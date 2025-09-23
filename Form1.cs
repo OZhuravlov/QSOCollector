@@ -1,30 +1,26 @@
-using Microsoft.Data.Sqlite;
-using System.Data;
-using System.Data.Common;
-
 namespace QSOCollector
 {
 
-    public partial class qsoCollectorForm : Form
+    public partial class QsoCollectorForm : Form
     {
         private readonly string connectionString;
-        private readonly SettingsRepository settingsRepository;
+        private readonly DbRepository dbRepository;
         private CancellationTokenSource clientCancellationTokenSource = new();
         private TcpServer? tcpServer = null;
-        private CancellationTokenSource serverCancellationTokenSource = new();
 
-        public qsoCollectorForm(string connectionString)
+        public QsoCollectorForm(string connectionString)
         {
             this.connectionString = connectionString;
-            this.settingsRepository = new SettingsRepository(connectionString);
+            dbRepository = new DbRepository(connectionString);
+
             InitializeComponent();
             RestoreSavedFormValuesFromDB();
-            handleServerCheckBoxChanged(enableServerCheckBox);
+            HandleServerCheckBoxChanged(enableServerCheckBox);
             HandleClientCheckBoxChanged(enableClientCheckBox);
         }
 
 
-        private void qsoCollectorForm_FormClosing(object sender, FormClosingEventArgs e)
+        private void QsoCollectorForm_FormClosing(object sender, FormClosingEventArgs e)
         {
             if (stopClientButton.Enabled)
             {
@@ -46,12 +42,12 @@ namespace QSOCollector
             SaveFormValuesToDB();
         }
 
-        private void enableServerCheckBox_CheckedChanged(object sender, EventArgs e)
+        private void EnableServerCheckBox_CheckedChanged(object sender, EventArgs e)
         {
-            handleServerCheckBoxChanged(sender as CheckBox);
+            HandleServerCheckBoxChanged(sender as CheckBox);
         }
 
-        private void handleServerCheckBoxChanged(CheckBox? serverCheckBox)
+        private void HandleServerCheckBoxChanged(CheckBox? serverCheckBox)
         {
             if (serverCheckBox == null)
             {
@@ -81,10 +77,10 @@ namespace QSOCollector
             {
                 return;
             }
-            handleCheckBoxForChildControls(checkbox, parent, checkbox.Checked);
+            HandleCheckBoxForChildControls(checkbox, parent, checkbox.Checked);
         }
 
-        private void handleCheckBoxForChildControls(CheckBox checkbox, Control parentControl, bool enabled)
+        private void HandleCheckBoxForChildControls(CheckBox checkbox, Control parentControl, bool enabled)
         {
             foreach (Control control in parentControl.Controls)
             {
@@ -97,11 +93,11 @@ namespace QSOCollector
                 }
 
                 control.Enabled = enabled;
-                handleCheckBoxForChildControls(checkbox, control, enabled);
+                HandleCheckBoxForChildControls(checkbox, control, enabled);
             }
         }
 
-        private void stopServerButton_Click(object sender, EventArgs e)
+        private void StopServerButton_Click(object sender, EventArgs e)
         {
             DialogResult result = MessageBox.Show("Are you sure you want to stop the server?", "Confirm Stop Server", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
             if (result != DialogResult.Yes)
@@ -124,7 +120,7 @@ namespace QSOCollector
             UpdateButton(stopServerButton, false);
         }
 
-        private void startServerButton_Click(object sender, EventArgs e)
+        private void StartServerButton_Click(object sender, EventArgs e)
         {
             int port = Int32.Parse(serverPortTextBox.Text);
             StartServer(port);
@@ -142,12 +138,12 @@ namespace QSOCollector
             await tcpServer.Start(connectionString, serverLogTextBox);
         }
 
-        private void UpdateButton(Button button, bool enabled)
+        private static void UpdateButton(Button button, bool enabled)
         {
             UpdateButton(button, enabled, null);
         }
 
-        private void UpdateButton(Button button, bool enabled, Color? backColor)
+        private static void UpdateButton(Button button, bool enabled, Color? backColor)
         {
             button.Enabled = enabled;
             Color color;
@@ -166,7 +162,7 @@ namespace QSOCollector
             button.Font = new Font(button.Font, fontStyle);
         }
 
-        private void serverPortTextBox_TextChanged(object sender, EventArgs e)
+        private void ServerPortTextBox_TextChanged(object sender, EventArgs e)
         {
             if (string.IsNullOrEmpty(serverPortTextBox.Text))
             {
@@ -178,7 +174,7 @@ namespace QSOCollector
             }
         }
 
-        private void portTextBox_KeyPress(object sender, KeyPressEventArgs e)
+        private void PortTextBox_KeyPress(object sender, KeyPressEventArgs e)
         {
             if (!char.IsControl(e.KeyChar) && !char.IsDigit(e.KeyChar))
             {
@@ -186,10 +182,9 @@ namespace QSOCollector
             }
         }
 
-        private void enableClientCheckBox_CheckedChanged(object sender, EventArgs e)
+        private void EnableClientCheckBox_CheckedChanged(object sender, EventArgs e)
         {
-            CheckBox? checkBox = sender as CheckBox;
-            if (checkBox == null)
+            if (sender is not CheckBox checkBox)
             {
                 return;
             }
@@ -221,9 +216,9 @@ namespace QSOCollector
             }
         }
 
-        private void startClientButton_Click(object sender, EventArgs e)
+        private void StartClientButton_Click(object sender, EventArgs e)
         {
-            List<ListenerConfig>? listeners = settingsRepository.GetListenerConfigs();
+            List<ListenerConfig>? listeners = dbRepository.GetListenerConfigs();
             if (listeners == null || listeners.Count == 0)
             {
                 MessageBox.Show("No active listener configurations found. Please configure at least one active listener.", "No Active Listeners", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -240,19 +235,19 @@ namespace QSOCollector
             string serverIp = clientServerNameIpTextBox.Text;
             int serverPort = Int32.Parse(clientServerPortTextBox.Text);
 
-            foreach (var listener in listeners)
+            foreach (var listenerConfig in listeners)
             {
-                StartClientUdpListenerTask(listener.QsoPort, serverIp, serverPort, clientCancellationTokenSource.Token);
+                StartClientUdpListenerTask(listenerConfig, serverIp, serverPort, clientCancellationTokenSource.Token);
             }
         }
 
-        private void StartClientUdpListenerTask(int localPort, string serverIp, int serverPort, CancellationToken cancellationToken)
+        private void StartClientUdpListenerTask(ListenerConfig listenerConfig, string serverIp, int serverPort, CancellationToken cancellationToken)
         {
-            var listener = new UdpClientListener(localPort, serverIp, serverPort, clientLogTextBox);
+            var listener = new UdpClientListener(listenerConfig, serverIp, serverPort, clientLogTextBox);
             Task.Run(() => listener.StartAsync(cancellationToken));
         }
 
-        private void stopClientButton_Click(object sender, EventArgs e)
+        private void StopClientButton_Click(object sender, EventArgs e)
         {
             DialogResult result = MessageBox.Show("Are you sure you want to stop the client?", "Confirm Stop Client", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
             if (result != DialogResult.Yes)
@@ -304,7 +299,7 @@ namespace QSOCollector
 
         private void RestoreSavedFormValuesFromDB()
         {
-            var settings = settingsRepository.LoadSettings();
+            Dictionary<string, string?> settings = dbRepository.LoadSettings();
             if (settings.TryGetValue("ServerEnabled", out var serverEnabled))
                 enableServerCheckBox.Checked = Convert.ToBoolean(serverEnabled);
             if (settings.TryGetValue("ServerPort", out var serverPort))
@@ -319,14 +314,14 @@ namespace QSOCollector
 
         private void SaveFormValuesToDB()
         {
-            settingsRepository.SaveSetting("ServerEnabled", enableServerCheckBox.Checked.ToString());
-            settingsRepository.SaveSetting("ServerPort", serverPortTextBox.Text);
-            settingsRepository.SaveSetting("ClientEnabled", enableClientCheckBox.Checked.ToString());
-            settingsRepository.SaveSetting("ClientServerNameIp", clientServerNameIpTextBox.Text);
-            settingsRepository.SaveSetting("ClientServerPort", clientServerPortTextBox.Text);
+            dbRepository.SaveSetting("ServerEnabled", enableServerCheckBox.Checked.ToString());
+            dbRepository.SaveSetting("ServerPort", serverPortTextBox.Text);
+            dbRepository.SaveSetting("ClientEnabled", enableClientCheckBox.Checked.ToString());
+            dbRepository.SaveSetting("ClientServerNameIp", clientServerNameIpTextBox.Text);
+            dbRepository.SaveSetting("ClientServerPort", clientServerPortTextBox.Text);
         }
 
-        private void listenersConfigButton_Click(object sender, EventArgs e)
+        private void ListenersConfigButton_Click(object sender, EventArgs e)
         {
             new ListenersForm(connectionString).ShowDialog(this);
         }

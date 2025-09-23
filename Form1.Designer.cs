@@ -1,6 +1,6 @@
 ﻿namespace QSOCollector
 {
-    partial class qsoCollectorForm
+    partial class QsoCollectorForm
     {
         /// <summary>
         ///  Required designer variable.
@@ -111,7 +111,7 @@
             listenersConfigButton.TabIndex = 4;
             listenersConfigButton.Text = "Listeners";
             listenersConfigButton.UseVisualStyleBackColor = true;
-            listenersConfigButton.Click += listenersConfigButton_Click;
+            listenersConfigButton.Click += ListenersConfigButton_Click;
             // 
             // ClientServerConfigGroupBox
             // 
@@ -144,7 +144,7 @@
             clientServerPortTextBox.Size = new Size(125, 27);
             clientServerPortTextBox.TabIndex = 2;
             clientServerPortTextBox.TextChanged += clientServerPortTextBox_TextChanged;
-            clientServerPortTextBox.KeyPress += portTextBox_KeyPress;
+            clientServerPortTextBox.KeyPress += PortTextBox_KeyPress;
             // 
             // clientServerNameIpTextBox
             // 
@@ -177,7 +177,7 @@
             stopClientButton.TabIndex = 2;
             stopClientButton.Text = "Stop Client";
             stopClientButton.UseVisualStyleBackColor = false;
-            stopClientButton.Click += stopClientButton_Click;
+            stopClientButton.Click += StopClientButton_Click;
             // 
             // startClientButton
             // 
@@ -190,7 +190,7 @@
             startClientButton.TabIndex = 1;
             startClientButton.Text = "Start Client";
             startClientButton.UseVisualStyleBackColor = false;
-            startClientButton.Click += startClientButton_Click;
+            startClientButton.Click += StartClientButton_Click;
             // 
             // enableClientCheckBox
             // 
@@ -202,7 +202,7 @@
             enableClientCheckBox.TabIndex = 0;
             enableClientCheckBox.Text = "Enable";
             enableClientCheckBox.UseVisualStyleBackColor = true;
-            enableClientCheckBox.CheckedChanged += enableClientCheckBox_CheckedChanged;
+            enableClientCheckBox.CheckedChanged += EnableClientCheckBox_CheckedChanged;
             // 
             // serverTab
             // 
@@ -247,7 +247,7 @@
             stopServerButton.TabIndex = 5;
             stopServerButton.Text = "Stop Server";
             stopServerButton.UseVisualStyleBackColor = false;
-            stopServerButton.Click += stopServerButton_Click;
+            stopServerButton.Click += StopServerButton_Click;
             // 
             // serverQsoGroupBox
             // 
@@ -316,7 +316,7 @@
             startServerButton.TabIndex = 3;
             startServerButton.Text = "Start Server";
             startServerButton.UseVisualStyleBackColor = false;
-            startServerButton.Click += startServerButton_Click;
+            startServerButton.Click += StartServerButton_Click;
             // 
             // serverPortTextBox
             // 
@@ -327,8 +327,8 @@
             serverPortTextBox.PlaceholderText = "(port number)";
             serverPortTextBox.Size = new Size(82, 27);
             serverPortTextBox.TabIndex = 2;
-            serverPortTextBox.TextChanged += serverPortTextBox_TextChanged;
-            serverPortTextBox.KeyPress += portTextBox_KeyPress;
+            serverPortTextBox.TextChanged += ServerPortTextBox_TextChanged;
+            serverPortTextBox.KeyPress += PortTextBox_KeyPress;
             // 
             // serverPortLabel
             // 
@@ -350,7 +350,7 @@
             enableServerCheckBox.TabIndex = 0;
             enableServerCheckBox.Text = "Enable";
             enableServerCheckBox.UseVisualStyleBackColor = true;
-            enableServerCheckBox.CheckedChanged += enableServerCheckBox_CheckedChanged;
+            enableServerCheckBox.CheckedChanged += EnableServerCheckBox_CheckedChanged;
             // 
             // qsoCollectorForm
             // 
@@ -362,7 +362,7 @@
             MaximizeBox = false;
             Name = "qsoCollectorForm";
             Text = "QSO Collector";
-            FormClosing += qsoCollectorForm_FormClosing;
+            FormClosing += QsoCollectorForm_FormClosing;
             mainTabControl.ResumeLayout(false);
             clientTab.ResumeLayout(false);
             clientTab.PerformLayout();

@@ -1,4 +1,5 @@
 ﻿using System.Net.Sockets;
+using System.Text.Json;
 
 
 namespace QSOCollector
@@ -38,10 +39,11 @@ namespace QSOCollector
 
             w.WriteLine(qsoMessage);
             string? responseMessage = await r.ReadLineAsync(new CancellationTokenSource(100000).Token);
+            ServerResponse serverResponse = JsonSerializer.Deserialize<ServerResponse>(responseMessage);
 
             clientLogTextBox.Invoke((MethodInvoker)delegate
             {
-                clientLogTextBox.AppendText(responseMessage);
+                clientLogTextBox.AppendText(serverResponse.ToString());
                 clientLogTextBox.AppendText("\r\n");
             });
         }

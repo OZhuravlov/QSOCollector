@@ -22,7 +22,7 @@ namespace QSOCollector
             string dbFileName = "qsoCollector.s3db";
             string connectionString = InitializeDatabase(dbPath, dbFileName);
             RunMigrations(connectionString);
-            Application.Run(new qsoCollectorForm(connectionString));
+            Application.Run(new QsoCollectorForm(connectionString));
         }
 
         static string InitializeDatabase(string dbPath, string dbFileName)

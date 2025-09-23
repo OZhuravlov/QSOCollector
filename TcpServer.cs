@@ -1,17 +1,17 @@
 ﻿using Microsoft.Data.Sqlite;
-using System.Data.Common;
 using System.Net;
 using System.Net.Sockets;
+using System.Text.Json;
 
 namespace QSOCollector
 {
     internal class TcpServer
     {
-        private IPEndPoint ipEndPoint;
-        private TcpListener listener;
+        private readonly IPEndPoint ipEndPoint;
+        private TcpListener? listener;
         private bool Running;
-        private List<Client> clients = new();
-        private CancellationTokenSource cts;
+        private readonly List<Client> clients = [];
+        private readonly CancellationTokenSource cts;
 
         public TcpServer(int port)
         {
@@ -38,14 +38,16 @@ namespace QSOCollector
             Running = true;
             while (Running)
             {
-                try {
+                try
+                {
                     TcpClient tcpClient = await listener.AcceptTcpClientAsync(cts.Token);
                     Client client = new(tcpClient, cts.Token);
                     clients.Add(client);
                     Task clientTask = client.Run(connectionString, serverLogTextBox); //don't await
                     clientTask.ContinueWith(t => clients.Remove(client));
                 }
-                catch (OperationCanceledException) { 
+                catch (OperationCanceledException)
+                {
                     listener.Stop();
                     listener.Dispose();
                     break;
@@ -54,58 +56,91 @@ namespace QSOCollector
         }
     }
 
-    internal class Client
+    internal class Client(TcpClient client, CancellationToken token)
     {
-        private NetworkStream stream;
-        private CancellationToken token;
+        private NetworkStream stream = client.GetStream();
+        private readonly string clientIPAddress = ((IPEndPoint)client.Client.RemoteEndPoint).Address.ToString();
 
-        public Client(TcpClient client, CancellationToken token)
+        public async Task Run(string dbConnectionString, TextBox serverLogTextBox)
         {
-            this.token = token;
-            stream = client.GetStream();
-        }
-
-        public async Task Run(string connectionString, TextBox serverLogTextBox)
-        {
-            try
+            DbRepository dbRepository = new(dbConnectionString);
+            StreamReader r = new(stream);
+            StreamWriter w = new(stream)
             {
-                using (DbConnection connection = new SqliteConnection(connectionString))
+                AutoFlush = true
+            };
+
+            while (true)
+            {
+                string? qsoMessageJson = await r.ReadLineAsync(token);
+                if (qsoMessageJson == null) continue;
+                QsoMessage? qsoMessage = JsonSerializer.Deserialize<QsoMessage>(qsoMessageJson);
+                if (qsoMessage == null) continue;
+
+                ServerResponse response;
+                try
                 {
-                    connection.Open();
-                    StreamReader r = new(stream);
-                    StreamWriter w = new(stream);
-                    w.AutoFlush = true;
-                    while (true)
+                    List<Dictionary<string, string>> qsoRecords = parseAdif(qsoMessage, serverLogTextBox);
+                    if (qsoRecords.Count == 0)
                     {
-                        string? qsoMessage = await r.ReadLineAsync(token);
-                        if (qsoMessage == null) break;
-                        using (DbCommand command = connection.CreateCommand())
-                        {
-                            command.CommandText = "INSERT INTO QSOs (QSOData) VALUES (@qsoData)";
-                            DbParameter param = command.CreateParameter();
-                            param.ParameterName = "@qsoData";
-                            param.Value = qsoMessage;
-                            command.Parameters.Add(param);
-                            await command.ExecuteNonQueryAsync(token);
-                        }
-                        serverLogTextBox.Invoke((MethodInvoker)delegate
-                        {
-                            serverLogTextBox.AppendText(qsoMessage);
-                            serverLogTextBox.AppendText("\r\n");
-                            serverLogTextBox.AppendText("Saved to Database\r\n");
-                            serverLogTextBox.AppendText("\r\n");
-                        });
-                        await w.WriteLineAsync("Saved to Database");
+                        throw new ArgumentException("No valid QSO records found in ADIF data");
                     }
+
+                    dbRepository.SaveQsoRecords(qsoRecords, isImported: false, isTemporary: false);
+                    response = new ServerResponse(ServerResponseStatus.Ok);
                 }
-            }
-            catch (SqliteException)
-            {
+                catch (SqliteException ex)
+                {
+                    response = new ServerResponse(ServerResponseStatus.SqliteError, ex.Message);
+                }
+                catch (ArgumentException ex)
+                {
+                    response = new ServerResponse(ServerResponseStatus.ArgumentError, ex.Message);
+                }
+                catch (Exception ex)
+                {
+                    response = new ServerResponse(ServerResponseStatus.UnknownError, ex.Message);
+                }
+
                 serverLogTextBox.Invoke((MethodInvoker)delegate
                 {
-                    serverLogTextBox.AppendText("Server database is not available. Please make sure it hasn't been deleted by mistake\r\n");
+                    serverLogTextBox.AppendText($"{response}\r\n");
+                });
+                await w.WriteLineAsync(JsonSerializer.Serialize<ServerResponse>(response));
+            }
+        }
+
+        private List<Dictionary<string, string>> parseAdif(QsoMessage qsoMessage, TextBox serverLogTextBox)
+        {
+            List<Dictionary<string, string>> qsoRecords = [];
+            try
+            {
+                // Parse the ADIF message
+                qsoRecords = AdifParser.Parse(qsoMessage, clientIPAddress);
+
+                // Log parsed records
+                serverLogTextBox.Invoke((MethodInvoker)delegate
+                {
+                    foreach (var record in qsoRecords)
+                    {
+                        foreach (var kv in record)
+                        {
+                            serverLogTextBox.AppendText($"{kv.Key}: {kv.Value}\r\n");
+                        }
+                        serverLogTextBox.AppendText("----\r\n");
+                    }
                 });
             }
+            catch (Exception ex)
+            {
+                // Handle parsing errors
+                serverLogTextBox.Invoke((MethodInvoker)delegate
+                {
+                    serverLogTextBox.AppendText($"ADIF parsing error: {ex.Message}\r\n");
+                });
+                throw new ArgumentException("ADIF parsing error", ex);
+            }
+            return qsoRecords;
         }
     }
 }

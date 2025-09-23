@@ -1,60 +1,48 @@
 using System.Net.Sockets;
 using System.Text;
-using System.Threading;
+using System.Text.Json;
 
 namespace QSOCollector
 {
-    public class UdpClientListener
+    public class UdpClientListener(ListenerConfig listenerConfig, string serverIp, int serverPort, TextBox logTextBox)
     {
-        private readonly int localPort;
-        private readonly string serverIp;
-        private readonly int serverPort;
-        private readonly TextBox logTextBox;
-
-        public UdpClientListener(int localPort, string serverIp, int serverPort, TextBox logTextBox)
-        {
-            this.localPort = localPort;
-            this.serverIp = serverIp;
-            this.serverPort = serverPort;
-            this.logTextBox = logTextBox;
-        }
-
         public async Task StartAsync(CancellationToken cancellationToken)
         {
-            using (UdpClient udpClient = new UdpClient(localPort))
+            int localPort = listenerConfig.QsoPort;
+            using UdpClient udpClient = new (localPort);
+            logTextBox.Invoke((MethodInvoker)delegate
             {
-                logTextBox.Invoke((MethodInvoker)delegate
+                logTextBox.AppendText($"UDP Port {localPort} Listener started\r\n");
+            });
+            TcpClientInstance tcpClient = new (serverIp, serverPort);
+            bool continueReceiving = true;
+            while (continueReceiving)
+            {
+                try
                 {
-                    logTextBox.AppendText($"UDP Port {localPort} Listener started\r\n");
-                });
-                TcpClientInstance tcpClient = new TcpClientInstance(serverIp, serverPort);
-                bool continueReceiving = true;
-                while (continueReceiving)
+                    var receivedResults = await udpClient.ReceiveAsync(cancellationToken);
+                    byte[] receivedBytes = receivedResults.Buffer;
+                    string receivedData = Encoding.UTF8.GetString(receivedBytes);
+
+                    QsoMessage qsoMessage = new() { OriginalFormat = listenerConfig.MessageFormat, AdifData = receivedData };
+                    logTextBox.Invoke((MethodInvoker)delegate
+                    {
+                        logTextBox.AppendText(receivedData);
+                        logTextBox.AppendText("\r\n");
+                    });
+
+                    string qsoMessageJson = JsonSerializer.Serialize<QsoMessage>(qsoMessage);
+                    await tcpClient.SendMessage(qsoMessageJson, logTextBox);
+                }
+                catch (OperationCanceledException)
                 {
-                    try
+                    udpClient.Close();
+                    udpClient.Dispose();
+                    logTextBox.Invoke((MethodInvoker)delegate
                     {
-                        UdpReceiveResult receivedResults = await udpClient.ReceiveAsync(cancellationToken);
-                        byte[] receivedBytes = receivedResults.Buffer;
-                        string receivedData = Encoding.UTF8.GetString(receivedBytes);
-
-                        logTextBox.Invoke((MethodInvoker)delegate
-                        {
-                            logTextBox.AppendText(receivedData);
-                            logTextBox.AppendText("\r\n");
-                        });
-
-                        await tcpClient.SendMessage(receivedData, logTextBox);
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        udpClient.Close();
-                        udpClient.Dispose();
-                        logTextBox.Invoke((MethodInvoker)delegate
-                        {
-                            logTextBox.AppendText($"UDP Port {localPort} Listener stopped\r\n");
-                            continueReceiving = false;
-                        });
-                    }
+                        logTextBox.AppendText($"UDP Port {localPort} Listener stopped\r\n");
+                        continueReceiving = false;
+                    });
                 }
             }
         }
