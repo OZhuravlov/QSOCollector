@@ -16,11 +16,11 @@ namespace QSOCollector
             client = new TcpClient(ipAddress, port);
         }
 
-        public bool isConnected() {
+        public bool IsConnected() {
             return client.Connected;
         }
 
-        public async Task SendMessage(string qsoMessage, TextBox clientLogTextBox)
+        public async Task SendMessage(string qsoMessage, TextBox clientLogTextBox, int responseDelay)
         {
             qsoMessage = qsoMessage.Replace("\r\n", string.Empty).Replace("\n", string.Empty).Trim();
             if (string.IsNullOrEmpty(qsoMessage)) return;
@@ -38,7 +38,7 @@ namespace QSOCollector
             }
 
             w.WriteLine(qsoMessage);
-            string? responseMessage = await r.ReadLineAsync(new CancellationTokenSource(100000).Token);
+            string? responseMessage = await r.ReadLineAsync(new CancellationTokenSource(responseDelay).Token);
             ServerResponse serverResponse = JsonSerializer.Deserialize<ServerResponse>(responseMessage);
 
             clientLogTextBox.Invoke((MethodInvoker)delegate

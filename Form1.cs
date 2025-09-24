@@ -243,7 +243,7 @@ namespace QSOCollector
 
         private void StartClientUdpListenerTask(ListenerConfig listenerConfig, string serverIp, int serverPort, CancellationToken cancellationToken)
         {
-            var listener = new UdpClientListener(listenerConfig, serverIp, serverPort, clientLogTextBox);
+            var listener = new UdpClientListener(listenerConfig, serverIp, serverPort, new DbRepository(connectionString), clientLogTextBox);
             Task.Run(() => listener.StartAsync(cancellationToken));
         }
 
