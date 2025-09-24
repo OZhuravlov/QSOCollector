@@ -1,6 +1,7 @@
 ﻿using Microsoft.Data.Sqlite;
 using System.Net;
 using System.Net.Sockets;
+using System.Text;
 using System.Text.Json;
 
 namespace QSOCollector
@@ -41,9 +42,9 @@ namespace QSOCollector
                 try
                 {
                     TcpClient tcpClient = await listener.AcceptTcpClientAsync(cts.Token);
-                    Client client = new(tcpClient, cts.Token);
+                    Client client = new(tcpClient, cts.Token, serverLogTextBox);
                     clients.Add(client);
-                    Task clientTask = client.Run(connectionString, serverLogTextBox); //don't await
+                    Task clientTask = client.Run(connectionString); //don't await
                     clientTask.ContinueWith(t => clients.Remove(client));
                 }
                 catch (OperationCanceledException)
@@ -56,12 +57,12 @@ namespace QSOCollector
         }
     }
 
-    internal class Client(TcpClient client, CancellationToken token)
+    internal class Client(TcpClient client, CancellationToken token, TextBox serverLogTextBox)
     {
         private NetworkStream stream = client.GetStream();
         private readonly string clientIPAddress = ((IPEndPoint)client.Client.RemoteEndPoint).Address.ToString();
 
-        public async Task Run(string dbConnectionString, TextBox serverLogTextBox)
+        public async Task Run(string dbConnectionString)
         {
             DbRepository dbRepository = new(dbConnectionString);
             StreamReader r = new(stream);
@@ -102,10 +103,7 @@ namespace QSOCollector
                     response = new ServerResponse(ServerResponseStatus.UnknownError, ex.Message);
                 }
 
-                serverLogTextBox.Invoke((MethodInvoker)delegate
-                {
-                    serverLogTextBox.AppendText($"{response}\r\n");
-                });
+                LogToTextBox(response.ToString());
                 await w.WriteLineAsync(JsonSerializer.Serialize<ServerResponse>(response));
             }
         }
@@ -119,28 +117,33 @@ namespace QSOCollector
                 qsoRecords = AdifParser.Parse(qsoMessage, clientIPAddress);
 
                 // Log parsed records
-                serverLogTextBox.Invoke((MethodInvoker)delegate
-                {
                     foreach (var record in qsoRecords)
                     {
+                    StringBuilder logMessage = new StringBuilder();
                         foreach (var kv in record)
                         {
-                            serverLogTextBox.AppendText($"{kv.Key}: {kv.Value}\r\n");
+                           logMessage.AppendLine(kv.Key + ": " + kv.Value);
                         }
-                        serverLogTextBox.AppendText("----\r\n");
-                    }
-                });
+                    logMessage.AppendLine("----");
+                    LogToTextBox(logMessage.ToString());
+                }
+                LogToTextBox("----");
             }
             catch (Exception ex)
             {
                 // Handle parsing errors
-                serverLogTextBox.Invoke((MethodInvoker)delegate
-                {
-                    serverLogTextBox.AppendText($"ADIF parsing error: {ex.Message}\r\n");
-                });
+                LogToTextBox($"ADIF parsing error: {ex.Message}");
                 throw new ArgumentException("ADIF parsing error", ex);
             }
             return qsoRecords;
+        }
+
+        private void LogToTextBox(String message)
+        {
+            serverLogTextBox.Invoke((MethodInvoker)delegate
+            {
+                serverLogTextBox.AppendText($"{message}\r\n");
+            });
         }
     }
 }

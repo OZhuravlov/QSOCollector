@@ -1,7 +1,6 @@
 ﻿using System.Net.Sockets;
 using System.Text.Json;
 
-
 namespace QSOCollector
 {
     internal class TcpClientInstance
@@ -40,17 +39,20 @@ namespace QSOCollector
             w.WriteLine(qsoMessage);
             string? responseMessage = await r.ReadLineAsync(new CancellationTokenSource(responseDelay).Token);
             ServerResponse serverResponse = JsonSerializer.Deserialize<ServerResponse>(responseMessage);
-
-            clientLogTextBox.Invoke((MethodInvoker)delegate
-            {
-                clientLogTextBox.AppendText(serverResponse.ToString());
-                clientLogTextBox.AppendText("\r\n");
-            });
+            LogToTextBox(clientLogTextBox, serverResponse.ToString());
         }
 
         public void Terminate() {
             client.Close();
             client.Dispose();
+        }
+
+        private void LogToTextBox(TextBox logTextBox, String message)
+        {
+            logTextBox.Invoke((MethodInvoker)delegate
+            {
+                logTextBox.AppendText($"{message}\r\n");
+            });
         }
     }
 }
