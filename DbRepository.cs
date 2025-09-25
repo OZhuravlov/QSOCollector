@@ -1,12 +1,25 @@
 using Microsoft.Data.Sqlite;
 using System.Reflection;
 using System.Text;
-using System.Windows.Forms;
 
 namespace QSOCollector
 {
     public class DbRepository
     {
+        private const string getTableColumnsSql = "SELECT UPPER(p.name) name, UPPER(p.type) type FROM sqlite_master m JOIN pragma_table_info(m.name) p WHERE lower(m.name) = lower(@tablename) and not p.pk";
+        private const string selectSettingsSql = "SELECT key, value FROM settings";
+        private const string insertSettingsSql = "INSERT OR REPLACE INTO settings (key, value) VALUES (@key, @value)";
+        private const string getListenerConfigsSql = "SELECT id as Id, protocol as Protocol, qso_port as QsoPort, acknowledge_port as AcknowledgePort, message_format as MessageFormat, is_active IsActive, description as Description FROM listeners WHERE is_active = true";
+        private const string insertQsoSql = "INSERT INTO qsodata (is_temporary, source_ip_address, is_imported, qso_time, programid, station_callsign, qso_date, qso_date_off, call, time_on, time_off, band, freq, freq_rx, mode, contest_id, rst_sent, rst_rcvd, exch_sent, exch_rcvd, operator, my_gridsquare, gridsquare, distance, comment, pfx, dxcc_pref, cqz, ituz, cont, qslmsg, dxcc, orig_format, orig_qsodata)" +
+                    " VALUES (@is_temporary, @source_ip_address, @is_imported, @qso_time, @programid, @station_callsign, @qso_date, @qso_date_off, @call, @time_on, @time_off, @band, @freq, @freq_rx, @mode, @contest_id, @rst_sent, @rst_rcvd, @exch_sent, @exch_rcvd, @operator, @my_gridsquare, @gridsquare, @distance, @comment, @pfx, @dxcc_pref, @cqz, @ituz, @cont, @qslmsg, @dxcc, @orig_format, @orig_qsodata)";
+        private const string getTemporaryQsoSql = "SELECT id, programid, orig_format, orig_qsodata " +
+            "  FROM qsodata " +
+            " WHERE is_temporary = 1 AND orig_format IS NOT NULL AND orig_qsodata IS NOT NULL " +
+            " ORDER BY id " +
+            " LIMIT 100";
+        private const string deleteTemporaryQsoQsl = "DELETE FROM qsodata WHERE is_temporary = 1 and id = @id";
+        private const int SQLITE_CONSTRAINT_UNIQUE = 2067;
+
         private readonly string connectionString;
         private readonly Dictionary<string, string> qsodataColumns;
 
@@ -23,7 +36,7 @@ namespace QSOCollector
             {
                 connection.Open();
                 using var command = connection.CreateCommand();
-                command.CommandText = "SELECT key, value FROM settings";
+                command.CommandText = selectSettingsSql;
                 using var reader = command.ExecuteReader();
                 while (reader.Read())
                 {
@@ -40,7 +53,7 @@ namespace QSOCollector
             using var connection = new SqliteConnection(connectionString);
             connection.Open();
             using var command = connection.CreateCommand();
-            command.CommandText = "INSERT OR REPLACE INTO settings (key, value) VALUES (@key, @value)";
+            command.CommandText = insertSettingsSql;
             command.Parameters.Add(new SqliteParameter("@key", key));
             command.Parameters.Add(new SqliteParameter("@value", value));
             command.ExecuteNonQuery();
@@ -53,7 +66,7 @@ namespace QSOCollector
             {
                 connection.Open();
                 using var command = connection.CreateCommand();
-                command.CommandText = "SELECT id as Id, protocol as Protocol, qso_port as QsoPort, acknowledge_port as AcknowledgePort, message_format as MessageFormat, is_active IsActive, description as Description FROM listeners WHERE is_active = true";
+                command.CommandText = getListenerConfigsSql;
                 using var reader = command.ExecuteReader();
                 listeners = GetData<ListenerConfig>(reader);
             }
@@ -65,7 +78,7 @@ namespace QSOCollector
             using var connection = new SqliteConnection(connectionString);
             connection.Open();
             using var command = connection.CreateCommand();
-            command.CommandText = "SELECT UPPER(p.name) name, UPPER(p.type) type FROM sqlite_master m JOIN pragma_table_info(m.name) p WHERE lower(m.name) = lower(@tablename) and not p.pk";
+            command.CommandText = getTableColumnsSql;
             command.Parameters.Add(new SqliteParameter("@tablename", tablename));
             using var reader = command.ExecuteReader();
             Dictionary<string, string> columns = [];
@@ -83,8 +96,7 @@ namespace QSOCollector
             foreach (var qsoRecord in qsoRecords)
             {
                 using var command = connection.CreateCommand();
-                command.CommandText = "INSERT INTO qsodata (is_temporary, source_ip_address, is_imported, qso_time, programid, station_callsign, qso_date, qso_date_off, call, time_on, time_off, band, freq, freq_rx, mode, contest_id, rst_sent, rst_rcvd, exch_sent, exch_rcvd, operator, my_gridsquare, gridsquare, distance, comment, pfx, dxcc_pref, cqz, ituz, cont, qslmsg, dxcc, orig_format, orig_qsodata)" +
-                    " VALUES (@is_temporary, @source_ip_address, @is_imported, @qso_time, @programid, @station_callsign, @qso_date, @qso_date_off, @call, @time_on, @time_off, @band, @freq, @freq_rx, @mode, @contest_id, @rst_sent, @rst_rcvd, @exch_sent, @exch_rcvd, @operator, @my_gridsquare, @gridsquare, @distance, @comment, @pfx, @dxcc_pref, @cqz, @ituz, @cont, @qslmsg, @dxcc, @orig_format, @orig_qsodata)";
+                command.CommandText = insertQsoSql;
 
                 List<string> parameterKeys = GetParameterKeys(command.CommandText);
                 List<string> addedParamKeys = [];
@@ -97,7 +109,7 @@ namespace QSOCollector
                     AddSqlParameter(command, paramKey, columnValue, addedParamKeys);
                 }
 
-                DateTime qsoTime = getQsoTime(qsoRecord);
+                DateTime qsoTime = GetQsoTime(qsoRecord);
                 AddSqlParameter(command, "qso_time", qsoTime, addedParamKeys);
                 AddSqlParameter(command, "is_imported", isImported, addedParamKeys);
                 AddSqlParameter(command, "is_temporary", isTemporary, addedParamKeys);
@@ -114,8 +126,47 @@ namespace QSOCollector
 
                 parameterKeys.RemoveAll(key => addedParamKeys.Contains(key));
 
-                command.ExecuteNonQuery();
+                try { 
+                    command.ExecuteNonQuery(); 
+                } 
+                catch (SqliteException ex)
+                {
+                    if (ex.SqliteExtendedErrorCode != SQLITE_CONSTRAINT_UNIQUE) throw;
+                }
+
             }
+        }
+
+        public Dictionary<int, QsoMessage> GetTemporaryQsoMessages()
+        {
+            var qsoMessages = new Dictionary<int, QsoMessage>();
+            using var connection = new SqliteConnection(connectionString);
+            connection.Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = getTemporaryQsoSql;
+            using var reader = command.ExecuteReader();
+            while (reader.Read())
+            {
+                int id = reader.GetInt32(0);
+                QsoMessage qsoMessage = new()
+                {
+                    Source = reader.GetValue(1) == DBNull.Value ? null : reader.GetString(1),
+                    OriginalFormat = reader.GetString(2),
+                    QsoData = reader.GetString(3)
+                };
+                qsoMessages.Add(id, qsoMessage);
+            }
+            return qsoMessages;
+        }
+
+        public void DeleteTemporaryQsoRecord(int id)
+        {
+            using var connection = new SqliteConnection(connectionString);
+            connection.Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = deleteTemporaryQsoQsl;
+            command.Parameters.Add(new SqliteParameter("@id", id));
+            command.ExecuteNonQuery();
         }
 
         private static void AddSqlParameter(SqliteCommand command, string paramKey, object paramValue, List<string> parameterKeys)
@@ -145,7 +196,7 @@ namespace QSOCollector
             return parameterkeys;
         }
 
-        private static DateTime getQsoTime(Dictionary<string, string?> qsoRecord)
+        private static DateTime GetQsoTime(Dictionary<string, string?> qsoRecord)
         {
             string? adifQsoDate = null;
             string? adifQsoTime = null;

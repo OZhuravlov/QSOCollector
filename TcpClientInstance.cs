@@ -12,7 +12,10 @@ namespace QSOCollector
 
         public TcpClientInstance(string ipAddress, int port)
         {
-            client = new TcpClient(ipAddress, port);
+            client = new TcpClient();
+            client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseUnicastPort, true);
+            client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+            client.Connect(ipAddress, port);
         }
 
         public bool IsConnected() {
@@ -32,8 +35,10 @@ namespace QSOCollector
             {
                 stream = client.GetStream();
                 r = new StreamReader(stream);
-                w = new StreamWriter(stream);
-                w.AutoFlush = true;
+                w = new StreamWriter(stream)
+                {
+                    AutoFlush = true
+                };
             }
 
             w.WriteLine(qsoMessage);

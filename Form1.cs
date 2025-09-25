@@ -1,3 +1,5 @@
+using System.Collections.Concurrent;
+
 namespace QSOCollector
 {
 
@@ -5,7 +7,7 @@ namespace QSOCollector
     {
         private readonly string connectionString;
         private readonly DbRepository dbRepository;
-        private CancellationTokenSource clientCancellationTokenSource = new();
+        private CancellationTokenSource? clientCancellationTokenSource = new();
         private TcpServer? tcpServer = null;
 
         public QsoCollectorForm(string connectionString)
@@ -133,7 +135,8 @@ namespace QSOCollector
             serverLogTextBox.AppendText("Server started...\r\n");
         }
 
-        private async void StartServer(int port) {
+        private async void StartServer(int port)
+        {
             tcpServer = new(port);
             await tcpServer.Start(connectionString, serverLogTextBox);
         }
@@ -224,6 +227,24 @@ namespace QSOCollector
                 MessageBox.Show("No active listener configurations found. Please configure at least one active listener.", "No Active Listeners", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
+
+            string serverIp = clientServerNameIpTextBox.Text;
+            int serverPort = Int32.Parse(clientServerPortTextBox.Text);
+            BlockingCollection<QsoMessage> qsoMessageQueue = [];
+
+            QsoMessageSender qsoMessageSender = StartQsoMessageHandler(qsoMessageQueue, serverIp, serverPort);
+            if (!qsoMessageSender.IsConnected())
+            {
+                MessageBox.Show($"Looks like server is not valable by address {serverIp}:{serverPort}. Please make sure it started", "Server not available", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            StartTemporarelySavedQsoHandler(qsoMessageQueue, qsoMessageSender);
+
+            foreach (var listenerConfig in listeners)
+            {
+                StartClientUdpListener(listenerConfig, qsoMessageQueue);
+            }
             enableClientCheckBox.Enabled = false;
             clientServerNameIpTextBox.Enabled = false;
             clientServerPortTextBox.Enabled = false;
@@ -231,20 +252,33 @@ namespace QSOCollector
             startClientButton.Text = "Executing...";
             UpdateButton(startClientButton, false, Color.Lavender);
             UpdateButton(stopClientButton, true, Color.RosyBrown);
-
-            string serverIp = clientServerNameIpTextBox.Text;
-            int serverPort = Int32.Parse(clientServerPortTextBox.Text);
-
-            foreach (var listenerConfig in listeners)
-            {
-                StartClientUdpListenerTask(listenerConfig, serverIp, serverPort, clientCancellationTokenSource.Token);
-            }
         }
 
-        private void StartClientUdpListenerTask(ListenerConfig listenerConfig, string serverIp, int serverPort, CancellationToken cancellationToken)
+        private QsoMessageSender StartQsoMessageHandler(BlockingCollection<QsoMessage> qsoMessageQueue, string serverIp, int serverPort)
         {
-            var listener = new UdpClientListener(listenerConfig, serverIp, serverPort, new DbRepository(connectionString), clientLogTextBox);
-            Task.Run(() => listener.StartAsync(cancellationToken));
+            CancellationTokenSource qsoMessageSenderCancellationTokenSource = CreateLinkedClientCancellationTokenSource();
+            var sender = new QsoMessageSender(serverIp, serverPort, qsoMessageQueue, dbRepository, clientLogTextBox, qsoMessageSenderCancellationTokenSource);
+            if (sender.IsConnected()) Task.Run(() => sender.Start());
+            return sender;
+        }
+
+        private void StartTemporarelySavedQsoHandler(BlockingCollection<QsoMessage> qsoMessageQueue, QsoMessageSender qsoMessageHandler)
+        {
+            CancellationTokenSource temporarelySavedQsoHandlerCancellationTokenSource = CreateLinkedClientCancellationTokenSource();
+            var handler = new TemporarelySavedQsoHandler(dbRepository, qsoMessageQueue, qsoMessageHandler, clientLogTextBox, temporarelySavedQsoHandlerCancellationTokenSource);
+            Task.Run(() => handler.Start());
+        }
+
+        private void StartClientUdpListener(ListenerConfig listenerConfig, BlockingCollection<QsoMessage> qsoMessageQueue)
+        {
+            CancellationTokenSource clientUdpListenerCancellationTokenSource = CreateLinkedClientCancellationTokenSource();
+            var listener = new UdpClientListener(listenerConfig, qsoMessageQueue, clientLogTextBox, clientUdpListenerCancellationTokenSource);
+            Task.Run(() => listener.Start());
+        }
+
+        private CancellationTokenSource CreateLinkedClientCancellationTokenSource()
+        {
+            return CancellationTokenSource.CreateLinkedTokenSource(clientCancellationTokenSource.Token);
         }
 
         private void StopClientButton_Click(object sender, EventArgs e)

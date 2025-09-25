@@ -2,21 +2,22 @@ using System.Text.RegularExpressions;
 
 namespace QSOCollector
 {
-    public static class AdifParser
+    public static class AdifMapper
     {
         private static readonly string endOfHeader = "<EOH>";
         private static readonly string endOfRecord = "<EOR>";
 
         // Parses an ADIF message and returns a list of key-value maps for each QSO record
-        public static List<Dictionary<string, string>> Parse(QsoMessage qsoMessage, string sourceIpAddress)
+        public static List<Dictionary<string, string>> Map(QsoMessage qsoMessage, string sourceIpAddress)
         {
             var result = new List<Dictionary<string, string>>();
             var headerMap = new Dictionary<string, string>
             {
+                ["PROGRAMID"] = qsoMessage.Source,
                 ["ORIG_FORMAT"] = qsoMessage.OriginalFormat,
                 ["SOURCE_IP_ADDRESS"] = sourceIpAddress
             };
-            string adifMessage = qsoMessage.AdifData.Replace("\r\n", string.Empty).Replace("\n", string.Empty).Trim();
+            string adifMessage = qsoMessage.QsoData.Replace("\r\n", string.Empty).Replace("\n", string.Empty).Trim();
 
             // Find header section (if any)
             int headerEnd = adifMessage.IndexOf(endOfHeader, StringComparison.OrdinalIgnoreCase);
@@ -30,6 +31,10 @@ namespace QSOCollector
                 {
                     headerMap[kv.Key] = kv.Value;
                 }
+            }
+            string sourceKey = "PROGRAMID";
+            if (!headerMap.ContainsKey(sourceKey) && !string.IsNullOrEmpty(qsoMessage.Source)) {
+                headerMap[sourceKey] = qsoMessage.Source;
             }
 
             // Split QSO records by <EOR>

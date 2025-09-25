@@ -10,7 +10,7 @@ namespace QSOCollector
     {
         private readonly IPEndPoint ipEndPoint;
         private TcpListener? listener;
-        private bool Running;
+        private bool running;
         private readonly List<Client> clients = [];
         private readonly CancellationTokenSource cts;
 
@@ -23,7 +23,7 @@ namespace QSOCollector
 
         public void Stop()
         {
-            Running = false;
+            running = false;
             cts.Cancel();
         }
 
@@ -36,13 +36,14 @@ namespace QSOCollector
         {
             listener = new(ipEndPoint);
             listener.Start();
-            Running = true;
-            while (Running)
+            running = true;
+            while (running)
             {
+                CancellationTokenSource clientCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cts.Token);
                 try
                 {
                     TcpClient tcpClient = await listener.AcceptTcpClientAsync(cts.Token);
-                    Client client = new(tcpClient, cts.Token, serverLogTextBox);
+                    Client client = new(tcpClient, clientCancellationTokenSource, serverLogTextBox);
                     clients.Add(client);
                     Task clientTask = client.Run(connectionString); //don't await
                     clientTask.ContinueWith(t => clients.Remove(client));
@@ -57,9 +58,9 @@ namespace QSOCollector
         }
     }
 
-    internal class Client(TcpClient client, CancellationToken token, TextBox serverLogTextBox)
+    internal class Client(TcpClient client, CancellationTokenSource clientCancellationTokenSource, TextBox serverLogTextBox)
     {
-        private NetworkStream stream = client.GetStream();
+        private readonly NetworkStream stream = client.GetStream();
         private readonly string clientIPAddress = ((IPEndPoint)client.Client.RemoteEndPoint).Address.ToString();
 
         public async Task Run(string dbConnectionString)
@@ -73,7 +74,7 @@ namespace QSOCollector
 
             while (true)
             {
-                string? qsoMessageJson = await r.ReadLineAsync(token);
+                string? qsoMessageJson = await r.ReadLineAsync(clientCancellationTokenSource.Token);
                 if (qsoMessageJson == null) continue;
                 QsoMessage? qsoMessage = JsonSerializer.Deserialize<QsoMessage>(qsoMessageJson);
                 if (qsoMessage == null) continue;
@@ -81,7 +82,7 @@ namespace QSOCollector
                 ServerResponse response;
                 try
                 {
-                    List<Dictionary<string, string>> qsoRecords = parseAdif(qsoMessage, serverLogTextBox);
+                    List<Dictionary<string, string>> qsoRecords = ParseAdif(qsoMessage, serverLogTextBox);
                     if (qsoRecords.Count == 0)
                     {
                         throw new ArgumentException("No valid QSO records found in ADIF data");
@@ -98,6 +99,11 @@ namespace QSOCollector
                 {
                     response = new ServerResponse(ServerResponseStatus.ArgumentError, ex.Message);
                 }
+                catch (OperationCanceledException)
+                {
+                    clientCancellationTokenSource.Dispose();
+                    throw;
+                }
                 catch (Exception ex)
                 {
                     response = new ServerResponse(ServerResponseStatus.UnknownError, ex.Message);
@@ -108,13 +114,13 @@ namespace QSOCollector
             }
         }
 
-        private List<Dictionary<string, string>> parseAdif(QsoMessage qsoMessage, TextBox serverLogTextBox)
+        private List<Dictionary<string, string>> ParseAdif(QsoMessage qsoMessage, TextBox serverLogTextBox)
         {
             List<Dictionary<string, string>> qsoRecords = [];
             try
             {
                 // Parse the ADIF message
-                qsoRecords = AdifParser.Parse(qsoMessage, clientIPAddress);
+                qsoRecords = AdifMapper.Map(qsoMessage, clientIPAddress);
 
                 // Log parsed records
                     foreach (var record in qsoRecords)
