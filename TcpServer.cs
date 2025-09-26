@@ -82,7 +82,7 @@ namespace QSOCollector
                 ServerResponse response;
                 try
                 {
-                    List<Dictionary<string, string>> qsoRecords = ParseAdif(qsoMessage, serverLogTextBox);
+                    List<Dictionary<string, string>> qsoRecords = ParseAdif(qsoMessage);
                     if (qsoRecords.Count == 0)
                     {
                         throw new ArgumentException("No valid QSO records found in ADIF data");
@@ -114,22 +114,26 @@ namespace QSOCollector
             }
         }
 
-        private List<Dictionary<string, string>> ParseAdif(QsoMessage qsoMessage, TextBox serverLogTextBox)
+        private List<Dictionary<string, string>> ParseAdif(QsoMessage qsoMessage)
         {
             List<Dictionary<string, string>> qsoRecords = [];
             try
             {
-                // Parse the ADIF message
-                qsoRecords = AdifMapper.Map(qsoMessage, clientIPAddress);
+                qsoRecords = qsoMessage.OriginalFormat switch
+                {
+                    "ADIF" => AdifToTableFieldsMapper.Map(qsoMessage, clientIPAddress),
+                    "N1MM" => N1mmContactInfoToTableFieldsMapper.Map(qsoMessage, clientIPAddress),
+                    _ => throw new ArgumentException($"Unsupported message format: {qsoMessage.OriginalFormat}"),
+                };
 
                 // Log parsed records
-                    foreach (var record in qsoRecords)
-                    {
+                foreach (var record in qsoRecords)
+                {
                     StringBuilder logMessage = new StringBuilder();
-                        foreach (var kv in record)
-                        {
-                           logMessage.AppendLine(kv.Key + ": " + kv.Value);
-                        }
+                    foreach (var kv in record)
+                    {
+                        logMessage.AppendLine(kv.Key + ": " + kv.Value);
+                    }
                     logMessage.AppendLine("----");
                     LogToTextBox(logMessage.ToString());
                 }

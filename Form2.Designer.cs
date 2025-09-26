@@ -111,7 +111,7 @@ namespace QSOCollector
             // 
             message_format.DataPropertyName = "message_format";
             message_format.HeaderText = "*Format";
-            message_format.Items.AddRange(new object[] { "ADIF", "CLUBLOG" });
+            message_format.Items.AddRange(new object[] { "ADIF", "N1MM" });
             message_format.MinimumWidth = 6;
             message_format.Name = "message_format";
             message_format.Resizable = DataGridViewTriState.False;

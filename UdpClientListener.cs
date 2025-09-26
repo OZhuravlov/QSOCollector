@@ -24,7 +24,7 @@ namespace QSOCollector
                     byte[] receivedBytes = receivedResults.Buffer;
                     receivedData = Encoding.UTF8.GetString(receivedBytes);
 
-                    QsoMessage qsoMessage = new() { OriginalFormat = listenerConfig.MessageFormat, QsoData = receivedData };
+                    QsoMessage qsoMessage = new() { OriginalFormat = listenerConfig.MessageFormat, OriginalQsoData = receivedData };
                     LogToTextBox(receivedData);
                     qsoMessageQueue.Add(qsoMessage);
                 }

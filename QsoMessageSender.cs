@@ -18,7 +18,8 @@ namespace QSOCollector
         private readonly CancellationTokenSource cancellationTokenSource;
         private TcpClientInstance? tcpClient;
 
-        public QsoMessageSender(string serverIp, int serverPort, BlockingCollection<QsoMessage> qsoMessageQueue, DbRepository dbRepository, TextBox logTextBox, CancellationTokenSource cancellationTokenSource)
+        public QsoMessageSender(string serverIp, int serverPort, BlockingCollection<QsoMessage> qsoMessageQueue, 
+            DbRepository dbRepository, TextBox logTextBox, CancellationTokenSource cancellationTokenSource)
         {
             this.serverIp = serverIp;
             this.serverPort = serverPort;
@@ -87,7 +88,7 @@ namespace QSOCollector
                 }
                 catch (ArgumentException ex)
                 {
-                    LogToTextBox($"Incorrect {qsoMessage.OriginalFormat} format, source {qsoMessage.Source}, data: {qsoMessage.QsoData}\r\n: {ex}\r\nIgnored");
+                    LogToTextBox($"Incorrect {qsoMessage.OriginalFormat} format, source {qsoMessage.Source}, data: {qsoMessage.OriginalQsoData}\r\n: {ex}\r\nIgnored");
                     continue;
                 }
             }
@@ -106,14 +107,13 @@ namespace QSOCollector
             List<Dictionary<string, string>> qsoRecords;
             try
             {
-                if (qsoMessage.OriginalFormat == "ADIF")
+                string sourceIpAddress = IPAddress.Loopback.ToString();
+                qsoRecords = qsoMessage.OriginalFormat switch
                 {
-                    qsoRecords = AdifMapper.Map(qsoMessage, IPAddress.Loopback.ToString());
-                }
-                else
-                {
-                    throw new ArgumentException($"Unsupported message format: {qsoMessage.OriginalFormat}");
-                }
+                    "ADIF" => AdifToTableFieldsMapper.Map(qsoMessage, sourceIpAddress),
+                    "N1MM" => N1mmContactInfoToTableFieldsMapper.Map(qsoMessage, sourceIpAddress),
+                    _ => throw new ArgumentException($"Unsupported message format: {qsoMessage.OriginalFormat}"),
+                };
 
                 foreach (var record in qsoRecords)
                 {

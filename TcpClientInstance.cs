@@ -5,10 +5,10 @@ namespace QSOCollector
 {
     internal class TcpClientInstance
     {
-        private TcpClient client;
-        private NetworkStream stream;
-        private StreamReader r;
-        private StreamWriter w;
+        private TcpClient? client;
+        private NetworkStream? stream;
+        private StreamReader? r;
+        private StreamWriter? w;
 
         public TcpClientInstance(string ipAddress, int port)
         {
@@ -19,7 +19,7 @@ namespace QSOCollector
         }
 
         public bool IsConnected() {
-            return client.Connected;
+            return client != null && client.Connected;
         }
 
         public async Task SendMessage(string qsoMessage, TextBox clientLogTextBox, int responseDelay)
@@ -27,7 +27,7 @@ namespace QSOCollector
             qsoMessage = qsoMessage.Replace("\r\n", string.Empty).Replace("\n", string.Empty).Trim();
             if (string.IsNullOrEmpty(qsoMessage)) return;
 
-            if (!client.Connected) {
+            if (!IsConnected()) {
                 throw new SocketException((int)SocketError.ConnectionAborted);
             }
 
@@ -48,8 +48,11 @@ namespace QSOCollector
         }
 
         public void Terminate() {
-            client.Close();
-            client.Dispose();
+            if (client != null)
+            {
+                client.Close();
+                client.Dispose();
+            }
         }
 
         private void LogToTextBox(TextBox logTextBox, String message)

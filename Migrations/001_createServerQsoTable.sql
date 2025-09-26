@@ -9,8 +9,8 @@
     qso_time          DATETIME     NOT NULL,
     programid         VARCHAR(20),
     station_callsign  VARCHAR(20)  NOT NULL,
-    qso_date          VARCHAR(8)   NOT NULL,
-    qso_date_off      VARCHAR(8)   NOT NULL,
+    qso_date          VARCHAR(8),
+    qso_date_off      VARCHAR(8),
     call              VARCHAR(15)  NOT NULL,
     time_on           VARCHAR(8),
     time_off          VARCHAR(8),
@@ -35,8 +35,10 @@
     cont              VARCHAR(2),
     qslmsg            VARCHAR(100),
     dxcc              INTEGER,
-    orig_format       VARCHAR(20),
-    orig_qsodata      TEXT
+    orig_format       VARCHAR(20) NOT NULL,
+    orig_qsodata      TEXT NOT NULL,
+    adif_qsodata      TEXT NOT NULL,
+    CHECK ((qso_date IS NOT NULL AND time_on IS NOT NULL) OR (qso_date_off IS NOT NULL AND time_off IS NOT NULL))
 );
 
 CREATE INDEX idx_qsodata_is_temporary ON qsodata(is_temporary);

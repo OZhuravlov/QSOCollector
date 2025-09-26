@@ -23,7 +23,7 @@ namespace QSOCollector
                         {
                             qsoMessageQueue.Add(qsoMessage.Value);
                             dbRepository.DeleteTemporaryQsoRecord(qsoMessage.Key);
-                            LogToTextBox($"Put QSO id {qsoMessage.Key} to be resent:{qsoMessage.Value.QsoData}");
+                            LogToTextBox($"Put QSO id {qsoMessage.Key} to be resent:{qsoMessage.Value.OriginalQsoData}");
                         }
                     }
                     await Task.Delay(TimeSpan.FromMinutes(1), cancellationToken);

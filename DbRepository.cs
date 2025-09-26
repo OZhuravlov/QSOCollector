@@ -10,9 +10,9 @@ namespace QSOCollector
         private const string selectSettingsSql = "SELECT key, value FROM settings";
         private const string insertSettingsSql = "INSERT OR REPLACE INTO settings (key, value) VALUES (@key, @value)";
         private const string getListenerConfigsSql = "SELECT id as Id, protocol as Protocol, qso_port as QsoPort, acknowledge_port as AcknowledgePort, message_format as MessageFormat, is_active IsActive, description as Description FROM listeners WHERE is_active = true";
-        private const string insertQsoSql = "INSERT INTO qsodata (is_temporary, source_ip_address, is_imported, qso_time, programid, station_callsign, qso_date, qso_date_off, call, time_on, time_off, band, freq, freq_rx, mode, contest_id, rst_sent, rst_rcvd, exch_sent, exch_rcvd, operator, my_gridsquare, gridsquare, distance, comment, pfx, dxcc_pref, cqz, ituz, cont, qslmsg, dxcc, orig_format, orig_qsodata)" +
-                    " VALUES (@is_temporary, @source_ip_address, @is_imported, @qso_time, @programid, @station_callsign, @qso_date, @qso_date_off, @call, @time_on, @time_off, @band, @freq, @freq_rx, @mode, @contest_id, @rst_sent, @rst_rcvd, @exch_sent, @exch_rcvd, @operator, @my_gridsquare, @gridsquare, @distance, @comment, @pfx, @dxcc_pref, @cqz, @ituz, @cont, @qslmsg, @dxcc, @orig_format, @orig_qsodata)";
-        private const string getTemporaryQsoSql = "SELECT id, programid, orig_format, orig_qsodata " +
+        private const string insertQsoSql = "INSERT INTO qsodata (is_temporary, source_ip_address, is_imported, qso_time, programid, station_callsign, qso_date, qso_date_off, call, time_on, time_off, band, freq, freq_rx, mode, contest_id, rst_sent, rst_rcvd, exch_sent, exch_rcvd, operator, my_gridsquare, gridsquare, distance, comment, pfx, dxcc_pref, cqz, ituz, cont, qslmsg, dxcc, orig_format, orig_qsodata, adif_qsodata)" +
+                    " VALUES (@is_temporary, @source_ip_address, @is_imported, @qso_time, @programid, @station_callsign, @qso_date, @qso_date_off, @call, @time_on, @time_off, @band, @freq, @freq_rx, @mode, @contest_id, @rst_sent, @rst_rcvd, @exch_sent, @exch_rcvd, @operator, @my_gridsquare, @gridsquare, @distance, @comment, @pfx, @dxcc_pref, @cqz, @ituz, @cont, @qslmsg, @dxcc, @orig_format, @orig_qsodata, @adif_qsodata)";
+        private const string getTemporaryQsoSql = "SELECT id, programid, orig_format, orig_qsodata, adif_qsodata " +
             "  FROM qsodata " +
             " WHERE is_temporary = 1 AND orig_format IS NOT NULL AND orig_qsodata IS NOT NULL " +
             " ORDER BY id " +
@@ -152,7 +152,8 @@ namespace QSOCollector
                 {
                     Source = reader.GetValue(1) == DBNull.Value ? null : reader.GetString(1),
                     OriginalFormat = reader.GetString(2),
-                    QsoData = reader.GetString(3)
+                    OriginalQsoData = reader.GetString(3),
+                    AdifQsoData = reader.GetString(4)
                 };
                 qsoMessages.Add(id, qsoMessage);
             }
