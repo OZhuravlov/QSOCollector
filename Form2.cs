@@ -177,17 +177,19 @@ namespace QSOCollector
 
         private void dataGridView1_EditingControlShowing(object sender, DataGridViewEditingControlShowingEventArgs e)
         {
-            int currentColumnIndex = dataGridView1.CurrentCell.ColumnIndex;
-            int qsoPortColumnIndex = dataGridView1.Columns["qso_port"].Index;
-            int acknowledgePortColumnIndex = dataGridView1.Columns["acknowledge_port"].Index;
-            if (currentColumnIndex == qsoPortColumnIndex || currentColumnIndex == acknowledgePortColumnIndex)
-            {
-                e.Control.KeyPress += new KeyPressEventHandler(dataGridView1Port_KeyPress);
-            }
+            e.Control.KeyPress += new KeyPressEventHandler(dataGridView1Port_KeyPress);
         }
 
         private void dataGridView1Port_KeyPress(object sender, KeyPressEventArgs e)
         {
+            int currentColumnIndex = dataGridView1.CurrentCell.ColumnIndex;
+            int qsoPortColumnIndex = dataGridView1.Columns["qso_port"].Index;
+            int acknowledgePortColumnIndex = dataGridView1.Columns["acknowledge_port"].Index;
+
+            if (currentColumnIndex != qsoPortColumnIndex && currentColumnIndex != acknowledgePortColumnIndex) {
+                return;
+            }
+            
             if (!char.IsControl(e.KeyChar) && !char.IsDigit(e.KeyChar))
             {
                 e.Handled = true;

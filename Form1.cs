@@ -355,7 +355,7 @@ namespace QSOCollector
             dbRepository.SaveSetting("ClientServerPort", clientServerPortTextBox.Text);
         }
 
-        private void listenersConfigButton_Click(object sender, EventArgs e)
+        private void ListenersConfigButton_Click(object sender, EventArgs e)
         {
             new ListenersForm(connectionString).ShowDialog(this);
         }

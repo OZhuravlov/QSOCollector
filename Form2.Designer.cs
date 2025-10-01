@@ -134,9 +134,10 @@ namespace QSOCollector
             description.AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
             description.DataPropertyName = "description";
             description.HeaderText = "Description (Optional)";
+            description.MaxInputLength = 100;
             description.MinimumWidth = 6;
             description.Name = "description";
-            description.Resizable = DataGridViewTriState.True;
+            description.Resizable = DataGridViewTriState.False;
             description.SortMode = DataGridViewColumnSortMode.NotSortable;
             description.Width = 300;
             // 
