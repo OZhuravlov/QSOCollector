@@ -1,4 +1,7 @@
 using System.Collections.Concurrent;
+using System.Data;
+using System.Data.SQLite;
+using System.Globalization;
 
 namespace QSOCollector
 {
@@ -8,6 +11,9 @@ namespace QSOCollector
         private readonly string connectionString;
         private readonly DbRepository dbRepository;
         private CancellationTokenSource? clientCancellationTokenSource = new();
+        private ClientProgressUpdater? clientProgressUpdater;
+        private ServerProgressUpdater? serverProgressUpdater;
+        private DataTable serverQsoAmountDataTable;
         private TcpServer? tcpServer = null;
 
         public QsoCollectorForm(string connectionString)
@@ -82,7 +88,7 @@ namespace QSOCollector
             HandleCheckBoxForChildControls(checkbox, parent, checkbox.Checked);
         }
 
-        private void HandleCheckBoxForChildControls(CheckBox checkbox, Control parentControl, bool enabled)
+        private static void HandleCheckBoxForChildControls(CheckBox checkbox, Control parentControl, bool enabled)
         {
             foreach (Control control in parentControl.Controls)
             {
@@ -118,6 +124,7 @@ namespace QSOCollector
             enableServerCheckBox.Enabled = true;
             serverPortTextBox.Enabled = true;
             startServerButton.Text = "Start Server";
+            serverLogTextBox.AppendText("Server stopped...\r\n");
             UpdateButton(startServerButton, true, Color.DarkSeaGreen);
             UpdateButton(stopServerButton, false);
         }
@@ -137,8 +144,31 @@ namespace QSOCollector
 
         private async void StartServer(int port)
         {
-            tcpServer = new(port);
-            await tcpServer.Start(connectionString, serverLogTextBox);
+            serverQsoAmountsDataGridView.DataSource = serverQsoAmountsBindingSource;
+            GetDataForServerQsoAmountDataGridView(connectionString, "SELECT mode QsoAmountMode, COUNT(CASE WHEN qso_time >= current_date THEN 1 END) TodayQsoAmount, count(*) TotalQsoAmount, COUNT(q.exported_time) ExportedQsoAmount, MAX(qso_time) LastQsoTime, MAX(q.exported_time) LastExportedQsoTime FROM qsodata q WHERE q.is_temporary = false GROUP BY mode UNION ALL SELECT 'Total', COUNT(CASE WHEN qso_time >= current_date THEN 1 END), COUNT(*), COUNT(q.exported_time), MAX(qso_time), MAX(q.exported_time) FROM qsodata q WHERE q.is_temporary = false");
+            serverProgressUpdater = new(serverQsoAmountDataTable, serverLogTextBox);
+            tcpServer = new(port, serverProgressUpdater);
+            await tcpServer.Start(connectionString);
+        }
+
+        private void GetDataForServerQsoAmountDataGridView(string connectionString, string selectCommand)
+        {
+            try
+            {
+                serverQsoAmountsDataAdapter = new SQLiteDataAdapter(selectCommand, connectionString);
+                SQLiteCommandBuilder commandBuilder = new SQLiteCommandBuilder(serverQsoAmountsDataAdapter);
+                serverQsoAmountDataTable = new()
+                {
+                    Locale = CultureInfo.InvariantCulture
+                };
+                serverQsoAmountsDataAdapter.Fill(serverQsoAmountDataTable);
+                serverQsoAmountDataTable.PrimaryKey = new DataColumn[] { serverQsoAmountDataTable.Columns["QsoAmountMode"] };
+                serverQsoAmountsBindingSource.DataSource = serverQsoAmountDataTable;
+            }
+            catch (SQLiteException ex)
+            {
+                MessageBox.Show($"Can't retrieve data from DB: {ex.Message}");
+            }
         }
 
         private static void UpdateButton(Button button, bool enabled)
@@ -231,19 +261,32 @@ namespace QSOCollector
             string serverIp = clientServerNameIpTextBox.Text;
             int serverPort = Int32.Parse(clientServerPortTextBox.Text);
             BlockingCollection<QsoMessage> qsoMessageQueue = [];
+            clientProgressUpdater = new(
+                clientQsoReceivedCountLabel,
+                clientQsoReceviedAtLabel,
+                clientQsoSentToServerCountLabel,
+                clientQsoSentToServerAtLabel,
+                clientQsoTempSavedCountLabel,
+                clientQsoTempSavedAtLabel,
+                clientQsoRejectedCountLabel,
+                clientQsoRejectedAtLabel,
+                clientServerStatusValueLabel,
+                clientServerCheckedAtLabel,
+                clientLogTextBox);
+            clientProgressUpdater.IsDebug = clientLogDetailsCheckBox.Checked;
 
-            QsoMessageSender qsoMessageSender = StartQsoMessageHandler(qsoMessageQueue, serverIp, serverPort);
+            QsoMessageSender qsoMessageSender = StartQsoMessageHandler(qsoMessageQueue, serverIp, serverPort, clientProgressUpdater);
             if (!qsoMessageSender.IsConnected())
             {
-                MessageBox.Show($"Looks like server is not valable by address {serverIp}:{serverPort}. Please make sure it started", "Server not available", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show($"Looks like server is not avalable by address {serverIp}:{serverPort}. Please make sure it started", "Server not available", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-            StartTemporarelySavedQsoHandler(qsoMessageQueue, qsoMessageSender);
+            StartTemporarelySavedQsoHandler(qsoMessageQueue, qsoMessageSender, clientProgressUpdater);
 
             foreach (var listenerConfig in listeners)
             {
-                StartClientUdpListener(listenerConfig, qsoMessageQueue);
+                StartClientUdpListener(listenerConfig, qsoMessageQueue, clientProgressUpdater);
             }
             enableClientCheckBox.Enabled = false;
             clientServerNameIpTextBox.Enabled = false;
@@ -254,25 +297,25 @@ namespace QSOCollector
             UpdateButton(stopClientButton, true, Color.RosyBrown);
         }
 
-        private QsoMessageSender StartQsoMessageHandler(BlockingCollection<QsoMessage> qsoMessageQueue, string serverIp, int serverPort)
+        private QsoMessageSender StartQsoMessageHandler(BlockingCollection<QsoMessage> qsoMessageQueue, string serverIp, int serverPort, ClientProgressUpdater clientProgressUpdater)
         {
             CancellationTokenSource qsoMessageSenderCancellationTokenSource = CreateLinkedClientCancellationTokenSource();
-            var sender = new QsoMessageSender(serverIp, serverPort, qsoMessageQueue, dbRepository, clientLogTextBox, qsoMessageSenderCancellationTokenSource);
+            var sender = new QsoMessageSender(serverIp, serverPort, qsoMessageQueue, dbRepository, clientProgressUpdater, qsoMessageSenderCancellationTokenSource);
             if (sender.IsConnected()) Task.Run(() => sender.Start());
             return sender;
         }
 
-        private void StartTemporarelySavedQsoHandler(BlockingCollection<QsoMessage> qsoMessageQueue, QsoMessageSender qsoMessageHandler)
+        private void StartTemporarelySavedQsoHandler(BlockingCollection<QsoMessage> qsoMessageQueue, QsoMessageSender qsoMessageHandler, ClientProgressUpdater progressUpdater)
         {
             CancellationTokenSource temporarelySavedQsoHandlerCancellationTokenSource = CreateLinkedClientCancellationTokenSource();
-            var handler = new TemporarelySavedQsoHandler(dbRepository, qsoMessageQueue, qsoMessageHandler, clientLogTextBox, temporarelySavedQsoHandlerCancellationTokenSource);
+            var handler = new TemporarelySavedQsoHandler(dbRepository, qsoMessageQueue, qsoMessageHandler, progressUpdater, temporarelySavedQsoHandlerCancellationTokenSource);
             Task.Run(() => handler.Start());
         }
 
-        private void StartClientUdpListener(ListenerConfig listenerConfig, BlockingCollection<QsoMessage> qsoMessageQueue)
+        private void StartClientUdpListener(ListenerConfig listenerConfig, BlockingCollection<QsoMessage> qsoMessageQueue, ClientProgressUpdater clientProgressUpdater)
         {
             CancellationTokenSource clientUdpListenerCancellationTokenSource = CreateLinkedClientCancellationTokenSource();
-            var listener = new UdpClientListener(listenerConfig, qsoMessageQueue, clientLogTextBox, clientUdpListenerCancellationTokenSource);
+            var listener = new UdpClientListener(listenerConfig, qsoMessageQueue, clientProgressUpdater, clientUdpListenerCancellationTokenSource);
             Task.Run(() => listener.Start());
         }
 
@@ -299,10 +342,14 @@ namespace QSOCollector
                 clientCancellationTokenSource.Dispose();
                 clientCancellationTokenSource = new CancellationTokenSource();
             }
+            clientProgressUpdater = null;
             enableClientCheckBox.Enabled = true;
             clientServerNameIpTextBox.Enabled = true;
             clientServerPortTextBox.Enabled = true;
             startClientButton.Text = "Start Client";
+            clientServerStatusValueLabel.Text = "Unknown";
+            clientServerStatusValueLabel.ForeColor = Color.Gray;
+            clientServerCheckedAtLabel.Text = "---";
             UpdateButton(startClientButton, true, Color.DarkSeaGreen);
             UpdateButton(stopClientButton, false);
         }
@@ -358,6 +405,22 @@ namespace QSOCollector
         private void ListenersConfigButton_Click(object sender, EventArgs e)
         {
             new ListenersForm(connectionString).ShowDialog(this);
+        }
+
+        private void clientLogDetailsCheckBox_CheckedChanged(object sender, EventArgs e)
+        {
+            if (clientProgressUpdater != null)
+            {
+                clientProgressUpdater.IsDebug = clientLogDetailsCheckBox.Checked;
+            }
+        }
+
+        private void serverShowLogDetailsCheckBox_CheckedChanged(object sender, EventArgs e)
+        {
+            if (serverProgressUpdater != null)
+            {
+                serverProgressUpdater.IsDebug = serverShowLogDetailsCheckBox.Checked;
+            }
         }
     }
 }

@@ -5,29 +5,32 @@ namespace QSOCollector
 {
     internal class TcpClientInstance
     {
-        private TcpClient? client;
+        private readonly TcpClient? client;
         private NetworkStream? stream;
         private StreamReader? r;
         private StreamWriter? w;
+        private readonly ClientProgressUpdater progressUpdater;
 
-        public TcpClientInstance(string ipAddress, int port)
+        public TcpClientInstance(string ipAddress, int port, ClientProgressUpdater progressUpdater)
         {
             client = new TcpClient();
             client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseUnicastPort, true);
             client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
             client.Connect(ipAddress, port);
+            this.progressUpdater = progressUpdater;
         }
 
         public bool IsConnected() {
             return client != null && client.Connected;
         }
 
-        public async Task SendMessage(string qsoMessage, TextBox clientLogTextBox, int responseDelay)
+        public async Task SendMessage(string qsoMessage, int responseDelay, string source, bool isTest)
         {
             qsoMessage = qsoMessage.Replace("\r\n", string.Empty).Replace("\n", string.Empty).Trim();
             if (string.IsNullOrEmpty(qsoMessage)) return;
 
-            if (!IsConnected()) {
+            if (!IsConnected())
+            {
                 throw new SocketException((int)SocketError.ConnectionAborted);
             }
 
@@ -44,7 +47,19 @@ namespace QSOCollector
             w.WriteLine(qsoMessage);
             string? responseMessage = await r.ReadLineAsync(new CancellationTokenSource(responseDelay).Token);
             ServerResponse serverResponse = JsonSerializer.Deserialize<ServerResponse>(responseMessage);
-            LogToTextBox(clientLogTextBox, serverResponse.ToString());
+            if (!string.IsNullOrEmpty(serverResponse?.ErrorDescription))
+            {
+                progressUpdater.UpdateLog($"Server returned an error: {responseMessage}");
+            }
+            else
+            {
+                if (!isTest) {
+                    progressUpdater.UpdateProgress(false, true, false, false, $"QSO from {source} sent to server");
+                }
+                progressUpdater.UpdateLog(qsoMessage, true);
+                progressUpdater.UpdateLog($"Server response: {responseMessage}", true);
+                progressUpdater.UpdateServerStatus("Active", null);
+            }
         }
 
         public void Terminate() {
@@ -53,14 +68,6 @@ namespace QSOCollector
                 client.Close();
                 client.Dispose();
             }
-        }
-
-        private void LogToTextBox(TextBox logTextBox, String message)
-        {
-            logTextBox.Invoke((MethodInvoker)delegate
-            {
-                logTextBox.AppendText($"{message}\r\n");
-            });
         }
     }
 }

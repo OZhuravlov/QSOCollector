@@ -1,15 +1,9 @@
 namespace QSOCollector
 {
-    public class ServerResponse
+    public class ServerResponse(ServerResponseStatus status, string? errorDescription = null)
     {
-        public ServerResponseStatus Status { get; set; }
-        public string? ErrorDescription { get; set; }
-
-        public ServerResponse(ServerResponseStatus status, string? errorDescription = null)
-        {
-            Status = status;
-            ErrorDescription = errorDescription;
-        }
+        public ServerResponseStatus Status { get; set; } = status;
+        public string? ErrorDescription { get; set; } = errorDescription;
 
         public override string ToString()
         {

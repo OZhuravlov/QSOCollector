@@ -6,53 +6,40 @@ namespace QSOCollector
 {
     public class UdpClientListener(
         ListenerConfig listenerConfig, BlockingCollection<QsoMessage> qsoMessageQueue, 
-        TextBox logTextBox, CancellationTokenSource cancellationTokenSource)
+        ClientProgressUpdater progressUpdater, CancellationTokenSource cancellationTokenSource)
     {
         public async Task Start()
         {
             int localPort = listenerConfig.QsoPort;
             using UdpClient udpClient = new(localPort);
-            LogToTextBox($"UDP Port {localPort} Listener started");
+            progressUpdater.UpdateLog($"UDP Port {localPort} ({listenerConfig.Description}) Listener started");
             CancellationToken cancellationToken = cancellationTokenSource.Token;
 
             while (!cancellationToken.IsCancellationRequested)
             {
-                string receivedData = string.Empty;
                 try
                 {
                     var receivedResults = await udpClient.ReceiveAsync(cancellationToken);
                     byte[] receivedBytes = receivedResults.Buffer;
-                    receivedData = Encoding.UTF8.GetString(receivedBytes);
+                    string receivedData = Encoding.UTF8.GetString(receivedBytes);
 
-                    QsoMessage qsoMessage = new() { OriginalFormat = listenerConfig.MessageFormat, OriginalQsoData = receivedData };
-                    LogToTextBox(receivedData);
+                    QsoMessage qsoMessage = new() { Source = listenerConfig.Description, OriginalFormat = listenerConfig.MessageFormat, OriginalQsoData = receivedData };
                     qsoMessageQueue.Add(qsoMessage);
+                    progressUpdater.UpdateProgress(true, false, false, false, $"QSO received on port {localPort} ({listenerConfig.Description})");
+                    progressUpdater.UpdateLog($"Data: {receivedData}", true);
                 }
-                catch (OperationCanceledException)
+                catch (Exception ex)
                 {
                     udpClient.Close();
                     udpClient.Dispose();
                     cancellationTokenSource.Dispose();
-                    LogToTextBox($"UDP Port {localPort} Listener was stopped");
-                    break;
-                }
-                catch (Exception)
-                {
-                    udpClient.Close();
-                    udpClient.Dispose();
-                    cancellationTokenSource.Dispose();
-                    LogToTextBox($"!!!UDP Port {localPort} Listener unexpectedly stopped");
+                    string message = (ex is OperationCanceledException)
+                        ? $"UDP Port {localPort} ({listenerConfig.Description}) Listener was stopped"
+                        : $"!!!UDP Port {localPort} ({listenerConfig.Description}) Listener unexpectedly stopped";
+                    progressUpdater.UpdateLog(message);
                     break;
                 }
             }
-        }
-
-        private void LogToTextBox(String message)
-        {
-            logTextBox.Invoke((MethodInvoker)delegate
-            {
-                logTextBox.AppendText($"{message}\r\n");
-            });
         }
     }
 }

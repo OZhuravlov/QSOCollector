@@ -13,12 +13,14 @@ namespace QSOCollector
         private bool running;
         private readonly List<Client> clients = [];
         private readonly CancellationTokenSource cts;
+        private readonly ServerProgressUpdater serverProgressUpdater;
 
-        public TcpServer(int port)
+        public TcpServer(int port, ServerProgressUpdater serverProgressUpdater)
         {
             IPAddress ip = IPAddress.Loopback;
             ipEndPoint = new(ip, port);
             cts = new CancellationTokenSource();
+            this.serverProgressUpdater = serverProgressUpdater;
         }
 
         public void Stop()
@@ -27,12 +29,12 @@ namespace QSOCollector
             cts.Cancel();
         }
 
-        public async Task Start(string connectionString, TextBox serverLogTextBox)
+        public async Task Start(string connectionString)
         {
-            await Run(connectionString, serverLogTextBox);
+            await Run(connectionString);
         }
 
-        private async Task Run(string connectionString, TextBox serverLogTextBox)
+        private async Task Run(string connectionString)
         {
             listener = new(ipEndPoint);
             listener.Start();
@@ -43,7 +45,7 @@ namespace QSOCollector
                 try
                 {
                     TcpClient tcpClient = await listener.AcceptTcpClientAsync(cts.Token);
-                    Client client = new(tcpClient, clientCancellationTokenSource, serverLogTextBox);
+                    Client client = new(tcpClient, clientCancellationTokenSource, serverProgressUpdater);
                     clients.Add(client);
                     Task clientTask = client.Run(connectionString); //don't await
                     clientTask.ContinueWith(t => clients.Remove(client));
@@ -58,7 +60,7 @@ namespace QSOCollector
         }
     }
 
-    internal class Client(TcpClient client, CancellationTokenSource clientCancellationTokenSource, TextBox serverLogTextBox)
+    internal class Client(TcpClient client, CancellationTokenSource clientCancellationTokenSource, ServerProgressUpdater serverProgressUpdater)
     {
         private readonly NetworkStream stream = client.GetStream();
         private readonly string clientIPAddress = ((IPEndPoint)client.Client.RemoteEndPoint).Address.ToString();
@@ -80,15 +82,23 @@ namespace QSOCollector
                 if (qsoMessage == null) continue;
 
                 ServerResponse response;
+                List<Dictionary<string, string>> qsoRecords = [];
                 try
                 {
-                    List<Dictionary<string, string>> qsoRecords = ParseAdif(qsoMessage);
-                    if (qsoRecords.Count == 0)
-                    {
-                        throw new ArgumentException("No valid QSO records found in ADIF data");
-                    }
+                    if (!qsoMessage.IsTest) {
+                        qsoRecords = ParseQsoMessage(qsoMessage);
+                        if (qsoRecords.Count == 0)
+                        {
+                            throw new ArgumentException("No valid QSO records found in ADIF data");
+                        }
 
-                    dbRepository.SaveQsoRecords(qsoRecords, isImported: false, isTemporary: false);
+                        dbRepository.SaveQsoRecords(qsoRecords, isImported: false, isTemporary: false);
+                        serverProgressUpdater.UpdateLog($"{qsoMessage}", true);
+                        foreach (var item in qsoRecords)
+                        {
+                            serverProgressUpdater.UpdateProgress(ServerProgressUpdater.ParseDateTime(item["QSO_TIME"]), item["MODE"], null);
+                        }
+                    }
                     response = new ServerResponse(ServerResponseStatus.Ok);
                 }
                 catch (SqliteException ex)
@@ -109,12 +119,20 @@ namespace QSOCollector
                     response = new ServerResponse(ServerResponseStatus.UnknownError, ex.Message);
                 }
 
-                LogToTextBox(response.ToString());
+                if (qsoMessage.IsTest)
+                {
+                    serverProgressUpdater.UpdateLog($"{qsoMessage.Source}: {response}", true);
+                }
+                else {
+                    var rec = qsoRecords[qsoRecords.Count - 1];
+                    string message = $"{rec["QSO_TIME"]} {rec["SOURCE_IP_ADDRESS"]} {rec["PROGRAMID"]} {rec["MODE"]} {qsoRecords.Count} QSO added";
+                    serverProgressUpdater.UpdateLog(message);
+                }
                 await w.WriteLineAsync(JsonSerializer.Serialize<ServerResponse>(response));
             }
         }
 
-        private List<Dictionary<string, string>> ParseAdif(QsoMessage qsoMessage)
+        private List<Dictionary<string, string>> ParseQsoMessage(QsoMessage qsoMessage)
         {
             List<Dictionary<string, string>> qsoRecords = [];
             try
@@ -126,34 +144,28 @@ namespace QSOCollector
                     _ => throw new ArgumentException($"Unsupported message format: {qsoMessage.OriginalFormat}"),
                 };
 
-                // Log parsed records
-                foreach (var record in qsoRecords)
-                {
-                    StringBuilder logMessage = new StringBuilder();
-                    foreach (var kv in record)
+                if (serverProgressUpdater.IsDebug) {
+                    // Log parsed records
+                    foreach (var record in qsoRecords)
                     {
-                        logMessage.AppendLine(kv.Key + ": " + kv.Value);
+                        StringBuilder logMessage = new StringBuilder();
+                        foreach (var kv in record)
+                        {
+                            logMessage.AppendLine(kv.Key + ": " + kv.Value);
+                        }
+                        logMessage.AppendLine("----");
+                        serverProgressUpdater.UpdateLog(logMessage.ToString(), true);
                     }
-                    logMessage.AppendLine("----");
-                    LogToTextBox(logMessage.ToString());
+                    serverProgressUpdater.UpdateLog("----", true);
                 }
-                LogToTextBox("----");
             }
             catch (Exception ex)
             {
                 // Handle parsing errors
-                LogToTextBox($"ADIF parsing error: {ex.Message}");
+                serverProgressUpdater.UpdateLog($"ADIF parsing error: {ex.Message}", true);
                 throw new ArgumentException("ADIF parsing error", ex);
             }
             return qsoRecords;
-        }
-
-        private void LogToTextBox(String message)
-        {
-            serverLogTextBox.Invoke((MethodInvoker)delegate
-            {
-                serverLogTextBox.AppendText($"{message}\r\n");
-            });
         }
     }
 }

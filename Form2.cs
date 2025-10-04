@@ -19,10 +19,10 @@ namespace QSOCollector
             // Bind the DataGridView to the BindingSource
             // and load the data from the database.
             dataGridView1.DataSource = bindingSource1;
-            GetData(connectionString, "select id, protocol, qso_port, acknowledge_port, message_format, is_active, description from listeners");
+            GetListenersConfigDataForDataGridView1(connectionString, "select id, protocol, qso_port, acknowledge_port, message_format, is_active, description from listeners");
         }
 
-        private void GetData(string connectionString, string selectCommand)
+        private void GetListenersConfigDataForDataGridView1(string connectionString, string selectCommand)
         {
             try
             {
@@ -34,7 +34,7 @@ namespace QSOCollector
                 SQLiteCommandBuilder commandBuilder = new SQLiteCommandBuilder(dataAdapter);
 
                 // Populate a new data table and bind it to the BindingSource.
-                DataTable table = new DataTable
+                DataTable table = new()
                 {
                     Locale = CultureInfo.InvariantCulture
                 };
@@ -45,11 +45,9 @@ namespace QSOCollector
                 // dataGridView1.AutoResizeColumns(
                 //     DataGridViewAutoSizeColumnsMode.AllCellsExceptHeader);
             }
-            catch (SQLiteException)
+            catch (SQLiteException ex)
             {
-                MessageBox.Show("To run this example, replace the value of the " +
-                    "connectionString variable with a connection string that is " +
-                    "valid for your system.");
+                MessageBox.Show($"Can't retrieve data from DB: {ex.Message}");
             }
         }
 

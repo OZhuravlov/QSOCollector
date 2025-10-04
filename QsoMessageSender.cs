@@ -1,7 +1,6 @@
 using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
 using System.Text.Json;
 
 namespace QSOCollector
@@ -14,33 +13,40 @@ namespace QSOCollector
         private readonly int serverPort;
         private readonly BlockingCollection<QsoMessage> qsoMessageQueue;
         private readonly DbRepository dbRepository;
-        private readonly TextBox logTextBox;
+        private readonly ClientProgressUpdater progressUpdater;
         private readonly CancellationTokenSource cancellationTokenSource;
         private TcpClientInstance? tcpClient;
 
-        public QsoMessageSender(string serverIp, int serverPort, BlockingCollection<QsoMessage> qsoMessageQueue, 
-            DbRepository dbRepository, TextBox logTextBox, CancellationTokenSource cancellationTokenSource)
+        public QsoMessageSender(string serverIp, int serverPort, BlockingCollection<QsoMessage> qsoMessageQueue,
+            DbRepository dbRepository, ClientProgressUpdater progressUpdater, CancellationTokenSource cancellationTokenSource)
         {
             this.serverIp = serverIp;
             this.serverPort = serverPort;
             this.qsoMessageQueue = qsoMessageQueue;
             this.dbRepository = dbRepository;
-            this.logTextBox = logTextBox;
+            this.progressUpdater = progressUpdater;
             this.cancellationTokenSource = cancellationTokenSource;
             try
             {
-                tcpClient = new TcpClientInstance(serverIp, serverPort);
+                tcpClient = new TcpClientInstance(serverIp, serverPort, progressUpdater);
+                progressUpdater.UpdateServerStatus("Active", null);
             }
-            catch (SocketException ex) {
+            catch (SocketException ex)
+            {
                 tcpClient = null;
-                LogToTextBox($"Unexpected error while creating QSO sender: {ex.Message}");
+                progressUpdater.UpdateServerStatus("Unavailable", $"Unexpected error while creating QSO sender: {ex.Message}");
             }
-            
+
         }
 
         public bool IsConnected()
         {
-            return tcpClient != null && tcpClient.IsConnected();
+            bool isConnected = tcpClient != null && tcpClient.IsConnected();
+            if (!isConnected)
+            {
+                progressUpdater.UpdateServerStatus("Unavailable", "Not connected to server");
+            }
+            return isConnected;
         }
 
         public async Task Start()
@@ -50,11 +56,20 @@ namespace QSOCollector
                 QsoMessage qsoMessage;
                 try
                 {
-                    qsoMessage = qsoMessageQueue.Take();
+                    if (!qsoMessageQueue.TryTake(out qsoMessage, 5000))
+                    {
+                        if (cancellationTokenSource.IsCancellationRequested)
+                        {
+                            progressUpdater.UpdateLog("Qso Message handler has been stopped");
+                            return;
+                        }
+                        await SendToServer(new() { Source = "TEST" });
+                        continue;
+                    }
                 }
                 catch (InvalidOperationException)
                 {
-                    LogToTextBox("Qso Message handler has been stopped");
+                    progressUpdater.UpdateLog("Qso Message handler has been stopped");
                     return;
                 }
 
@@ -62,44 +77,68 @@ namespace QSOCollector
                 {
                     if (cancellationTokenSource.IsCancellationRequested)
                     {
-                        SaveTemporarelyToDb(qsoMessage, "Client to be stopped requested");
+                        HandleServerConnectionError(qsoMessage, "Client to be stopped requested");
                     }
                     else
                     {
-                        string qsoMessageJson = JsonSerializer.Serialize<QsoMessage>(qsoMessage);
-                        try
-                        {
-                            if (!tcpClient.IsConnected())
-                            {
-                                tcpClient = new(serverIp, serverPort);
-                            }
-                            await tcpClient.SendMessage(qsoMessageJson, logTextBox, responseTimeoutMs);
-                        }
-                        catch (OperationCanceledException ex)
-                        {
-                            SaveTemporarelyToDb(qsoMessage, $"Error sending to server: {ex.Message}");
-                        }
-                        catch (SocketException ex)
-                        {
-                            SaveTemporarelyToDb(qsoMessage, $"Socket Connection error: {ex.Message}");
-                            await Task.Delay(TimeSpan.FromSeconds(1));
-                        }
+                        await SendToServer(qsoMessage);
                     }
                 }
                 catch (ArgumentException ex)
                 {
-                    LogToTextBox($"Incorrect {qsoMessage.OriginalFormat} format, source {qsoMessage.Source}, data: {qsoMessage.OriginalQsoData}\r\n: {ex}\r\nIgnored");
+                    progressUpdater.UpdateProgress(false, false, false, true,
+                        $"Incorrect {qsoMessage.OriginalFormat} format, source {qsoMessage.Source}, data: {qsoMessage.OriginalQsoData}\r\n: {ex}\r\nIgnored");
                     continue;
                 }
             }
         }
 
-        private void SaveTemporarelyToDb(QsoMessage qsoMessage, string logMessage)
+        private async Task SendToServer(QsoMessage qsoMessage)
         {
-            LogToTextBox($"{logMessage}\r\nTemporarely saving to local Database");
+            string qsoMessageJson = JsonSerializer.Serialize<QsoMessage>(qsoMessage);
+            try
+            {
+                bool retry = false;
+                int i = 3;
+                do
+                {
+                    try
+                    {
+                        await tcpClient.SendMessage(qsoMessageJson, responseTimeoutMs, qsoMessage.Source, qsoMessage.IsTest);
+                        retry = false;
+                    }
+                    catch (Exception ex)
+                    {
+                        if (i-- > 0)
+                        {
+                            retry = true;
+                            tcpClient = new(serverIp, serverPort, progressUpdater);
+                            await Task.Delay(TimeSpan.FromSeconds(1));
+                            continue;
+                        }
+                        throw;
+                    }
+                } while (retry);
+            }
+            catch (OperationCanceledException)
+            {
+                HandleServerConnectionError(qsoMessage, "Connection to Server has been cancelled");
+            }
+            catch (SocketException)
+            {
+                HandleServerConnectionError(qsoMessage, "Looks like server is not available");
+            }
+        }
+
+        private void HandleServerConnectionError(QsoMessage qsoMessage, string logMessage)
+        {
+            progressUpdater.UpdateServerStatus("Unavailable", logMessage);
+            if (qsoMessage.IsTest) return;
+            progressUpdater.UpdateLog($"The following QSO messages will be temporarely saved to local DB:\n{qsoMessage}", true);
             List<Dictionary<string, string>> qsoRecords = ParseMessage(qsoMessage);
             dbRepository.SaveQsoRecords(qsoRecords, isImported: false, isTemporary: true);
-            LogToTextBox($"Saved to local Database");
+            progressUpdater.UpdateTempSaved(qsoRecords.Count);
+            progressUpdater.UpdateLog($"{qsoRecords.Count} QSOs from {qsoMessage.Source} saved to local Database");
         }
 
         private List<Dictionary<string, string>> ParseMessage(QsoMessage qsoMessage)
@@ -114,32 +153,12 @@ namespace QSOCollector
                     "N1MM" => N1mmContactInfoToTableFieldsMapper.Map(qsoMessage, sourceIpAddress),
                     _ => throw new ArgumentException($"Unsupported message format: {qsoMessage.OriginalFormat}"),
                 };
-
-                foreach (var record in qsoRecords)
-                {
-                    StringBuilder logMessage = new();
-                    foreach (var kv in record)
-                    {
-                        logMessage.AppendLine($"{kv.Key}: {kv.Value})");
-                    }
-                    logMessage.Append("----");
-                    LogToTextBox(logMessage.ToString());
-                }
             }
             catch (Exception ex)
             {
-                LogToTextBox($"QSO message parsing error: {ex.Message}");
                 throw new ArgumentException("QSO message parsing error", ex);
             }
             return qsoRecords;
-        }
-
-        private void LogToTextBox(String message)
-        {
-            logTextBox.Invoke((MethodInvoker)delegate
-            {
-                logTextBox.AppendText($"{message}\r\n");
-            });
         }
     }
 }

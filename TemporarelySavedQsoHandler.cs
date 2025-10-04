@@ -3,7 +3,7 @@ using System.Collections.Concurrent;
 namespace QSOCollector
 {
     public class TemporarelySavedQsoHandler(DbRepository dbRepository, BlockingCollection<QsoMessage> qsoMessageQueue,
-        QsoMessageSender qsoMessageSender, TextBox logTextBox, CancellationTokenSource cancellationTokenSource)
+        QsoMessageSender qsoMessageSender, ClientProgressUpdater progressUpdater, CancellationTokenSource cancellationTokenSource)
     {
 
         public async Task Start()
@@ -23,8 +23,9 @@ namespace QSOCollector
                         {
                             qsoMessageQueue.Add(qsoMessage.Value);
                             dbRepository.DeleteTemporaryQsoRecord(qsoMessage.Key);
-                            LogToTextBox($"Put QSO id {qsoMessage.Key} to be resent:{qsoMessage.Value.OriginalQsoData}");
+                            progressUpdater.UpdateLog($"Resend to server locally saved QSO id {qsoMessage.Key} from {qsoMessage.Value.Source}");
                         }
+                        progressUpdater.UpdateTempSaved(-tempQsoMessages.Count);
                     }
                     await Task.Delay(TimeSpan.FromMinutes(1), cancellationToken);
                 }
@@ -32,23 +33,15 @@ namespace QSOCollector
                 {
                     cancellationTokenSource.Dispose();
                     qsoMessageQueue.CompleteAdding();
-                    LogToTextBox("TemporarelySavedQsoResender stopped");
+                    progressUpdater.UpdateLog("Saved Qso resender stopped");
                     break;
                 }
                 catch (Exception ex)
                 {
-                    LogToTextBox($"Error when try to put temporarely saved QSOs for reprocessing: {ex}");
+                    progressUpdater.UpdateLog($"Error when try to put temporarely saved QSOs for reprocessing: {ex}");
                     break;
                 }
             }
-        }
-
-        private void LogToTextBox(String message)
-        {
-            logTextBox.Invoke((MethodInvoker)delegate
-            {
-                logTextBox.AppendText($"{message}\r\n");
-            });
         }
     }
 }

@@ -55,6 +55,7 @@ namespace QSOCollector
                 string adifRecord = record + endOfRecord;
                 qsoMap["ORIG_QSODATA"] = qsoMessage.OriginalFormat == "ADIF" ? adifRecord : qsoMessage.OriginalQsoData;
                 qsoMap["ADIF_QSODATA"] = adifRecord;
+                qsoMap["QSO_TIME"] = GetQsoTime(qsoMap).ToString("yyyy-MM-dd HH:mm:ss");
                 result.Add(qsoMap);
             }
 
@@ -83,6 +84,35 @@ namespace QSOCollector
 
                 pos = match.Index + match.Length;
             }
+        }
+
+        private static DateTime GetQsoTime(Dictionary<string, string?> qsoRecord)
+        {
+            string? adifQsoDate = null;
+            string? adifQsoTime = null;
+            if (qsoRecord.ContainsKey("QSO_DATE_OFF") && qsoRecord.ContainsKey("TIME_OFF"))
+            {
+                adifQsoDate = qsoRecord["QSO_DATE_OFF"]!;
+                adifQsoTime = qsoRecord["TIME_OFF"]!;
+            }
+
+            if (string.IsNullOrEmpty(adifQsoDate) || string.IsNullOrEmpty(adifQsoTime))
+            {
+                adifQsoDate = qsoRecord["QSO_DATE"]!;
+                adifQsoTime = qsoRecord["TIME_ON"]!;
+            }
+
+            if (string.IsNullOrEmpty(adifQsoDate) || string.IsNullOrEmpty(adifQsoTime))
+            {
+                throw new ArgumentException("QSO_DATE or TIME is missing or empty in the QSO record.");
+            }
+
+            string dateTimeString = $"{adifQsoDate} {adifQsoTime}";
+            if (DateTime.TryParseExact(dateTimeString, "yyyyMMdd HHmmss"[..dateTimeString.Length], null, System.Globalization.DateTimeStyles.AdjustToUniversal, out DateTime qsoTime))
+            {
+                return qsoTime;
+            }
+            throw new ArgumentException("Cannot convert ADIF QSO Date and Time to DATETIME value"); ;
         }
     }
 }
