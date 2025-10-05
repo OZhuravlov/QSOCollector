@@ -13,6 +13,13 @@ namespace QSOCollector
         [STAThread]
         static void Main()
         {
+            using Mutex mutex = new(false, "Global\\" + appGuid);
+            if (!mutex.WaitOne(0, false))
+            {
+                MessageBox.Show("Instance already running");
+                return;
+            }
+
             Batteries.Init();
             // To customize application configuration such as set high DPI settings or default font,
             // see https://aka.ms/applicationconfiguration.
@@ -24,6 +31,8 @@ namespace QSOCollector
             RunMigrations(connectionString);
             Application.Run(new QsoCollectorForm(connectionString));
         }
+
+        private static string appGuid = "dce43cbd-39a4-49df-9e4e-4e3e85adfd83";
 
         static string InitializeDatabase(string dbPath, string dbFileName)
         {

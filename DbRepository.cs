@@ -11,6 +11,7 @@ namespace QSOCollector
         private const string insertSettingsSql = "INSERT OR REPLACE INTO settings (key, value) VALUES (@key, @value)";
         private const string getListenerConfigsSql = "SELECT id as Id, protocol as Protocol, qso_port as QsoPort, acknowledge_port as AcknowledgePort, message_format as MessageFormat, is_active IsActive, description as Description FROM listeners WHERE is_active = true";
         private const string getServerQsoAmountsSql = "SELECT mode QsoAmountMode, COUNT(CASE WHEN qso_time >= current_date THEN 1 END) TodayQsoAmount, count(*) TotalQsoAmount, COUNT(q.exported_time) ExportedQsoAmount, MAX(qso_time) LastQsoTime, MAX(q.exported_time) LastExportedQsoTime FROM qsodata q WHERE q.is_temporary = false GROUP BY mode UNION ALL SELECT 'Total', COUNT(CASE WHEN qso_time >= current_date THEN 1 END), COUNT(*), COUNT(q.exported_time), MAX(qso_time), MAX(q.exported_time) FROM qsodata q WHERE q.is_temporary = false";
+        private const string getQsoAmountsForExportSql = "SELECT COALESCE(q.programid, '<UNKNOWN>') ProgramId, q.exported_time IS NOT NULL IsExported, DATE(q.qso_time) QsoDate, CASE WHEN q.mode NOT IN ('SSB', 'CW') THEN 'DATA' ELSE q.mode END ModeGroup, q.mode Mode, q.band Band, COALESCE(q.operator, '<UNKNOWN>') Operator, COALESCE(q.source_ip_address, '<UNKNOWN>') SourceIp, count(*) Count FROM qsodata q WHERE q.is_temporary = false GROUP BY COALESCE(q.programid, '<UNKNOWN>'), q.exported_time IS NOT NULL, DATE(q.qso_time), CASE WHEN q.mode NOT IN ('SSB', 'CW') THEN 'DATA' ELSE q.mode END, q.mode, q.band, COALESCE(q.operator, '<UNKNOWN>'), COALESCE(q.source_ip_address, '<UNKNOWN>')";
         private const string insertQsoSql = "INSERT INTO qsodata (is_temporary, source_ip_address, is_imported, qso_time, programid, station_callsign, qso_date, qso_date_off, call, time_on, time_off, band, freq, freq_rx, mode, contest_id, rst_sent, rst_rcvd, exch_sent, exch_rcvd, operator, my_gridsquare, gridsquare, distance, comment, pfx, dxcc_pref, cqz, ituz, cont, qslmsg, dxcc, orig_format, orig_qsodata, adif_qsodata)" +
                     " VALUES (@is_temporary, @source_ip_address, @is_imported, @qso_time, @programid, @station_callsign, @qso_date, @qso_date_off, @call, @time_on, @time_off, @band, @freq, @freq_rx, @mode, @contest_id, @rst_sent, @rst_rcvd, @exch_sent, @exch_rcvd, @operator, @my_gridsquare, @gridsquare, @distance, @comment, @pfx, @dxcc_pref, @cqz, @ituz, @cont, @qslmsg, @dxcc, @orig_format, @orig_qsodata, @adif_qsodata)";
         private const string getTemporaryQsoSql = "SELECT id, programid, orig_format, orig_qsodata, adif_qsodata " +
@@ -76,6 +77,16 @@ namespace QSOCollector
             command.CommandText = getServerQsoAmountsSql;
             using var reader = command.ExecuteReader();
             return GetData<ServerQsoAmount>(reader);
+        }
+
+        public List<QsoExportExpectedAmounts> GetQsoAmountsForExport()
+        {
+            using var connection = new SqliteConnection(connectionString);
+            connection.Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = getQsoAmountsForExportSql;
+            using var reader = command.ExecuteReader();
+            return GetData<QsoExportExpectedAmounts>(reader);
         }
 
         private Dictionary<string, string> GetTableColumns(string tablename)

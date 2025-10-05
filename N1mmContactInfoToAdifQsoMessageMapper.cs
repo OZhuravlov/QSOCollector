@@ -46,8 +46,12 @@ namespace QSOCollector
             return adif.ToString();
         }
 
-        private static string GetFormattedFreq(int origFreq, string origBand)
+        private static string? GetFormattedFreq(int origFreq, string origBand)
         {
+            if (origBand.EndsWith("GHz", StringComparison.CurrentCultureIgnoreCase)) {
+                return null;
+            }
+
             char delimiter = '.';
             int pointPosition = origBand.IndexOf(delimiter);
             if (pointPosition == -1)
@@ -67,20 +71,20 @@ namespace QSOCollector
                 "3.5" => "80M",
                 "5.3" => "60M",
                 "7" => "40M",
-                "10" => "30M",
+                "10.1" => "30M",
                 "14" => "20M",
                 "18" => "17M",
                 "21" => "15M",
-                "24" => "12M",
+                "24.9" => "12M",
                 "27" => "11M",
                 "28" => "10M",
                 "50" => "6M",
                 "70" => "4M",
                 "144" => "2M",
                 "432" => "70CM",
-                "1200" => "23CM",
-                "2400" => "13CM",
-                "5650" => "6CM",
+                "1.2GHz" => "23CM",
+                "2.4GHz" => "13CM",
+                "5.6GHz" => "6CM",
                 _ => throw new NotImplementedException()
             };
         }

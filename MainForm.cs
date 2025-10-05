@@ -5,7 +5,6 @@ using System.Globalization;
 
 namespace QSOCollector
 {
-
     public partial class QsoCollectorForm : Form
     {
         private readonly string connectionString;
@@ -13,7 +12,7 @@ namespace QSOCollector
         private CancellationTokenSource? clientCancellationTokenSource = new();
         private ClientProgressUpdater? clientProgressUpdater;
         private ServerProgressUpdater? serverProgressUpdater;
-        private DataTable serverQsoAmountDataTable;
+        private DataTable? serverQsoAmountDataTable;
         private TcpServer? tcpServer = null;
 
         public QsoCollectorForm(string connectionString)
@@ -22,11 +21,13 @@ namespace QSOCollector
             dbRepository = new DbRepository(connectionString);
 
             InitializeComponent();
+            this.Text += $"        v.{System.Reflection.Assembly.GetExecutingAssembly().GetName().Version}";
             RestoreSavedFormValuesFromDB();
             HandleServerCheckBoxChanged(enableServerCheckBox);
+            serverLogTextBox.Clear();
             HandleClientCheckBoxChanged(enableClientCheckBox);
+            clientLogTextBox.Clear();
         }
-
 
         private void QsoCollectorForm_FormClosing(object sender, FormClosingEventArgs e)
         {
@@ -421,6 +422,11 @@ namespace QSOCollector
             {
                 serverProgressUpdater.IsDebug = serverShowLogDetailsCheckBox.Checked;
             }
+        }
+
+        private void qsoExportButton_Click(object sender, EventArgs e)
+        {
+            new QsoExportForm(dbRepository).ShowDialog(this);
         }
     }
 }
