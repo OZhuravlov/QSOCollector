@@ -44,6 +44,8 @@
             secondaryFiltersGroupBox = new GroupBox();
             sourceIpComboBox = new ComboBox();
             sourceIpLabel = new Label();
+            programIdComboBox = new ComboBox();
+            programIdLabel = new Label();
             operatorComboBox = new ComboBox();
             OperatorLabel = new Label();
             modeGroupComboBox = new ComboBox();
@@ -52,8 +54,9 @@
             bandLabel = new Label();
             modeComboBox = new ComboBox();
             modeLabel = new Label();
-            programIdLabel = new Label();
-            programIdComboBox = new ComboBox();
+            resetSecondaryFiltersButton = new Button();
+            exportButton = new Button();
+            exportProgressBar = new ProgressBar();
             mainFilterGroupBox.SuspendLayout();
             amountsGroupBox.SuspendLayout();
             secondaryFiltersGroupBox.SuspendLayout();
@@ -84,7 +87,6 @@
             dateToTimePicker.Format = DateTimePickerFormat.Short;
             dateToTimePicker.Location = new Point(218, 63);
             dateToTimePicker.Name = "dateToTimePicker";
-            dateToTimePicker.ShowCheckBox = true;
             dateToTimePicker.Size = new Size(138, 27);
             dateToTimePicker.TabIndex = 4;
             dateToTimePicker.ValueChanged += dateToTimePicker_ValueChanged;
@@ -131,7 +133,6 @@
             dateFromTimePicker.Format = DateTimePickerFormat.Short;
             dateFromTimePicker.Location = new Point(218, 32);
             dateFromTimePicker.Name = "dateFromTimePicker";
-            dateFromTimePicker.ShowCheckBox = true;
             dateFromTimePicker.Size = new Size(138, 27);
             dateFromTimePicker.TabIndex = 1;
             dateFromTimePicker.ValueChanged += dateFromTimePicker_ValueChanged;
@@ -170,7 +171,7 @@
             amountsGroupBox.Controls.Add(totalLabel);
             amountsGroupBox.Controls.Add(filteredLabel);
             amountsGroupBox.Controls.Add(totalAmountLabel);
-            amountsGroupBox.Location = new Point(5, 300);
+            amountsGroupBox.Location = new Point(9, 332);
             amountsGroupBox.Name = "amountsGroupBox";
             amountsGroupBox.Size = new Size(399, 53);
             amountsGroupBox.TabIndex = 1;
@@ -189,7 +190,7 @@
             // totalLabel
             // 
             totalLabel.AutoSize = true;
-            totalLabel.Location = new Point(198, 23);
+            totalLabel.Location = new Point(208, 23);
             totalLabel.Name = "totalLabel";
             totalLabel.RightToLeft = RightToLeft.No;
             totalLabel.Size = new Size(60, 20);
@@ -218,6 +219,8 @@
             // 
             secondaryFiltersGroupBox.Controls.Add(sourceIpComboBox);
             secondaryFiltersGroupBox.Controls.Add(sourceIpLabel);
+            secondaryFiltersGroupBox.Controls.Add(programIdComboBox);
+            secondaryFiltersGroupBox.Controls.Add(programIdLabel);
             secondaryFiltersGroupBox.Controls.Add(operatorComboBox);
             secondaryFiltersGroupBox.Controls.Add(OperatorLabel);
             secondaryFiltersGroupBox.Controls.Add(modeGroupComboBox);
@@ -226,12 +229,10 @@
             secondaryFiltersGroupBox.Controls.Add(bandLabel);
             secondaryFiltersGroupBox.Controls.Add(modeComboBox);
             secondaryFiltersGroupBox.Controls.Add(modeLabel);
-            secondaryFiltersGroupBox.Controls.Add(programIdLabel);
-            secondaryFiltersGroupBox.Controls.Add(programIdComboBox);
             secondaryFiltersGroupBox.Font = new Font("Segoe UI Semibold", 10.2F, FontStyle.Bold, GraphicsUnit.Point, 0);
             secondaryFiltersGroupBox.Location = new Point(5, 129);
             secondaryFiltersGroupBox.Name = "secondaryFiltersGroupBox";
-            secondaryFiltersGroupBox.Size = new Size(399, 165);
+            secondaryFiltersGroupBox.Size = new Size(399, 123);
             secondaryFiltersGroupBox.TabIndex = 2;
             secondaryFiltersGroupBox.TabStop = false;
             secondaryFiltersGroupBox.Text = "Secondary filters";
@@ -240,7 +241,7 @@
             // 
             sourceIpComboBox.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
             sourceIpComboBox.FormattingEnabled = true;
-            sourceIpComboBox.Location = new Point(283, 79);
+            sourceIpComboBox.Location = new Point(283, 85);
             sourceIpComboBox.Name = "sourceIpComboBox";
             sourceIpComboBox.Size = new Size(105, 28);
             sourceIpComboBox.TabIndex = 10;
@@ -250,17 +251,38 @@
             // 
             sourceIpLabel.AutoSize = true;
             sourceIpLabel.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            sourceIpLabel.Location = new Point(208, 86);
+            sourceIpLabel.Location = new Point(208, 91);
             sourceIpLabel.Name = "sourceIpLabel";
             sourceIpLabel.Size = new Size(70, 20);
             sourceIpLabel.TabIndex = 9;
             sourceIpLabel.Text = "Source IP";
             // 
+            // programIdComboBox
+            // 
+            programIdComboBox.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            programIdComboBox.FormattingEnabled = true;
+            programIdComboBox.ItemHeight = 20;
+            programIdComboBox.Location = new Point(283, 25);
+            programIdComboBox.Name = "programIdComboBox";
+            programIdComboBox.Size = new Size(105, 28);
+            programIdComboBox.TabIndex = 3;
+            programIdComboBox.SelectedValueChanged += programIdComboBox_SelectedValueChanged;
+            // 
+            // programIdLabel
+            // 
+            programIdLabel.AutoSize = true;
+            programIdLabel.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            programIdLabel.Location = new Point(212, 28);
+            programIdLabel.Name = "programIdLabel";
+            programIdLabel.Size = new Size(66, 20);
+            programIdLabel.TabIndex = 1;
+            programIdLabel.Text = "Program";
+            // 
             // operatorComboBox
             // 
             operatorComboBox.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
             operatorComboBox.FormattingEnabled = true;
-            operatorComboBox.Location = new Point(283, 50);
+            operatorComboBox.Location = new Point(283, 55);
             operatorComboBox.Name = "operatorComboBox";
             operatorComboBox.Size = new Size(105, 28);
             operatorComboBox.TabIndex = 8;
@@ -270,7 +292,7 @@
             // 
             OperatorLabel.AutoSize = true;
             OperatorLabel.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            OperatorLabel.Location = new Point(208, 54);
+            OperatorLabel.Location = new Point(209, 59);
             OperatorLabel.Name = "OperatorLabel";
             OperatorLabel.Size = new Size(69, 20);
             OperatorLabel.TabIndex = 7;
@@ -280,7 +302,7 @@
             // 
             modeGroupComboBox.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
             modeGroupComboBox.FormattingEnabled = true;
-            modeGroupComboBox.Location = new Point(96, 25);
+            modeGroupComboBox.Location = new Point(96, 24);
             modeGroupComboBox.Name = "modeGroupComboBox";
             modeGroupComboBox.Size = new Size(106, 28);
             modeGroupComboBox.TabIndex = 0;
@@ -290,7 +312,7 @@
             // 
             modeGroupLabel.AutoSize = true;
             modeGroupLabel.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            modeGroupLabel.Location = new Point(3, 26);
+            modeGroupLabel.Location = new Point(3, 28);
             modeGroupLabel.Name = "modeGroupLabel";
             modeGroupLabel.Size = new Size(92, 20);
             modeGroupLabel.TabIndex = 6;
@@ -300,17 +322,17 @@
             // 
             bandComboBox.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
             bandComboBox.FormattingEnabled = true;
-            bandComboBox.Location = new Point(283, 21);
+            bandComboBox.Location = new Point(96, 84);
             bandComboBox.Name = "bandComboBox";
             bandComboBox.Size = new Size(105, 28);
-            bandComboBox.TabIndex = 3;
+            bandComboBox.TabIndex = 2;
             bandComboBox.SelectedValueChanged += bandComboBox_SelectedValueChanged;
             // 
             // bandLabel
             // 
             bandLabel.AutoSize = true;
             bandLabel.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            bandLabel.Location = new Point(208, 24);
+            bandLabel.Location = new Point(5, 87);
             bandLabel.Name = "bandLabel";
             bandLabel.Size = new Size(43, 20);
             bandLabel.TabIndex = 4;
@@ -336,37 +358,55 @@
             modeLabel.TabIndex = 2;
             modeLabel.Text = "Mode";
             // 
-            // programIdLabel
+            // resetSecondaryFiltersButton
             // 
-            programIdLabel.AutoSize = true;
-            programIdLabel.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            programIdLabel.Location = new Point(3, 89);
-            programIdLabel.Name = "programIdLabel";
-            programIdLabel.Size = new Size(66, 20);
-            programIdLabel.TabIndex = 1;
-            programIdLabel.Text = "Program";
+            resetSecondaryFiltersButton.BackColor = Color.RosyBrown;
+            resetSecondaryFiltersButton.FlatStyle = FlatStyle.Popup;
+            resetSecondaryFiltersButton.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            resetSecondaryFiltersButton.Location = new Point(12, 258);
+            resetSecondaryFiltersButton.Name = "resetSecondaryFiltersButton";
+            resetSecondaryFiltersButton.Size = new Size(185, 38);
+            resetSecondaryFiltersButton.TabIndex = 11;
+            resetSecondaryFiltersButton.Text = "Clear Secondary filters";
+            resetSecondaryFiltersButton.UseVisualStyleBackColor = false;
+            resetSecondaryFiltersButton.Click += resetSecondaryFiltersButton_Click;
             // 
-            // programIdComboBox
+            // exportButton
             // 
-            programIdComboBox.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            programIdComboBox.FormattingEnabled = true;
-            programIdComboBox.ItemHeight = 20;
-            programIdComboBox.Location = new Point(96, 83);
-            programIdComboBox.Name = "programIdComboBox";
-            programIdComboBox.Size = new Size(106, 28);
-            programIdComboBox.TabIndex = 2;
-            programIdComboBox.SelectedValueChanged += programIdComboBox_SelectedValueChanged;
+            exportButton.BackColor = Color.DarkSeaGreen;
+            exportButton.FlatStyle = FlatStyle.Popup;
+            exportButton.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            exportButton.Location = new Point(213, 258);
+            exportButton.Name = "exportButton";
+            exportButton.Size = new Size(180, 38);
+            exportButton.TabIndex = 12;
+            exportButton.Text = "Export";
+            exportButton.UseVisualStyleBackColor = false;
+            exportButton.Click += exportButton_Click;
+            // 
+            // exportProgressBar
+            // 
+            exportProgressBar.Location = new Point(25, 307);
+            exportProgressBar.Name = "exportProgressBar";
+            exportProgressBar.Size = new Size(349, 19);
+            exportProgressBar.TabIndex = 13;
+            exportProgressBar.Visible = false;
             // 
             // QsoExportForm
             // 
+            AccessibleRole = AccessibleRole.None;
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(409, 406);
+            ClientSize = new Size(409, 387);
+            Controls.Add(exportProgressBar);
+            Controls.Add(exportButton);
+            Controls.Add(resetSecondaryFiltersButton);
             Controls.Add(secondaryFiltersGroupBox);
             Controls.Add(amountsGroupBox);
             Controls.Add(mainFilterGroupBox);
             MaximizeBox = false;
             Name = "QsoExportForm";
+            StartPosition = FormStartPosition.CenterParent;
             Text = "Export to ADIF";
             mainFilterGroupBox.ResumeLayout(false);
             mainFilterGroupBox.PerformLayout();
@@ -405,5 +445,8 @@
         private ComboBox operatorComboBox;
         private Label sourceIpLabel;
         private ComboBox sourceIpComboBox;
+        private Button resetSecondaryFiltersButton;
+        private Button exportButton;
+        private ProgressBar exportProgressBar;
     }
 }

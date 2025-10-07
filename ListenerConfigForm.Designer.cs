@@ -184,6 +184,7 @@ namespace QSOCollector
             FormBorderStyle = FormBorderStyle.Fixed3D;
             MaximizeBox = false;
             Name = "ListenersForm";
+            StartPosition = FormStartPosition.CenterParent;
             Text = "Listeners";
             Load += ListenersForm_Load;
             ((System.ComponentModel.ISupportInitialize)dataGridView1).EndInit();

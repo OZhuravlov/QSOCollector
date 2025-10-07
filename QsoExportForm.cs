@@ -1,11 +1,13 @@
-﻿using DbUp;
+﻿using System.Diagnostics;
+using System.Text;
+using System.Windows.Forms;
 
 namespace QSOCollector
 {
     public partial class QsoExportForm : Form
     {
         private readonly DbRepository dbRepository;
-        private readonly List<QsoExportExpectedAmounts> expectedAmounts;
+        private List<QsoExportExpectedAmounts> expectedAmounts;
         private readonly QsoExportFilters exportFilters = new();
 
         public QsoExportForm(DbRepository dbRepository)
@@ -21,6 +23,7 @@ namespace QSOCollector
             totalAmountLabel.Text = expectedAmounts.Sum(r => r.Count).ToString();
             newQSOsRadioButton.Checked = true;
             exportFilters.IsNewOnly = true;
+            RadioButtonChanged();
             InitSecondaryFilters();
             RecalcFiltered();
         }
@@ -31,6 +34,7 @@ namespace QSOCollector
             exportFilters.DateFrom = dateFromTimePicker.Value.Date;
             ResetDatePicker(dateFromTimePicker);
         }
+
         private void ResetDateToPicker()
         {
             dateToTimePicker.Value = dateFromTimePicker.MaxDate;
@@ -55,6 +59,7 @@ namespace QSOCollector
             exportFilters.IsNewOnly = newQSOsRadioButton.Checked;
             dateFromTimePicker.Enabled = byDateRadioButton.Checked;
             dateToTimePicker.Enabled = byDateRadioButton.Checked;
+            exportButton.Text = "Export";
             if (byDateRadioButton.Checked)
             {
                 SetDateFromPicker();
@@ -66,13 +71,14 @@ namespace QSOCollector
                 ResetDateToPicker();
             }
             ClearSecondaryFilters();
+            InitSecondaryFilters();
         }
 
         private void ClearSecondaryFilters()
         {
             secondaryFiltersGroupBox.Controls.OfType<ComboBox>().ToList()
-                .ForEach(c => 
-                { 
+                .ForEach(c =>
+                {
                     c.Items.Clear();
                     c.SelectedIndex = -1;
                     c.SelectedItem = null;
@@ -82,10 +88,16 @@ namespace QSOCollector
 
         private void InitSecondaryFilters()
         {
+            exportFilters.ModeGroup = null;
+            exportFilters.Mode = null;
+            exportFilters.Band = null;
+            exportFilters.ProgramId = null;
+            exportFilters.Operator = null;
+            exportFilters.SourceIp = null;
             ResetSecondaryFilter(modeGroupComboBox, GetFilteredAmounts(exportFilters).Select(r => r.ModeGroup).Distinct().OrderBy(r => r));
             ResetSecondaryFilter(modeComboBox, GetFilteredAmounts(exportFilters).Select(r => r.Mode).Distinct().OrderBy(r => r));
-            ResetSecondaryFilter(programIdComboBox, GetFilteredAmounts(exportFilters).Select(r => r.ProgramId).Distinct().OrderBy(r => r == "<UNKNOWN>").ThenBy(r => r));
             ResetSecondaryFilter(bandComboBox, GetFilteredAmounts(exportFilters).Select(r => r.Band).Distinct().OrderByDescending(r => Int32.Parse(r.TrimEnd('M'))));
+            ResetSecondaryFilter(programIdComboBox, GetFilteredAmounts(exportFilters).Select(r => r.ProgramId).Distinct().OrderBy(r => r == "<UNKNOWN>").ThenBy(r => r));
             ResetSecondaryFilter(operatorComboBox, GetFilteredAmounts(exportFilters).Select(r => r.Operator).Distinct().OrderBy(r => r == "<UNKNOWN>").ThenBy(r => r));
             ResetSecondaryFilter(sourceIpComboBox, GetFilteredAmounts(exportFilters).Select(r => r.Operator).Distinct().OrderBy(r => r == "<UNKNOWN>").ThenBy(r => r));
         }
@@ -101,10 +113,12 @@ namespace QSOCollector
             comboBox.SelectedIndex = defaultIndex;
             comboBox.SelectedItem = null;
             comboBox.Text = null;
-            if (currIndex != defaultIndex) {
+            if (currIndex != defaultIndex)
+            {
                 for (int i = 0; i < comboBox.Items.Count; i++)
                 {
-                    if (comboBox.Items[i].ToString() == currValue) { 
+                    if (comboBox.Items[i].ToString() == currValue)
+                    {
                         comboBox.SelectedIndex = i;
                         comboBox.SelectedItem = currValue;
                         comboBox.Text = currValue;
@@ -134,19 +148,6 @@ namespace QSOCollector
             picker.Value = value;
         }
 
-        private void dateFromTimePicker_CheckedChanged(object sender, EventArgs e)
-        {
-            if (dateFromTimePicker.Checked)
-            {
-                SetDateFromPicker();
-            }
-            else
-            {
-                ResetDateFromPicker();
-            }
-            RecalcFiltered();
-        }
-
         private void dateFromTimePicker_EnabledChanged(object sender, EventArgs e)
         {
             if (dateFromTimePicker.Enabled)
@@ -156,18 +157,6 @@ namespace QSOCollector
             else
             {
                 ResetDateFromPicker();
-            }
-            RecalcFiltered();
-        }
-        private void dateToTimePicker_CheckedChanged(object sender, EventArgs e)
-        {
-            if (dateToTimePicker.Checked)
-            {
-                SetDateToPicker();
-            }
-            else
-            {
-                ResetDateToPicker();
             }
             RecalcFiltered();
         }
@@ -259,9 +248,90 @@ namespace QSOCollector
             RecalcFiltered();
         }
 
-        private string? GetComboBoxValue(ComboBox comboBox) { 
-            return comboBox.SelectedIndex == -1 || string.IsNullOrWhiteSpace(comboBox.Text) 
-                ? null : comboBox.Text;
+        private string? GetComboBoxValue(ComboBox comboBox)
+        {
+            return comboBox.SelectedIndex == -1 || string.IsNullOrWhiteSpace(comboBox.Text) ? null : comboBox.Text;
+        }
+
+        private void resetSecondaryFiltersButton_Click(object sender, EventArgs e)
+        {
+            ClearSecondaryFilters();
+            InitSecondaryFilters();
+            RecalcFiltered();
+        }
+
+        private void exportButton_Click(object sender, EventArgs e)
+        {
+            if (GetCalcFiltered() == 0)
+            {
+                DialogResult dialogResultStartExport = MessageBox.Show("It looks like no QSO expected to be exported. " +
+                    "Do you want to try fetching from Database?", "Nothing to export", 
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Question,
+                    MessageBoxDefaultButton.Button2);
+                if (dialogResultStartExport == DialogResult.No)
+                {
+                    return;
+                }
+            }
+
+            Dictionary<int, string> adifEntries = dbRepository.GetAdif(exportFilters);
+
+            if (adifEntries.Count == 0) {
+                MessageBox.Show("No QSO found to export with current filters", "Nothing to export", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            DateTime now = DateTime.UtcNow;
+
+            var sb = new StringBuilder($"# UR8UQ DXpedition QSO Collector v.{System.Reflection.Assembly.GetExecutingAssembly().GetName().Version}\n#   Created:  {now:yyyy-MM-dd HH:mm:ss}\n<ADIF_VER:3>3.1.6\n<EOH>\n");
+            foreach (var item in adifEntries.Values)
+            {
+                sb.AppendLine(item);
+            }
+
+            var fileContent = sb.ToString();
+            var filePath = string.Empty;
+
+            using (SaveFileDialog saveFileDialog = new()
+            {
+                InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                FileName = $"export_{now:yyyyMMdd_HHmmss}.adi",
+                Filter = "ADIF files (*.adi)|*.adi|All files (*.*)|*.*",
+                DefaultExt = "adi",
+                AddExtension = true,
+                RestoreDirectory = true
+            })
+            {
+                if (saveFileDialog.ShowDialog() == DialogResult.OK)
+                {
+                    filePath = saveFileDialog.FileName;
+                    File.WriteAllText(filePath, fileContent);
+                }
+                else
+                {
+                    return;
+                }
+            }
+
+            DialogResult dialogResultSetExported = MessageBox.Show(
+                $"ADIF file with {adifEntries.Count} QSO(s) has been saved to file {filePath}\nWould you like to mark these QSO(s) in database as exported\n(This could help do not export duplicates next time)",
+                "ADIF exported",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question,
+                MessageBoxDefaultButton.Button1
+            );
+
+            if (dialogResultSetExported == DialogResult.Yes)
+            {
+                dbRepository.SetQSOsExported([.. adifEntries.Keys]);
+                expectedAmounts = dbRepository.GetQsoAmountsForExport();
+                exportButton.Text = $"Exported ({adifEntries.Count})";
+                RecalcFiltered();
+            }
+
+            string argument = "/select, \"" + filePath + "\"";
+            Process.Start("explorer.exe", argument);
         }
     }
 }

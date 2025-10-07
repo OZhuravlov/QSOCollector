@@ -750,7 +750,7 @@ namespace QSOCollector
             FormBorderStyle = FormBorderStyle.Fixed3D;
             MaximizeBox = false;
             Name = "QsoCollectorForm";
-            Text = "DXpedition QSO Collector ® Alex UR8UQ";
+            Text = "DXpedition QSO Collector © Alex UR8UQ";
             FormClosing += QsoCollectorForm_FormClosing;
             mainTabControl.ResumeLayout(false);
             clientTab.ResumeLayout(false);

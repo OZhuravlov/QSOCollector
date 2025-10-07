@@ -140,9 +140,10 @@ namespace QSOCollector
 
                 parameterKeys.RemoveAll(key => addedParamKeys.Contains(key));
 
-                try { 
-                    command.ExecuteNonQuery(); 
-                } 
+                try
+                {
+                    command.ExecuteNonQuery();
+                }
                 catch (SqliteException ex)
                 {
                     if (ex.SqliteExtendedErrorCode != SQLITE_CONSTRAINT_UNIQUE) throw;
@@ -182,6 +183,147 @@ namespace QSOCollector
             command.CommandText = deleteTemporaryQsoQsl;
             command.Parameters.Add(new SqliteParameter("@id", id));
             command.ExecuteNonQuery();
+        }
+
+        public Dictionary<int, string> GetAdif(QsoExportFilters exportFilters)
+        {
+            using var connection = new SqliteConnection(connectionString);
+            connection.Open();
+            using var command = connection.CreateCommand();
+            AddAdifSqlCommandTextAndParams(command, exportFilters);
+            var adifEntries = new Dictionary<int, string>();
+
+            using var reader = command.ExecuteReader();
+            while (reader.Read())
+            {
+                adifEntries.Add(reader.GetInt32(0), reader.GetString(1));
+            }
+            return adifEntries;
+        }
+
+        public void SetQSOsExported(List<int> keys)
+        {
+            if (keys.Count == 0)
+            {
+                return;
+            }
+
+            using var connection = new SqliteConnection(connectionString);
+            connection.Open();
+            
+            int startPos = 0;
+            do {
+                int count = Math.Min(999, keys.Count - startPos);
+                keys.GetRange(startPos, Math.Min(999, keys.Count - startPos));
+                startPos += count + 1;
+                using (var command = connection.CreateCommand()) {
+                    StringBuilder sb = new("UPDATE qsodata SET exported_time = CURRENT_TIMESTAMP WHERE id IN (");
+                    for (int i = 0; i < count; i++)
+                    {
+                        if (i > 0) sb.Append(", ");
+                        sb.Append($"@id{i}");
+                        command.Parameters.Add(new SqliteParameter($"@id{i}", keys[startPos - count - 1 + i]));
+
+                    }
+                    sb.Append(")");
+                    command.CommandText = sb.ToString();
+                    command.ExecuteNonQuery();
+                }
+            } while (startPos < keys.Count);
+        }
+
+        private static void AddAdifSqlCommandTextAndParams(SqliteCommand command, QsoExportFilters exportFilters)
+        {
+            StringBuilder sb = new("SELECT q.id, q.adif_qsodata FROM qsodata q WHERE q.is_temporary = false AND q.adif_qsodata IS NOT NULL ");
+
+            if (exportFilters.IsNewOnly == true)
+            {
+                sb.Append(" AND q.exported_time IS NULL");
+            }
+
+            if (exportFilters.DateFrom != null)
+            {
+                sb.Append(" AND q.qso_time >= @dateFrom");
+                command.Parameters.Add(new SqliteParameter("@dateFrom", DateOnly.FromDateTime(exportFilters.DateFrom.Value)));
+            }
+
+            if (exportFilters.DateTo != null)
+            {
+                sb.Append(" AND q.qso_time < @dateTo");
+                DateTime dateTo = exportFilters.DateTo.Value;
+                // if dateTo not in the Past but in Future then move to next day
+                // this way the whole day is included
+                if (dateTo <= DateTime.UtcNow) {
+                    dateTo = dateTo.AddDays(1);
+                }
+                command.Parameters.Add(new SqliteParameter("@dateTo", DateOnly.FromDateTime(dateTo)));
+            }
+
+            if (exportFilters.ModeGroup != null && exportFilters.Mode == null)
+            {
+                if (exportFilters.ModeGroup == "DATA")
+                {
+                    sb.Append(" AND q.mode NOT IN ('CW', 'SSB')");
+                }
+                else
+                {
+                    sb.Append(" AND q.mode = @modeGroup");
+                    command.Parameters.Add(new SqliteParameter("@modeGroup", exportFilters.ModeGroup));
+                }
+            }
+
+            if (exportFilters.Mode != null)
+            {
+                sb.Append(" AND q.mode = @mode");
+                command.Parameters.Add(new SqliteParameter("@mode", exportFilters.Mode));
+            }
+
+            if (exportFilters.Band != null)
+            {
+                sb.Append(" AND q.band = @band");
+                command.Parameters.Add(new SqliteParameter("@band", exportFilters.Band));
+            }
+
+            if (exportFilters.ProgramId != null)
+            {
+                if (exportFilters.ProgramId == "UNKNOWN")
+                {
+                    sb.Append(" AND q.programId IS NULL");
+                }
+                else
+                {
+                    sb.Append(" AND q.programId = @programId");
+                    command.Parameters.Add(new SqliteParameter("@programId", exportFilters.ProgramId));
+                }
+            }
+
+            if (exportFilters.Operator != null)
+            {
+                if (exportFilters.Operator == "UNKNOWN")
+                {
+                    sb.Append(" AND q.operator IS NULL");
+                }
+                else
+                {
+                    sb.Append(" AND q.operator = @operator");
+                    command.Parameters.Add(new SqliteParameter("@operator", exportFilters.Operator));
+                }
+            }
+
+            if (exportFilters.SourceIp != null)
+            {
+                if (exportFilters.SourceIp == "UNKNOWN")
+                {
+                    sb.Append(" AND q.sourceIp IS NULL");
+                }
+                else
+                {
+                    sb.Append(" AND q.sourceIp = @sourceIp");
+                    command.Parameters.Add(new SqliteParameter("@sourceIp", exportFilters.SourceIp));
+                }
+            }
+            sb.Append(" ORDER BY q.qso_time");
+            command.CommandText = sb.ToString();
         }
 
         private static void AddSqlParameter(SqliteCommand command, string paramKey, object paramValue, List<string> parameterKeys)
