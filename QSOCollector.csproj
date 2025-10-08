@@ -9,13 +9,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="Migrations\001_createServerQsoTable.sql" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <EmbeddedResource Include="Migrations\003_createListenersTable.sql" />
-    <EmbeddedResource Include="Migrations\002_createSettingsTable.sql" />
-    <EmbeddedResource Include="Migrations\001_createServerQsoTable.sql" />
+    <EmbeddedResource Include="Migrations\002_adifImportTable.sql" />
+    <EmbeddedResource Include="Migrations\001_adifExportTable.sql" />
+    <EmbeddedResource Include="Migrations\005_createListenersTable.sql" />
+    <EmbeddedResource Include="Migrations\004_createSettingsTable.sql" />
+    <EmbeddedResource Include="Migrations\003_createServerQsoTable.sql" />
   </ItemGroup>
 
   <ItemGroup>
@@ -33,12 +31,18 @@
       <AutoGen>True</AutoGen>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
+    <Compile Update="QsoImportForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
   </ItemGroup>
 
   <ItemGroup>
     <EmbeddedResource Update="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+    <EmbeddedResource Update="QsoImportForm.resx">
+      <SubType>Designer</SubType>
     </EmbeddedResource>
   </ItemGroup>
 

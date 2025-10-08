@@ -48,7 +48,7 @@ namespace QSOCollector
 
         private static string? GetFormattedFreq(int origFreq, string origBand)
         {
-            if (origBand.EndsWith("GHz", StringComparison.CurrentCultureIgnoreCase)) {
+            if (origBand.EndsWith("GHz", StringComparison.OrdinalIgnoreCase)) {
                 return null;
             }
 

@@ -504,6 +504,7 @@ namespace QSOCollector
             qsoImportButton.TabIndex = 1;
             qsoImportButton.Text = "QSO Import";
             qsoImportButton.UseVisualStyleBackColor = false;
+            qsoImportButton.Click += qsoImportButton_Click;
             // 
             // serverProcessingGroupBox
             // 
@@ -563,6 +564,8 @@ namespace QSOCollector
             serverQsoAmountsDataGridView.ShowEditingIcon = false;
             serverQsoAmountsDataGridView.Size = new Size(647, 154);
             serverQsoAmountsDataGridView.TabIndex = 7;
+            serverQsoAmountsDataGridView.RowsAdded += serverQsoAmountsDataGridView_RowsAdded;
+            serverQsoAmountsDataGridView.RowsRemoved += serverQsoAmountsDataGridView_RowsRemoved;
             // 
             // qsoAmountMode
             // 

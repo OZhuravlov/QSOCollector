@@ -146,7 +146,9 @@ namespace QSOCollector
         private async void StartServer(int port)
         {
             serverQsoAmountsDataGridView.DataSource = serverQsoAmountsBindingSource;
-            GetDataForServerQsoAmountDataGridView(connectionString, "SELECT mode QsoAmountMode, COUNT(CASE WHEN qso_time >= current_date THEN 1 END) TodayQsoAmount, count(*) TotalQsoAmount, COUNT(q.exported_time) ExportedQsoAmount, MAX(qso_time) LastQsoTime, MAX(q.exported_time) LastExportedQsoTime FROM qsodata q WHERE q.is_temporary = false GROUP BY mode UNION ALL SELECT 'Total', COUNT(CASE WHEN qso_time >= current_date THEN 1 END), COUNT(*), COUNT(q.exported_time), MAX(qso_time), MAX(q.exported_time) FROM qsodata q WHERE q.is_temporary = false");
+            GetDataForServerQsoAmountDataGridView(connectionString, "SELECT q.mode QsoAmountMode, COUNT(CASE WHEN q.qso_time >= current_date THEN 1 END) TodayQsoAmount, count(*) TotalQsoAmount, COUNT(e.id) ExportedQsoAmount, MAX(q.qso_time) LastQsoTime, MAX(e.end_time) LastExportedQsoTime FROM qsodata q LEFT JOIN adif_export e ON q.export_id = e.id AND e.is_confirmed = true WHERE q.is_temporary = false GROUP BY q.mode UNION ALL SELECT 'Total', COUNT(CASE WHEN q.qso_time >= current_date THEN 1 END), COUNT(*), COUNT(e.id), MAX(q.qso_time), MAX(e.end_time) FROM qsodata q JOIN adif_export e ON q.export_id = e.id AND e.is_confirmed = true WHERE q.is_temporary = false");
+            HandleExportEnabled();
+
             serverProgressUpdater = new(serverQsoAmountDataTable, serverLogTextBox);
             tcpServer = new(port, serverProgressUpdater);
             await tcpServer.Start(connectionString);
@@ -163,7 +165,7 @@ namespace QSOCollector
                     Locale = CultureInfo.InvariantCulture
                 };
                 serverQsoAmountsDataAdapter.Fill(serverQsoAmountDataTable);
-                serverQsoAmountDataTable.PrimaryKey = new DataColumn[] { serverQsoAmountDataTable.Columns["QsoAmountMode"] };
+                serverQsoAmountDataTable.PrimaryKey = [serverQsoAmountDataTable.Columns["QsoAmountMode"]];
                 serverQsoAmountsBindingSource.DataSource = serverQsoAmountDataTable;
             }
             catch (SQLiteException ex)
@@ -426,7 +428,34 @@ namespace QSOCollector
 
         private void qsoExportButton_Click(object sender, EventArgs e)
         {
-            new QsoExportForm(dbRepository).ShowDialog(this);
+            List<QsoExportExpectedAmounts> expectedAmounts = dbRepository.GetQsoAmountsForExport();
+            if (expectedAmounts.Count == 0)
+            {
+                MessageBox.Show("There are no QSOs in Database yet. Nothing to export", "No Data for export", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            new QsoExportForm(dbRepository, expectedAmounts).ShowDialog(this);
         }
+
+        private void qsoImportButton_Click(object sender, EventArgs e)
+        {
+            new QsoImportForm(dbRepository).ShowDialog(this);
+        }
+
+        private void serverQsoAmountsDataGridView_RowsAdded(object sender, DataGridViewRowsAddedEventArgs e)
+        {
+            HandleExportEnabled();
+        }
+        private void serverQsoAmountsDataGridView_RowsRemoved(object sender, DataGridViewRowsRemovedEventArgs e)
+        {
+            HandleExportEnabled();
+        }
+
+        private void HandleExportEnabled()
+        {
+            // not only total row should be present
+            qsoExportButton.Enabled = serverQsoAmountsDataGridView.RowCount > 1;
+        }
+
     }
 }

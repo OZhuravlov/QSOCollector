@@ -1,6 +1,7 @@
 using Microsoft.Data.Sqlite;
 using System.Reflection;
 using System.Text;
+using System.Text.Json;
 
 namespace QSOCollector
 {
@@ -10,10 +11,10 @@ namespace QSOCollector
         private const string selectSettingsSql = "SELECT key, value FROM settings";
         private const string insertSettingsSql = "INSERT OR REPLACE INTO settings (key, value) VALUES (@key, @value)";
         private const string getListenerConfigsSql = "SELECT id as Id, protocol as Protocol, qso_port as QsoPort, acknowledge_port as AcknowledgePort, message_format as MessageFormat, is_active IsActive, description as Description FROM listeners WHERE is_active = true";
-        private const string getServerQsoAmountsSql = "SELECT mode QsoAmountMode, COUNT(CASE WHEN qso_time >= current_date THEN 1 END) TodayQsoAmount, count(*) TotalQsoAmount, COUNT(q.exported_time) ExportedQsoAmount, MAX(qso_time) LastQsoTime, MAX(q.exported_time) LastExportedQsoTime FROM qsodata q WHERE q.is_temporary = false GROUP BY mode UNION ALL SELECT 'Total', COUNT(CASE WHEN qso_time >= current_date THEN 1 END), COUNT(*), COUNT(q.exported_time), MAX(qso_time), MAX(q.exported_time) FROM qsodata q WHERE q.is_temporary = false";
-        private const string getQsoAmountsForExportSql = "SELECT COALESCE(q.programid, '<UNKNOWN>') ProgramId, q.exported_time IS NOT NULL IsExported, DATE(q.qso_time) QsoDate, CASE WHEN q.mode NOT IN ('SSB', 'CW') THEN 'DATA' ELSE q.mode END ModeGroup, q.mode Mode, q.band Band, COALESCE(q.operator, '<UNKNOWN>') Operator, COALESCE(q.source_ip_address, '<UNKNOWN>') SourceIp, count(*) Count FROM qsodata q WHERE q.is_temporary = false GROUP BY COALESCE(q.programid, '<UNKNOWN>'), q.exported_time IS NOT NULL, DATE(q.qso_time), CASE WHEN q.mode NOT IN ('SSB', 'CW') THEN 'DATA' ELSE q.mode END, q.mode, q.band, COALESCE(q.operator, '<UNKNOWN>'), COALESCE(q.source_ip_address, '<UNKNOWN>')";
-        private const string insertQsoSql = "INSERT INTO qsodata (is_temporary, source_ip_address, is_imported, qso_time, programid, station_callsign, qso_date, qso_date_off, call, time_on, time_off, band, freq, freq_rx, mode, contest_id, rst_sent, rst_rcvd, exch_sent, exch_rcvd, operator, my_gridsquare, gridsquare, distance, comment, pfx, dxcc_pref, cqz, ituz, cont, qslmsg, dxcc, orig_format, orig_qsodata, adif_qsodata)" +
-                    " VALUES (@is_temporary, @source_ip_address, @is_imported, @qso_time, @programid, @station_callsign, @qso_date, @qso_date_off, @call, @time_on, @time_off, @band, @freq, @freq_rx, @mode, @contest_id, @rst_sent, @rst_rcvd, @exch_sent, @exch_rcvd, @operator, @my_gridsquare, @gridsquare, @distance, @comment, @pfx, @dxcc_pref, @cqz, @ituz, @cont, @qslmsg, @dxcc, @orig_format, @orig_qsodata, @adif_qsodata)";
+        private const string getServerQsoAmountsSql = "SELECT q.mode QsoAmountMode, COUNT(CASE WHEN q.qso_time >= current_date THEN 1 END) TodayQsoAmount, count(*) TotalQsoAmount, COUNT(e.id) ExportedQsoAmount, MAX(q.qso_time) LastQsoTime, MAX(e.end_time) LastExportedQsoTime FROM qsodata q LEFT JOIN adif_export e ON q.export_id = e.id AND e.is_confirmed = true WHERE q.is_temporary = false GROUP BY q.mode UNION ALL SELECT 'Total', COUNT(CASE WHEN q.qso_time >= current_date THEN 1 END), COUNT(*), COUNT(e.id), MAX(q.qso_time), MAX(e.end_time) FROM qsodata q LEFT JOIN adif_export e ON q.export_id = e.id AND e.is_confirmed = true WHERE q.is_temporary = false";
+        private const string getQsoAmountsForExportSql = "SELECT COALESCE(q.programid, '<UNKNOWN>') ProgramId, e.id IS NOT NULL IsExported, DATE(q.qso_time) QsoDate, CASE WHEN q.mode NOT IN ('SSB', 'CW') THEN 'DATA' ELSE q.mode END ModeGroup, q.mode Mode, q.band Band, COALESCE(q.operator, '<UNKNOWN>') Operator, COALESCE(q.source_ip_address, '<UNKNOWN>') SourceIp, count(*) Count FROM qsodata q LEFT JOIN adif_export e ON q.export_id = e.id AND e.is_confirmed = true WHERE q.is_temporary = false GROUP BY COALESCE(q.programid, '<UNKNOWN>'), e.id IS NOT NULL, DATE(q.qso_time), CASE WHEN q.mode NOT IN ('SSB', 'CW') THEN 'DATA' ELSE q.mode END, q.mode, q.band, COALESCE(q.operator, '<UNKNOWN>'), COALESCE(q.source_ip_address, '<UNKNOWN>')";
+        private const string insertQsoSql = "INSERT INTO qsodata (is_temporary, source_ip_address, import_id, qso_time, programid, station_callsign, qso_date, qso_date_off, call, time_on, time_off, band, freq, freq_rx, mode, contest_id, rst_sent, rst_rcvd, exch_sent, exch_rcvd, operator, my_gridsquare, gridsquare, distance, comment, pfx, dxcc_pref, cqz, ituz, cont, qslmsg, dxcc, orig_format, orig_qsodata, adif_qsodata)" +
+                    " VALUES (@is_temporary, @source_ip_address, @import_id, @qso_time, @programid, @station_callsign, @qso_date, @qso_date_off, @call, @time_on, @time_off, @band, @freq, @freq_rx, @mode, @contest_id, @rst_sent, @rst_rcvd, @exch_sent, @exch_rcvd, @operator, @my_gridsquare, @gridsquare, @distance, @comment, @pfx, @dxcc_pref, @cqz, @ituz, @cont, @qslmsg, @dxcc, @orig_format, @orig_qsodata, @adif_qsodata)";
         private const string getTemporaryQsoSql = "SELECT id, programid, orig_format, orig_qsodata, adif_qsodata " +
             "  FROM qsodata " +
             " WHERE is_temporary = 1 AND orig_format IS NOT NULL AND orig_qsodata IS NOT NULL " +
@@ -52,11 +53,21 @@ namespace QSOCollector
         {
             using var connection = new SqliteConnection(connectionString);
             connection.Open();
-            using var command = connection.CreateCommand();
-            command.CommandText = insertSettingsSql;
-            command.Parameters.Add(new SqliteParameter("@key", key));
-            command.Parameters.Add(new SqliteParameter("@value", value));
-            command.ExecuteNonQuery();
+            using var transaction = connection.BeginTransaction();
+            try
+            {
+                using var command = connection.CreateCommand();
+                command.CommandText = insertSettingsSql;
+                command.Parameters.Add(new SqliteParameter("@key", key));
+                command.Parameters.Add(new SqliteParameter("@value", value));
+                command.ExecuteNonQuery();
+                transaction.Commit();
+            }
+            catch (SqliteException)
+            {
+                transaction.Rollback();
+                throw;
+            }
         }
 
         public List<ListenerConfig> GetListenerConfigs()
@@ -105,10 +116,68 @@ namespace QSOCollector
             return columns;
         }
 
-        public void SaveQsoRecords(List<Dictionary<string, string?>> qsoRecords, bool isImported = false, bool isTemporary = false)
+        public void ImportQsoRecords(List<Dictionary<string, string?>> qsoRecords, string folder, string fileName)
         {
             using var connection = new SqliteConnection(connectionString);
             connection.Open();
+            using var transaction = connection.BeginTransaction();
+            try
+            {
+                using var commandImport = connection.CreateCommand();
+                commandImport.CommandText = "INSERT INTO adif_import (folder, file_name, qso_amount) VALUES (@folder, @fileName, @qsoAmount)";
+                commandImport.Parameters.Add(new SqliteParameter("@folder", folder));
+                commandImport.Parameters.Add(new SqliteParameter("@fileName", fileName));
+                commandImport.Parameters.Add(new SqliteParameter("@qsoAmount", qsoRecords.Count));
+                commandImport.ExecuteNonQuery();
+
+                using var commandImportId = connection.CreateCommand();
+                commandImportId.CommandText = "SELECT MAX(id) id FROM adif_import WHERE end_time IS NULL AND folder = @folder AND file_name = @fileName AND qso_amount = @qsoAmount";
+                commandImportId.Parameters.Add(new SqliteParameter("@folder", folder));
+                commandImportId.Parameters.Add(new SqliteParameter("@fileName", fileName));
+                commandImportId.Parameters.Add(new SqliteParameter("@qsoAmount", qsoRecords.Count));
+                SqliteDataReader testReader = commandImportId.ExecuteReader();
+                testReader.Read();
+                int importId = testReader.GetInt32(0);
+
+                ExecuteSavingQsoRecords(connection, qsoRecords, importId);
+
+                using var commandImportComplete = connection.CreateCommand();
+                commandImportComplete.CommandText = "UPDATE adif_import SET end_time = CURRENT_TIMESTAMP WHERE id = @id";
+                commandImportComplete.Parameters.Add(new SqliteParameter("@id", importId));
+                commandImportComplete.ExecuteNonQuery();
+
+                transaction.Commit();
+            }
+            catch (SqliteException)
+            {
+                transaction.Rollback();
+                throw;
+            }
+        }
+
+        public void SaveQsoRecords(List<Dictionary<string, string?>> qsoRecords, int? importId = null, bool isTemporary = false)
+        {
+            using var connection = new SqliteConnection(connectionString);
+            connection.Open();
+            using var transaction = connection.BeginTransaction();
+            try
+            {
+                ExecuteSavingQsoRecords(connection, qsoRecords, importId, isTemporary);
+                transaction.Commit();
+            }
+            catch (SqliteException)
+            {
+                transaction.Rollback();
+                throw;
+            }
+        }
+
+        private void ExecuteSavingQsoRecords(
+            SqliteConnection connection, 
+            List<Dictionary<string, string?>> qsoRecords, 
+            int? importId, 
+            bool isTemporary = false)
+        {
             foreach (var qsoRecord in qsoRecords)
             {
                 using var command = connection.CreateCommand();
@@ -125,7 +194,7 @@ namespace QSOCollector
                     AddSqlParameter(command, paramKey, columnValue, addedParamKeys);
                 }
 
-                AddSqlParameter(command, "is_imported", isImported, addedParamKeys);
+                AddSqlParameter(command, "import_id", importId, addedParamKeys);
                 AddSqlParameter(command, "is_temporary", isTemporary, addedParamKeys);
 
                 parameterKeys.RemoveAll(key => addedParamKeys.Contains(key));
@@ -179,10 +248,20 @@ namespace QSOCollector
         {
             using var connection = new SqliteConnection(connectionString);
             connection.Open();
-            using var command = connection.CreateCommand();
-            command.CommandText = deleteTemporaryQsoQsl;
-            command.Parameters.Add(new SqliteParameter("@id", id));
-            command.ExecuteNonQuery();
+            using var transaction = connection.BeginTransaction();
+            try
+            {
+                using var command = connection.CreateCommand();
+                command.CommandText = deleteTemporaryQsoQsl;
+                command.Parameters.Add(new SqliteParameter("@id", id));
+                command.ExecuteNonQuery();
+                transaction.Commit();
+            }
+            catch (SqliteException)
+            {
+                transaction.Rollback();
+                throw;
+            }
         }
 
         public Dictionary<int, string> GetAdif(QsoExportFilters exportFilters)
@@ -201,7 +280,7 @@ namespace QSOCollector
             return adifEntries;
         }
 
-        public void SetQSOsExported(List<int> keys)
+        public void SetQSOsExported(List<int> keys, string folder, string fileName, QsoExportFilters filter, bool isConfirmed)
         {
             if (keys.Count == 0)
             {
@@ -210,14 +289,38 @@ namespace QSOCollector
 
             using var connection = new SqliteConnection(connectionString);
             connection.Open();
-            
+
             int startPos = 0;
-            do {
-                int count = Math.Min(999, keys.Count - startPos);
-                keys.GetRange(startPos, Math.Min(999, keys.Count - startPos));
-                startPos += count + 1;
-                using (var command = connection.CreateCommand()) {
-                    StringBuilder sb = new("UPDATE qsodata SET exported_time = CURRENT_TIMESTAMP WHERE id IN (");
+            using var transaction = connection.BeginTransaction();
+            try
+            {
+                using var commandExport = connection.CreateCommand();
+                commandExport.CommandText = "INSERT INTO adif_export (folder, file_name, qso_amount, filter, is_confirmed) VALUES (@filePath, @fileName, @qsoAmount, @filter, @isConfirmed)";
+                commandExport.Parameters.Add(new SqliteParameter("@folder", folder));
+                commandExport.Parameters.Add(new SqliteParameter("@fileName", fileName));   
+                commandExport.Parameters.Add(new SqliteParameter("@qsoAmount", keys.Count));
+                commandExport.Parameters.Add(new SqliteParameter("@isConfirmed", isConfirmed));
+                commandExport.Parameters.Add(new SqliteParameter("@filter", JsonSerializer.Serialize(filter)));
+                commandExport.ExecuteNonQuery();
+
+                using var commandGetExport = connection.CreateCommand();
+                commandGetExport.CommandText = "SELECT id FROM adif_export WHERE end_time IS NULL and folder = @folder AND file_name = @fileName and qso_amount = @qsoAmount and is_confirmed = @isConfirmed) ORDER BY start_time DESC LIMIT 1";
+                commandGetExport.Parameters.Add(new SqliteParameter("@folder", folder));
+                commandGetExport.Parameters.Add(new SqliteParameter("@fileName", fileName));
+                commandGetExport.Parameters.Add(new SqliteParameter("@qsoAmount", keys.Count));
+                commandGetExport.Parameters.Add(new SqliteParameter("@isConfirmed", isConfirmed));
+                using var reader = commandGetExport.ExecuteReader();
+                int exportId = reader.GetInt32(0);
+                reader.Close();
+
+                do
+                {
+                    int count = Math.Min(999, keys.Count - startPos);
+                    keys.GetRange(startPos, Math.Min(999, keys.Count - startPos));
+                    startPos += count + 1;
+                    using var command = connection.CreateCommand();
+                    StringBuilder sb = new("UPDATE qsodata SET export_id = @exportId WHERE id IN (");
+                    command.Parameters.Add(new SqliteParameter("@exportId", exportId));
                     for (int i = 0; i < count; i++)
                     {
                         if (i > 0) sb.Append(", ");
@@ -228,23 +331,35 @@ namespace QSOCollector
                     sb.Append(")");
                     command.CommandText = sb.ToString();
                     command.ExecuteNonQuery();
-                }
-            } while (startPos < keys.Count);
+                } while (startPos < keys.Count);
+
+                using var commandExportComplete = connection.CreateCommand();
+                commandExportComplete.CommandText = "UPDATE adif_export SET end_time = CURRENT_TIMESTAMP WHERE id = @id";
+                commandExportComplete.Parameters.Add(new SqliteParameter("@id", exportId));
+                commandExportComplete.ExecuteNonQuery();
+
+                transaction.Commit();
+            }
+            catch (SqliteException)
+            {
+                transaction.Rollback();
+                throw;
+            }
         }
 
         private static void AddAdifSqlCommandTextAndParams(SqliteCommand command, QsoExportFilters exportFilters)
         {
-            StringBuilder sb = new("SELECT q.id, q.adif_qsodata FROM qsodata q WHERE q.is_temporary = false AND q.adif_qsodata IS NOT NULL ");
+            StringBuilder sb = new("SELECT q.id, q.adif_qsodata FROM qsodata q LEFT JOIN adif_export e ON q.export_id = e.id WHERE q.is_temporary = false AND q.adif_qsodata IS NOT NULL ");
 
             if (exportFilters.IsNewOnly == true)
             {
-                sb.Append(" AND q.exported_time IS NULL");
+                sb.Append(" AND e.id IS NULL");
             }
 
             if (exportFilters.DateFrom != null)
             {
                 sb.Append(" AND q.qso_time >= @dateFrom");
-                command.Parameters.Add(new SqliteParameter("@dateFrom", DateOnly.FromDateTime(exportFilters.DateFrom.Value)));
+                AddSqlParameter(command, "dateFrom", DateOnly.FromDateTime(exportFilters.DateFrom.Value));
             }
 
             if (exportFilters.DateTo != null)
@@ -253,10 +368,11 @@ namespace QSOCollector
                 DateTime dateTo = exportFilters.DateTo.Value;
                 // if dateTo not in the Past but in Future then move to next day
                 // this way the whole day is included
-                if (dateTo <= DateTime.UtcNow) {
+                if (dateTo <= DateTime.UtcNow)
+                {
                     dateTo = dateTo.AddDays(1);
                 }
-                command.Parameters.Add(new SqliteParameter("@dateTo", DateOnly.FromDateTime(dateTo)));
+                AddSqlParameter(command, "dateTo", DateOnly.FromDateTime(dateTo));
             }
 
             if (exportFilters.ModeGroup != null && exportFilters.Mode == null)
@@ -268,20 +384,20 @@ namespace QSOCollector
                 else
                 {
                     sb.Append(" AND q.mode = @modeGroup");
-                    command.Parameters.Add(new SqliteParameter("@modeGroup", exportFilters.ModeGroup));
+                    AddSqlParameter(command, "modeGroup", exportFilters.ModeGroup);
                 }
             }
 
             if (exportFilters.Mode != null)
             {
                 sb.Append(" AND q.mode = @mode");
-                command.Parameters.Add(new SqliteParameter("@mode", exportFilters.Mode));
+                AddSqlParameter(command, "mode", exportFilters.Mode);
             }
 
             if (exportFilters.Band != null)
             {
                 sb.Append(" AND q.band = @band");
-                command.Parameters.Add(new SqliteParameter("@band", exportFilters.Band));
+                AddSqlParameter(command, "band", exportFilters.Band);
             }
 
             if (exportFilters.ProgramId != null)
@@ -293,7 +409,7 @@ namespace QSOCollector
                 else
                 {
                     sb.Append(" AND q.programId = @programId");
-                    command.Parameters.Add(new SqliteParameter("@programId", exportFilters.ProgramId));
+                    AddSqlParameter(command, "programId", exportFilters.ProgramId);
                 }
             }
 
@@ -306,7 +422,7 @@ namespace QSOCollector
                 else
                 {
                     sb.Append(" AND q.operator = @operator");
-                    command.Parameters.Add(new SqliteParameter("@operator", exportFilters.Operator));
+                    AddSqlParameter(command, "operator", exportFilters.Operator);
                 }
             }
 
@@ -319,17 +435,19 @@ namespace QSOCollector
                 else
                 {
                     sb.Append(" AND q.sourceIp = @sourceIp");
-                    command.Parameters.Add(new SqliteParameter("@sourceIp", exportFilters.SourceIp));
+                    AddSqlParameter(command, "sourceIp", exportFilters.SourceIp);
                 }
             }
             sb.Append(" ORDER BY q.qso_time");
             command.CommandText = sb.ToString();
         }
 
-        private static void AddSqlParameter(SqliteCommand command, string paramKey, object paramValue, List<string> parameterKeys)
+        private static void AddSqlParameter(SqliteCommand command, string paramKey, object paramValue, List<string>? parameterKeys = null)
         {
-            command.Parameters.Add(new SqliteParameter($"@{paramKey}", paramValue));
-            parameterKeys.Add(paramKey);
+            command.Parameters.Add(new SqliteParameter($"@{paramKey}", paramValue ?? DBNull.Value));
+            if (parameterKeys != null) {
+                parameterKeys.Add(paramKey);
+            }
         }
 
         private static List<string> GetParameterKeys(string commandText)

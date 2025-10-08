@@ -404,6 +404,7 @@
             Controls.Add(secondaryFiltersGroupBox);
             Controls.Add(amountsGroupBox);
             Controls.Add(mainFilterGroupBox);
+            FormBorderStyle = FormBorderStyle.Fixed3D;
             MaximizeBox = false;
             Name = "QsoExportForm";
             StartPosition = FormStartPosition.CenterParent;

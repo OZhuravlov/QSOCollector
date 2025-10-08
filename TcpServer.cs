@@ -92,7 +92,7 @@ namespace QSOCollector
                             throw new ArgumentException("No valid QSO records found in ADIF data");
                         }
 
-                        dbRepository.SaveQsoRecords(qsoRecords, isImported: false, isTemporary: false);
+                        dbRepository.SaveQsoRecords(qsoRecords, isTemporary: false);
                         serverProgressUpdater.UpdateLog($"{qsoMessage}", true);
                         foreach (var item in qsoRecords)
                         {

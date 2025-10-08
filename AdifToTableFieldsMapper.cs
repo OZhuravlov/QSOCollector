@@ -4,13 +4,14 @@ namespace QSOCollector
 {
     public static class AdifToTableFieldsMapper
     {
+        public static readonly string endOfRecord = "<EOR>";
         private static readonly string endOfHeader = "<EOH>";
-        private static readonly string endOfRecord = "<EOR>";
 
         // Parses an ADIF message and returns a list of key-value maps for each QSO record
-        public static List<Dictionary<string, string>> Map(QsoMessage qsoMessage, string sourceIpAddress)
+        public static List<Dictionary<string, string?>> Map(QsoMessage qsoMessage, string? sourceIpAddress = null)
         {
-            if (qsoMessage.OriginalFormat == "ADIF") {
+            if (qsoMessage.OriginalFormat == "ADIF")
+            {
                 qsoMessage.AdifQsoData = qsoMessage.OriginalQsoData;
             }
 
@@ -18,11 +19,16 @@ namespace QSOCollector
             var headerMap = new Dictionary<string, string>
             {
                 ["ORIG_FORMAT"] = qsoMessage.OriginalFormat,
-                ["SOURCE_IP_ADDRESS"] = sourceIpAddress
             };
 
+            if (sourceIpAddress != null)
+            {
+                headerMap["SOURCE_IP_ADDRESS"] = sourceIpAddress;
+            }
+
             string sourceKey = "PROGRAMID";
-            if (!string.IsNullOrEmpty(qsoMessage.Source)) {
+            if (!string.IsNullOrEmpty(qsoMessage.Source))
+            {
                 headerMap[sourceKey] = qsoMessage.Source;
             }
 
@@ -56,6 +62,11 @@ namespace QSOCollector
                 qsoMap["ORIG_QSODATA"] = qsoMessage.OriginalFormat == "ADIF" ? adifRecord : qsoMessage.OriginalQsoData;
                 qsoMap["ADIF_QSODATA"] = adifRecord;
                 qsoMap["QSO_TIME"] = GetQsoTime(qsoMap).ToString("yyyy-MM-dd HH:mm:ss");
+                string? qsoOperator;
+                if (!qsoMap.ContainsKey("STATION_CALLSIGN") && qsoMap.TryGetValue("OPERATOR", out qsoOperator)) {
+                    qsoMap["STATION_CALLSIGN"] = qsoOperator;
+                }
+
                 result.Add(qsoMap);
             }
 

@@ -136,7 +136,7 @@ namespace QSOCollector
             if (qsoMessage.IsTest) return;
             progressUpdater.UpdateLog($"The following QSO messages will be temporarely saved to local DB:\n{qsoMessage}", true);
             List<Dictionary<string, string>> qsoRecords = ParseMessage(qsoMessage);
-            dbRepository.SaveQsoRecords(qsoRecords, isImported: false, isTemporary: true);
+            dbRepository.SaveQsoRecords(qsoRecords, isTemporary: true);
             progressUpdater.UpdateTempSaved(qsoRecords.Count);
             progressUpdater.UpdateLog($"{qsoRecords.Count} QSOs from {qsoMessage.Source} saved to local Database");
         }

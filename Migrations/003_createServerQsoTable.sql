@@ -4,8 +4,8 @@
     source_ip_address VARCHAR(20),
     created_time      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     update_time       DATETIME,
-    is_imported       BOOLEAN      NOT NULL DEFAULT FALSE,
-    exported_time     DATETIME,
+    import_id         INTEGER,
+    export_id         INTEGER,
     qso_time          DATETIME     NOT NULL,
     programid         VARCHAR(20),
     station_callsign  VARCHAR(20)  NOT NULL,
@@ -38,11 +38,17 @@
     orig_format       VARCHAR(20) NOT NULL,
     orig_qsodata      TEXT NOT NULL,
     adif_qsodata      TEXT NOT NULL,
+    UNIQUE (qso_time, call, band, mode, is_temporary),
+    FOREIGN KEY (import_id) REFERENCES adif_import(id) ON DELETE SET NULL,
+    FOREIGN KEY (export_id) REFERENCES adif_export(id) ON DELETE SET NULL,
     CHECK ((qso_date IS NOT NULL AND time_on IS NOT NULL) OR (qso_date_off IS NOT NULL AND time_off IS NOT NULL))
 );
 
 CREATE INDEX idx_qsodata_is_temporary ON qsodata(is_temporary);
-CREATE UNIQUE INDEX idx_qsodata_uniq ON qsodata(qso_time, call, band, mode, is_temporary);
-CREATE INDEX idx_qsodata_band ON qsodata(band);
 CREATE INDEX idx_qsodata_mode ON qsodata(mode);
+CREATE INDEX idx_qsodata_band ON qsodata(band);
+CREATE INDEX idx_qsodata_programid ON qsodata(programid);
 CREATE INDEX idx_qsodata_operator ON qsodata(operator);
+CREATE INDEX idx_qsodata_source_ip_address ON qsodata(source_ip_address);
+CREATE INDEX idx_qsodata_import_id ON qsodata(import_id);
+CREATE INDEX idx_qsodata_export_id ON qsodata(export_id);

@@ -1,6 +1,5 @@
 ﻿using System.Diagnostics;
 using System.Text;
-using System.Windows.Forms;
 
 namespace QSOCollector
 {
@@ -10,10 +9,10 @@ namespace QSOCollector
         private List<QsoExportExpectedAmounts> expectedAmounts;
         private readonly QsoExportFilters exportFilters = new();
 
-        public QsoExportForm(DbRepository dbRepository)
+        public QsoExportForm(DbRepository dbRepository, List<QsoExportExpectedAmounts> expectedAmounts)
         {
             this.dbRepository = dbRepository;
-            expectedAmounts = dbRepository.GetQsoAmountsForExport();
+            this.expectedAmounts = expectedAmounts;
             InitializeComponent();
             InitValues();
         }
@@ -265,10 +264,11 @@ namespace QSOCollector
             if (GetCalcFiltered() == 0)
             {
                 DialogResult dialogResultStartExport = MessageBox.Show("It looks like no QSO expected to be exported. " +
-                    "Do you want to try fetching from Database?", "Nothing to export", 
+                    "Do you want to try fetching from Database?", "Nothing to export",
                     MessageBoxButtons.YesNo,
                     MessageBoxIcon.Question,
                     MessageBoxDefaultButton.Button2);
+
                 if (dialogResultStartExport == DialogResult.No)
                 {
                     return;
@@ -277,14 +277,15 @@ namespace QSOCollector
 
             Dictionary<int, string> adifEntries = dbRepository.GetAdif(exportFilters);
 
-            if (adifEntries.Count == 0) {
-                MessageBox.Show("No QSO found to export with current filters", "Nothing to export", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            if (adifEntries.Count == 0)
+            {
+                MessageBox.Show("No QSO found to export with current filters", "Nothing to export", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
             DateTime now = DateTime.UtcNow;
 
-            var sb = new StringBuilder($"# UR8UQ DXpedition QSO Collector v.{System.Reflection.Assembly.GetExecutingAssembly().GetName().Version}\n#   Created:  {now:yyyy-MM-dd HH:mm:ss}\n<ADIF_VER:3>3.1.6\n<EOH>\n");
+            var sb = new StringBuilder($"# UR8UQ DXpedition QSO Collector v.{System.Reflection.Assembly.GetExecutingAssembly().GetName().Version}\r\n#   Created:  {now:yyyy-MM-dd HH:mm:ss}\r\n#\r\n<ADIF_VER:5>3.1.6\r\n<EOH>\r\n");
             foreach (var item in adifEntries.Values)
             {
                 sb.AppendLine(item);
@@ -292,6 +293,8 @@ namespace QSOCollector
 
             var fileContent = sb.ToString();
             var filePath = string.Empty;
+            var fileName = string.Empty;
+            var folder = string.Empty;
 
             using (SaveFileDialog saveFileDialog = new()
             {
@@ -306,6 +309,8 @@ namespace QSOCollector
                 if (saveFileDialog.ShowDialog() == DialogResult.OK)
                 {
                     filePath = saveFileDialog.FileName;
+                    folder = Path.GetDirectoryName(filePath);
+                    fileName = Path.GetFileName(filePath);
                     File.WriteAllText(filePath, fileContent);
                 }
                 else
@@ -324,10 +329,13 @@ namespace QSOCollector
 
             if (dialogResultSetExported == DialogResult.Yes)
             {
-                dbRepository.SetQSOsExported([.. adifEntries.Keys]);
+                dbRepository.SetQSOsExported([.. adifEntries.Keys], folder, fileName, exportFilters, true);
                 expectedAmounts = dbRepository.GetQsoAmountsForExport();
                 exportButton.Text = $"Exported ({adifEntries.Count})";
                 RecalcFiltered();
+            }
+            else {
+                dbRepository.SetQSOsExported([.. adifEntries.Keys], folder, fileName, exportFilters, false);
             }
 
             string argument = "/select, \"" + filePath + "\"";
