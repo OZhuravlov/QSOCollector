@@ -50,7 +50,7 @@
             // 
             // importButton
             // 
-            importButton.BackColor = Color.DarkSeaGreen;
+            importButton.BackColor = Color.Transparent;
             importButton.Enabled = false;
             importButton.FlatStyle = FlatStyle.Popup;
             importButton.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);

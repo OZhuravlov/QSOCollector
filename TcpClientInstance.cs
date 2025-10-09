@@ -20,7 +20,8 @@ namespace QSOCollector
             this.progressUpdater = progressUpdater;
         }
 
-        public bool IsConnected() {
+        public bool IsConnected()
+        {
             return client != null && client.Connected;
         }
 
@@ -45,24 +46,35 @@ namespace QSOCollector
             }
 
             w.WriteLine(qsoMessage);
+            if (!isTest)
+            {
+                progressUpdater.UpdateProgress(false, true, false, false, $"QSO from {source} sent to server");
+            }
+            else {
+                progressUpdater.UpdateLog("Server status requested", true);
+            }
+
             string? responseMessage = await r.ReadLineAsync(new CancellationTokenSource(responseDelay).Token);
             ServerResponse serverResponse = JsonSerializer.Deserialize<ServerResponse>(responseMessage);
-            if (!string.IsNullOrEmpty(serverResponse?.ErrorDescription))
+            if (serverResponse == null)
+            {
+                progressUpdater.UpdateLog($"Server response timeout");
+                return;
+            }
+
+            if (serverResponse.Status != ServerResponseStatus.Ok)
             {
                 progressUpdater.UpdateLog($"Server returned an error: {responseMessage}");
+                return;
             }
-            else
-            {
-                if (!isTest) {
-                    progressUpdater.UpdateProgress(false, true, false, false, $"QSO from {source} sent to server");
-                }
-                progressUpdater.UpdateLog(qsoMessage, true);
-                progressUpdater.UpdateLog($"Server response: {responseMessage}", true);
-                progressUpdater.UpdateServerStatus("Active", null);
-            }
+
+            string responseDetailedMessage = isTest ? $"Server status: {serverResponse.Status}" : $"QSO from {source} processed by server";
+            progressUpdater.UpdateLog(responseDetailedMessage, true);
+            progressUpdater.UpdateServerStatus("Active", null);
         }
 
-        public void Terminate() {
+        public void Terminate()
+        {
             if (client != null)
             {
                 client.Close();

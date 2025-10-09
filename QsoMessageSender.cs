@@ -107,7 +107,7 @@ namespace QSOCollector
                         await tcpClient.SendMessage(qsoMessageJson, responseTimeoutMs, qsoMessage.Source, qsoMessage.IsTest);
                         retry = false;
                     }
-                    catch (Exception ex)
+                    catch (Exception)
                     {
                         if (i-- > 0)
                         {

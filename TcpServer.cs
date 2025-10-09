@@ -121,7 +121,8 @@ namespace QSOCollector
 
                 if (qsoMessage.IsTest)
                 {
-                    serverProgressUpdater.UpdateLog($"{qsoMessage.Source}: {response}", true);
+                    string message = $"Got server status request from {clientIPAddress}. Status: {response.Status}";
+                    serverProgressUpdater.UpdateLog(message, true);
                 }
                 else {
                     var rec = qsoRecords[qsoRecords.Count - 1];

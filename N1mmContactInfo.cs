@@ -76,6 +76,9 @@ namespace QSOCollector
         [XmlElement("exchangel")]
         public string? Exchangel { get; set; }
 
+        [XmlElement("exchange1")]
+        public string? Exchange1 { get; set; }
+
         [XmlElement("section")]
         public string? Section { get; set; }
 
@@ -106,6 +109,9 @@ namespace QSOCollector
         [XmlElement("ismultiplierl")]
         public string? IsMultiplierl { get; set; }
 
+        [XmlElement("ismultiplier1")]
+        public string? IsMultiplier1 { get; set; }
+
         [XmlElement("ismultiplier2")]
         public string? IsMultiplier2 { get; set; }
 
@@ -116,19 +122,19 @@ namespace QSOCollector
         public int? Points { get; set; }
 
         [XmlElement("radionr")]
-        public int? RadioNr { get; set; }
+        public string? RadioNr { get; set; }
 
         [XmlElement("run1run2")]
-        public int? Run1Run2 { get; set; }
+        public string? Run1Run2 { get; set; }
 
         [XmlElement("RoverLocation")]
         public string? RoverLocation { get; set; }
 
         [XmlElement("RadioInterfaced")]
-        public int? RadioInterfaced { get; set; }
+        public string? RadioInterfaced { get; set; }
 
         [XmlElement("NetworkedCompNr")]
-        public int? NetworkedCompNr { get; set; }
+        public string? NetworkedCompNr { get; set; }
 
         [XmlElement("IsOriginal")]
         public string? IsOriginal { get; set; }

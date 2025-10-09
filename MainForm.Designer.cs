@@ -360,14 +360,15 @@ namespace QSOCollector
             // 
             // listenersConfigButton
             // 
+            listenersConfigButton.BackColor = Color.SlateGray;
             listenersConfigButton.FlatStyle = FlatStyle.Popup;
             listenersConfigButton.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
             listenersConfigButton.Location = new Point(9, 50);
             listenersConfigButton.Name = "listenersConfigButton";
-            listenersConfigButton.Size = new Size(108, 47);
+            listenersConfigButton.Size = new Size(129, 47);
             listenersConfigButton.TabIndex = 4;
-            listenersConfigButton.Text = "Listeners";
-            listenersConfigButton.UseVisualStyleBackColor = true;
+            listenersConfigButton.Text = "UDP Listeners";
+            listenersConfigButton.UseVisualStyleBackColor = false;
             listenersConfigButton.Click += ListenersConfigButton_Click;
             // 
             // ClientServerConfigGroupBox
@@ -498,7 +499,7 @@ namespace QSOCollector
             qsoImportButton.Enabled = false;
             qsoImportButton.FlatStyle = FlatStyle.System;
             qsoImportButton.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            qsoImportButton.Location = new Point(407, 517);
+            qsoImportButton.Location = new Point(439, 517);
             qsoImportButton.Name = "qsoImportButton";
             qsoImportButton.Size = new Size(96, 35);
             qsoImportButton.TabIndex = 1;
@@ -545,7 +546,7 @@ namespace QSOCollector
             dataGridViewCellStyle2.WrapMode = DataGridViewTriState.False;
             serverQsoAmountsDataGridView.DefaultCellStyle = dataGridViewCellStyle2;
             serverQsoAmountsDataGridView.EditMode = DataGridViewEditMode.EditProgrammatically;
-            serverQsoAmountsDataGridView.Location = new Point(15, 29);
+            serverQsoAmountsDataGridView.Location = new Point(3, 29);
             serverQsoAmountsDataGridView.Name = "serverQsoAmountsDataGridView";
             serverQsoAmountsDataGridView.ReadOnly = true;
             dataGridViewCellStyle3.Alignment = DataGridViewContentAlignment.MiddleCenter;
@@ -562,7 +563,7 @@ namespace QSOCollector
             serverQsoAmountsDataGridView.RowTemplate.ReadOnly = true;
             serverQsoAmountsDataGridView.RowTemplate.Resizable = DataGridViewTriState.False;
             serverQsoAmountsDataGridView.ShowEditingIcon = false;
-            serverQsoAmountsDataGridView.Size = new Size(647, 154);
+            serverQsoAmountsDataGridView.Size = new Size(673, 154);
             serverQsoAmountsDataGridView.TabIndex = 7;
             serverQsoAmountsDataGridView.RowsAdded += serverQsoAmountsDataGridView_RowsAdded;
             serverQsoAmountsDataGridView.RowsRemoved += serverQsoAmountsDataGridView_RowsRemoved;
@@ -644,7 +645,7 @@ namespace QSOCollector
             lastExportedQsoTime.ReadOnly = true;
             lastExportedQsoTime.Resizable = DataGridViewTriState.False;
             lastExportedQsoTime.SortMode = DataGridViewColumnSortMode.NotSortable;
-            lastExportedQsoTime.Width = 130;
+            lastExportedQsoTime.Width = 150;
             // 
             // serverLogTextBox
             // 
@@ -682,7 +683,7 @@ namespace QSOCollector
             qsoExportButton.FlatStyle = FlatStyle.System;
             qsoExportButton.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
             qsoExportButton.ForeColor = SystemColors.ControlText;
-            qsoExportButton.Location = new Point(265, 517);
+            qsoExportButton.Location = new Point(248, 517);
             qsoExportButton.Name = "qsoExportButton";
             qsoExportButton.Size = new Size(110, 35);
             qsoExportButton.TabIndex = 0;

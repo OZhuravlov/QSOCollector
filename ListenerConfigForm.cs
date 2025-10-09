@@ -19,7 +19,7 @@ namespace QSOCollector
             // Bind the DataGridView to the BindingSource
             // and load the data from the database.
             dataGridView1.DataSource = bindingSource1;
-            GetListenersConfigDataForDataGridView1(connectionString, "select id, protocol, qso_port, acknowledge_port, message_format, is_active, description from listeners");
+            GetListenersConfigDataForDataGridView1(connectionString, "select id, name, qso_port, forward_port, acknowledge_port, message_format, is_active from listeners");
         }
 
         private void GetListenersConfigDataForDataGridView1(string connectionString, string selectCommand)
@@ -54,8 +54,7 @@ namespace QSOCollector
         private void dataGridView1_CellValidating(object sender, DataGridViewCellValidatingEventArgs e)
         {
             DataGridViewColumn column = dataGridView1.Columns[e.ColumnIndex];
-            e.Cancel = (column.Name == "qso_port" || column.Name == "acknowledge_port")
-                && !handlePortValue(e.RowIndex, e.ColumnIndex, column.HeaderText);
+            e.Cancel = column.Name.EndsWith("_port") && !handlePortValue(e.RowIndex, e.ColumnIndex, column.HeaderText);
         }
 
         private bool handlePortValue(int rowIndex, int columnIndex, string columnHeader)
@@ -95,7 +94,7 @@ namespace QSOCollector
             // Validate all columns except id and description
             foreach (DataGridViewColumn column in dataGridView1.Columns)
             {
-                if (column.Name == "id" || column.Name == "description" || column.Name == "acknowledge_port")
+                if (column.Name == "id" || column.Name == "forward_port" || column.Name == "acknowledge_port")
                     continue;
                 DataGridViewCell cell = row.Cells[column.Index];
                 if (cell.FormattedValue == null || string.IsNullOrWhiteSpace(cell.FormattedValue.ToString()))
@@ -110,7 +109,6 @@ namespace QSOCollector
         private void dataGridView1_DefaultValuesNeeded(object sender, DataGridViewRowEventArgs e)
         {
             e.Row.Cells["is_active"].Value = true;
-            e.Row.Cells["protocol"].Value = "UDP";
             e.Row.Cells["message_format"].Value = "ADIF";
         }
 

@@ -35,8 +35,7 @@
             };
             List<Dictionary<string, string?>> qsoRecords = AdifToTableFieldsMapper.Map(qsoMessage);
             dbRepository.ImportQsoRecords(qsoRecords, folder, fileName);
-            importButton.Text = $"Imported {qsoRecords.Count} QSOs";
-            importButton.Enabled = false;
+            handleButton(importButton, false, $"Imported {qsoRecords.Count} QSOs");
             closeCancelButton.Text = "Close";
             MessageBox.Show($"{qsoRecords.Count} QSOs successfully imported", "QSOs imported", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
@@ -58,8 +57,7 @@
                 fileContent = reader.ReadToEnd();
                 int length = Math.Min(fileContent.Length, filePreviewTextBox.MaxLength);
                 filePreviewTextBox.Text = fileContent[..length];
-                importButton.Enabled = true;
-                importButton.Text = "Continue import";
+                handleButton(importButton, true, "Continue import");
                 closeCancelButton.Text = "Cancel";
             }
             else
@@ -71,10 +69,16 @@
                 fileName = null;
                 filePathLabel.Text = "No file selected";
                 filePreviewTextBox.Text = string.Empty;
-                importButton.Enabled = false;
+                handleButton(importButton, false);
                 closeCancelButton.Text = "Close";
                 return;
             }
+        }
+        private void handleButton(Button button, bool enabled, string? newText = null)
+        {
+            button.Enabled = enabled;
+            if (newText != null) button.Text = newText;
+            ButtonStyleHandler.Update(button, enabled);
         }
     }
 }

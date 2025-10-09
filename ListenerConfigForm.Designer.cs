@@ -34,14 +34,17 @@ namespace QSOCollector
         /// </summary>
         private void InitializeComponent()
         {
+            DataGridViewCellStyle dataGridViewCellStyle1 = new DataGridViewCellStyle();
+            DataGridViewCellStyle dataGridViewCellStyle2 = new DataGridViewCellStyle();
+            DataGridViewCellStyle dataGridViewCellStyle3 = new DataGridViewCellStyle();
             dataGridView1 = new DataGridView();
             id = new DataGridViewTextBoxColumn();
-            protocol = new DataGridViewComboBoxColumn();
+            name = new DataGridViewTextBoxColumn();
             qso_port = new DataGridViewTextBoxColumn();
+            forward_port = new DataGridViewTextBoxColumn();
             acknowledge_port = new DataGridViewTextBoxColumn();
             message_format = new DataGridViewComboBoxColumn();
             is_active = new DataGridViewCheckBoxColumn();
-            description = new DataGridViewTextBoxColumn();
             deleteSelectedListenersButton = new Button();
             cancelEditListenersButton = new Button();
             saveListenersButton = new Button();
@@ -52,13 +55,34 @@ namespace QSOCollector
             // 
             dataGridView1.AllowUserToResizeColumns = false;
             dataGridView1.AllowUserToResizeRows = false;
+            dataGridViewCellStyle1.SelectionBackColor = Color.Gray;
+            dataGridViewCellStyle1.SelectionForeColor = SystemColors.HighlightText;
+            dataGridView1.AlternatingRowsDefaultCellStyle = dataGridViewCellStyle1;
+            dataGridView1.BackgroundColor = SystemColors.Window;
+            dataGridView1.BorderStyle = BorderStyle.Fixed3D;
+            dataGridViewCellStyle2.Alignment = DataGridViewContentAlignment.MiddleLeft;
+            dataGridViewCellStyle2.BackColor = SystemColors.Control;
+            dataGridViewCellStyle2.Font = new Font("Segoe UI", 9F);
+            dataGridViewCellStyle2.ForeColor = SystemColors.WindowText;
+            dataGridViewCellStyle2.SelectionBackColor = Color.LightGray;
+            dataGridViewCellStyle2.SelectionForeColor = SystemColors.WindowText;
+            dataGridViewCellStyle2.WrapMode = DataGridViewTriState.True;
+            dataGridView1.ColumnHeadersDefaultCellStyle = dataGridViewCellStyle2;
             dataGridView1.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            dataGridView1.Columns.AddRange(new DataGridViewColumn[] { id, protocol, qso_port, acknowledge_port, message_format, is_active, description });
+            dataGridView1.Columns.AddRange(new DataGridViewColumn[] { id, name, qso_port, forward_port, acknowledge_port, message_format, is_active });
+            dataGridViewCellStyle3.Alignment = DataGridViewContentAlignment.MiddleLeft;
+            dataGridViewCellStyle3.BackColor = SystemColors.Window;
+            dataGridViewCellStyle3.Font = new Font("Segoe UI", 9F);
+            dataGridViewCellStyle3.ForeColor = SystemColors.ControlText;
+            dataGridViewCellStyle3.SelectionBackColor = Color.LightGray;
+            dataGridViewCellStyle3.SelectionForeColor = SystemColors.WindowText;
+            dataGridViewCellStyle3.WrapMode = DataGridViewTriState.False;
+            dataGridView1.DefaultCellStyle = dataGridViewCellStyle3;
             dataGridView1.Location = new Point(-1, 2);
             dataGridView1.Name = "dataGridView1";
             dataGridView1.RowHeadersWidth = 51;
             dataGridView1.RowHeadersWidthSizeMode = DataGridViewRowHeadersWidthSizeMode.DisableResizing;
-            dataGridView1.Size = new Size(805, 236);
+            dataGridView1.Size = new Size(584, 257);
             dataGridView1.TabIndex = 0;
             dataGridView1.CellBeginEdit += dataGridView1_CellBeginEdit;
             dataGridView1.CellValidating += dataGridView1_CellValidating;
@@ -76,16 +100,18 @@ namespace QSOCollector
             id.Visible = false;
             id.Width = 10;
             // 
-            // protocol
+            // name
             // 
-            protocol.DataPropertyName = "protocol";
-            protocol.HeaderText = "*Protocol";
-            protocol.Items.AddRange(new object[] { "UDP" });
-            protocol.MinimumWidth = 6;
-            protocol.Name = "protocol";
-            protocol.Resizable = DataGridViewTriState.False;
-            protocol.ToolTipText = "Check from QSO producer configuration";
-            protocol.Width = 125;
+            name.AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
+            name.DataPropertyName = "name";
+            name.HeaderText = "Listener name";
+            name.MaxInputLength = 100;
+            name.MinimumWidth = 6;
+            name.Name = "name";
+            name.Resizable = DataGridViewTriState.False;
+            name.SortMode = DataGridViewColumnSortMode.NotSortable;
+            name.ToolTipText = "Describe sender. Like MSHV, N1MM, WSJTX";
+            name.Width = 120;
             // 
             // qso_port
             // 
@@ -97,15 +123,30 @@ namespace QSOCollector
             qso_port.Name = "qso_port";
             qso_port.Resizable = DataGridViewTriState.False;
             qso_port.SortMode = DataGridViewColumnSortMode.NotSortable;
-            qso_port.Width = 70;
+            qso_port.ToolTipText = "main Port to get All QSOs";
+            qso_port.Width = 90;
+            // 
+            // forward_port
+            // 
+            forward_port.AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
+            forward_port.DataPropertyName = "forward_port";
+            forward_port.HeaderText = "Forward Port";
+            forward_port.MaxInputLength = 6;
+            forward_port.MinimumWidth = 6;
+            forward_port.Name = "forward_port";
+            forward_port.ToolTipText = "(Optional) Port to forward all messages to";
+            forward_port.Width = 80;
             // 
             // acknowledge_port
             // 
+            acknowledge_port.AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
             acknowledge_port.DataPropertyName = "acknowledge_port";
-            acknowledge_port.HeaderText = "Acknowledge Port (Optional)";
+            acknowledge_port.HeaderText = "Application port";
+            acknowledge_port.MaxInputLength = 6;
             acknowledge_port.MinimumWidth = 6;
             acknowledge_port.Name = "acknowledge_port";
-            acknowledge_port.Width = 125;
+            acknowledge_port.ToolTipText = "Port used by Application to send information of itself. Used to monitor App is active";
+            acknowledge_port.Width = 90;
             // 
             // message_format
             // 
@@ -115,8 +156,8 @@ namespace QSOCollector
             message_format.MinimumWidth = 6;
             message_format.Name = "message_format";
             message_format.Resizable = DataGridViewTriState.False;
-            message_format.ToolTipText = "QSO message format. Check from QSO producer doc";
-            message_format.Width = 150;
+            message_format.ToolTipText = "QSO message format like ADIF, N1MM";
+            message_format.Width = 90;
             // 
             // is_active
             // 
@@ -129,21 +170,9 @@ namespace QSOCollector
             is_active.Resizable = DataGridViewTriState.False;
             is_active.Width = 60;
             // 
-            // description
-            // 
-            description.AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
-            description.DataPropertyName = "description";
-            description.HeaderText = "Description (Optional)";
-            description.MaxInputLength = 100;
-            description.MinimumWidth = 6;
-            description.Name = "description";
-            description.Resizable = DataGridViewTriState.False;
-            description.SortMode = DataGridViewColumnSortMode.NotSortable;
-            description.Width = 300;
-            // 
             // deleteSelectedListenersButton
             // 
-            deleteSelectedListenersButton.Location = new Point(66, 244);
+            deleteSelectedListenersButton.Location = new Point(66, 265);
             deleteSelectedListenersButton.Name = "deleteSelectedListenersButton";
             deleteSelectedListenersButton.Size = new Size(180, 41);
             deleteSelectedListenersButton.TabIndex = 1;
@@ -153,7 +182,7 @@ namespace QSOCollector
             // 
             // cancelEditListenersButton
             // 
-            cancelEditListenersButton.Location = new Point(389, 244);
+            cancelEditListenersButton.Location = new Point(318, 265);
             cancelEditListenersButton.Name = "cancelEditListenersButton";
             cancelEditListenersButton.Size = new Size(118, 41);
             cancelEditListenersButton.TabIndex = 2;
@@ -164,7 +193,7 @@ namespace QSOCollector
             // saveListenersButton
             // 
             saveListenersButton.Enabled = false;
-            saveListenersButton.Location = new Point(513, 244);
+            saveListenersButton.Location = new Point(442, 265);
             saveListenersButton.Name = "saveListenersButton";
             saveListenersButton.Size = new Size(94, 41);
             saveListenersButton.TabIndex = 3;
@@ -176,16 +205,17 @@ namespace QSOCollector
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(804, 284);
+            ClientSize = new Size(583, 310);
             Controls.Add(saveListenersButton);
             Controls.Add(cancelEditListenersButton);
             Controls.Add(deleteSelectedListenersButton);
             Controls.Add(dataGridView1);
+            ForeColor = SystemColors.ControlText;
             FormBorderStyle = FormBorderStyle.Fixed3D;
             MaximizeBox = false;
             Name = "ListenersForm";
             StartPosition = FormStartPosition.CenterParent;
-            Text = "Listeners";
+            Text = "UDP Listeners";
             Load += ListenersForm_Load;
             ((System.ComponentModel.ISupportInitialize)dataGridView1).EndInit();
             ResumeLayout(false);
@@ -200,11 +230,11 @@ namespace QSOCollector
         private Button cancelEditListenersButton;
         private Button saveListenersButton;
         private DataGridViewTextBoxColumn id;
-        private DataGridViewComboBoxColumn protocol;
+        private DataGridViewTextBoxColumn name;
         private DataGridViewTextBoxColumn qso_port;
+        private DataGridViewTextBoxColumn forward_port;
         private DataGridViewTextBoxColumn acknowledge_port;
         private DataGridViewComboBoxColumn message_format;
         private DataGridViewCheckBoxColumn is_active;
-        private DataGridViewTextBoxColumn description;
     }
 }

@@ -66,15 +66,18 @@ namespace QSOCollector
             if (serverCheckBox.Checked)
             {
                 StopServer();
+                serverQsoAmountsDataGridView.DataSource = serverQsoAmountsBindingSource;
+                GetDataForServerQsoAmountDataGridView();
             }
             else
             {
                 serverLogTextBox.Clear();
+                ClearDataForServerQsoAmountDataGridView();
             }
 
             if (serverCheckBox.Checked && string.IsNullOrEmpty(serverPortTextBox.Text))
             {
-                UpdateButton(startServerButton, false);
+                ButtonStyleHandler.Update(startServerButton, false);
                 serverPortTextBox.Focus();
             }
         }
@@ -97,7 +100,7 @@ namespace QSOCollector
 
                 if (control is Button button)
                 {
-                    UpdateButton(button, enabled);
+                    ButtonStyleHandler.Update(button, enabled);
                     continue;
                 }
 
@@ -126,8 +129,8 @@ namespace QSOCollector
             serverPortTextBox.Enabled = true;
             startServerButton.Text = "Start Server";
             serverLogTextBox.AppendText("Server stopped...\r\n");
-            UpdateButton(startServerButton, true, Color.DarkSeaGreen);
-            UpdateButton(stopServerButton, false);
+            ButtonStyleHandler.Update(startServerButton, true, Color.DarkSeaGreen);
+            ButtonStyleHandler.Update(stopServerButton, false);
         }
 
         private void StartServerButton_Click(object sender, EventArgs e)
@@ -138,15 +141,13 @@ namespace QSOCollector
             serverPortTextBox.Enabled = false;
             serverLogTextBox.Clear();
             startServerButton.Text = "Executing...";
-            UpdateButton(startServerButton, false, Color.Lavender);
-            UpdateButton(stopServerButton, true, Color.RosyBrown);
+            ButtonStyleHandler.Update(startServerButton, false, Color.Lavender);
+            ButtonStyleHandler.Update(stopServerButton, true, Color.RosyBrown);
             serverLogTextBox.AppendText("Server started...\r\n");
         }
 
         private async void StartServer(int port)
         {
-            serverQsoAmountsDataGridView.DataSource = serverQsoAmountsBindingSource;
-            GetDataForServerQsoAmountDataGridView(connectionString, "SELECT q.mode QsoAmountMode, COUNT(CASE WHEN q.qso_time >= current_date THEN 1 END) TodayQsoAmount, count(*) TotalQsoAmount, COUNT(e.id) ExportedQsoAmount, MAX(q.qso_time) LastQsoTime, MAX(e.end_time) LastExportedQsoTime FROM qsodata q LEFT JOIN adif_export e ON q.export_id = e.id AND e.is_confirmed = true WHERE q.is_temporary = false GROUP BY q.mode UNION ALL SELECT 'Total', COUNT(CASE WHEN q.qso_time >= current_date THEN 1 END), COUNT(*), COUNT(e.id), MAX(q.qso_time), MAX(e.end_time) FROM qsodata q JOIN adif_export e ON q.export_id = e.id AND e.is_confirmed = true WHERE q.is_temporary = false");
             HandleExportEnabled();
 
             serverProgressUpdater = new(serverQsoAmountDataTable, serverLogTextBox);
@@ -154,8 +155,9 @@ namespace QSOCollector
             await tcpServer.Start(connectionString);
         }
 
-        private void GetDataForServerQsoAmountDataGridView(string connectionString, string selectCommand)
+        private void GetDataForServerQsoAmountDataGridView()
         {
+            string selectCommand ="SELECT q.mode QsoAmountMode, COUNT(CASE WHEN q.qso_time >= current_date THEN 1 END) TodayQsoAmount, count(*) TotalQsoAmount, COUNT(e.id) ExportedQsoAmount, MAX(q.qso_time) LastQsoTime, MAX(e.end_time) LastExportedQsoTime FROM qsodata q LEFT JOIN adif_export e ON q.export_id = e.id AND e.is_confirmed = true WHERE q.is_temporary = false GROUP BY q.mode UNION ALL SELECT 'Total', COUNT(CASE WHEN q.qso_time >= current_date THEN 1 END), COUNT(*), COUNT(e.id), MAX(q.qso_time), MAX(e.end_time) FROM qsodata q LEFT JOIN adif_export e ON q.export_id = e.id AND e.is_confirmed = true WHERE q.is_temporary = false";
             try
             {
                 serverQsoAmountsDataAdapter = new SQLiteDataAdapter(selectCommand, connectionString);
@@ -174,39 +176,19 @@ namespace QSOCollector
             }
         }
 
-        private static void UpdateButton(Button button, bool enabled)
-        {
-            UpdateButton(button, enabled, null);
-        }
-
-        private static void UpdateButton(Button button, bool enabled, Color? backColor)
-        {
-            button.Enabled = enabled;
-            Color color;
-            FontStyle fontStyle;
-            if (button.Enabled)
-            {
-                color = backColor == null ? Color.DarkCyan : backColor.Value;
-                fontStyle = FontStyle.Bold;
-            }
-            else
-            {
-                color = backColor == null ? Color.Transparent : backColor.Value;
-                fontStyle = FontStyle.Regular;
-            }
-            button.BackColor = color;
-            button.Font = new Font(button.Font, fontStyle);
+        private void ClearDataForServerQsoAmountDataGridView() {
+            serverQsoAmountDataTable.Rows.Clear();
         }
 
         private void ServerPortTextBox_TextChanged(object sender, EventArgs e)
         {
             if (string.IsNullOrEmpty(serverPortTextBox.Text))
             {
-                UpdateButton(startServerButton, false);
+                ButtonStyleHandler.Update(startServerButton, false);
             }
             else
             {
-                UpdateButton(startServerButton, true, Color.DarkSeaGreen);
+                ButtonStyleHandler.Update(startServerButton, true, Color.DarkSeaGreen);
             }
         }
 
@@ -247,7 +229,7 @@ namespace QSOCollector
             if (clientCheckBox.Checked &&
                 (string.IsNullOrEmpty(clientServerNameIpTextBox.Text) || string.IsNullOrEmpty(clientServerPortTextBox.Text)))
             {
-                UpdateButton(startClientButton, false);
+                ButtonStyleHandler.Update(startClientButton, false);
                 clientServerNameIpTextBox.Focus();
             }
         }
@@ -296,8 +278,8 @@ namespace QSOCollector
             clientServerPortTextBox.Enabled = false;
             clientLogTextBox.Clear();
             startClientButton.Text = "Executing...";
-            UpdateButton(startClientButton, false, Color.Lavender);
-            UpdateButton(stopClientButton, true, Color.RosyBrown);
+            ButtonStyleHandler.Update(startClientButton, false, Color.Lavender);
+            ButtonStyleHandler.Update(stopClientButton, true, Color.RosyBrown);
         }
 
         private QsoMessageSender StartQsoMessageHandler(BlockingCollection<QsoMessage> qsoMessageQueue, string serverIp, int serverPort, ClientProgressUpdater clientProgressUpdater)
@@ -353,8 +335,8 @@ namespace QSOCollector
             clientServerStatusValueLabel.Text = "Unknown";
             clientServerStatusValueLabel.ForeColor = Color.Gray;
             clientServerCheckedAtLabel.Text = "---";
-            UpdateButton(startClientButton, true, Color.DarkSeaGreen);
-            UpdateButton(stopClientButton, false);
+            ButtonStyleHandler.Update(startClientButton, true, Color.DarkSeaGreen);
+            ButtonStyleHandler.Update(stopClientButton, false);
         }
 
         private void clientServerNameIpTextBox_TextChanged(object sender, EventArgs e)
@@ -372,12 +354,12 @@ namespace QSOCollector
             if (string.IsNullOrEmpty(clientServerNameIpTextBox.Text)
                 || string.IsNullOrEmpty(clientServerPortTextBox.Text))
             {
-                UpdateButton(startClientButton, false);
-                UpdateButton(stopClientButton, false);
+                ButtonStyleHandler.Update(startClientButton, false);
+                ButtonStyleHandler.Update(stopClientButton, false);
             }
             else
             {
-                UpdateButton(startClientButton, true, Color.DarkSeaGreen);
+                ButtonStyleHandler.Update(startClientButton, true, Color.DarkSeaGreen);
             }
         }
 
@@ -435,11 +417,20 @@ namespace QSOCollector
                 return;
             }
             new QsoExportForm(dbRepository, expectedAmounts).ShowDialog(this);
+            if (enableServerCheckBox.Checked)
+            {
+                GetDataForServerQsoAmountDataGridView();
+                HandleExportEnabled();
+            }
         }
 
         private void qsoImportButton_Click(object sender, EventArgs e)
         {
             new QsoImportForm(dbRepository).ShowDialog(this);
+            if (enableServerCheckBox.Checked) {
+                GetDataForServerQsoAmountDataGridView();
+                HandleExportEnabled();
+            }
         }
 
         private void serverQsoAmountsDataGridView_RowsAdded(object sender, DataGridViewRowsAddedEventArgs e)

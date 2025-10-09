@@ -1,7 +1,11 @@
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
+
 namespace QSOCollector
 {
     public class ServerResponse(ServerResponseStatus status, string? errorDescription = null)
     {
+        [JsonConverter(typeof(StringEnumConverter))]
         public ServerResponseStatus Status { get; set; } = status;
         public string? ErrorDescription { get; set; } = errorDescription;
 

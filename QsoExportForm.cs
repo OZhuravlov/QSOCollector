@@ -320,7 +320,7 @@ namespace QSOCollector
             }
 
             DialogResult dialogResultSetExported = MessageBox.Show(
-                $"ADIF file with {adifEntries.Count} QSO(s) has been saved to file {filePath}\nWould you like to mark these QSO(s) in database as exported\n(This could help do not export duplicates next time)",
+                $"ADIF file with {adifEntries.Count} QSO(s) has been saved to file {filePath}\nWould you like to set these QSO(s) in database as exported (Recommended)\n(This could help do not export duplicates next time)",
                 "ADIF exported",
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Question,
@@ -331,7 +331,8 @@ namespace QSOCollector
             {
                 dbRepository.SetQSOsExported([.. adifEntries.Keys], folder, fileName, exportFilters, true);
                 expectedAmounts = dbRepository.GetQsoAmountsForExport();
-                exportButton.Text = $"Exported ({adifEntries.Count})";
+                handleButton(exportButton, false, $"Exported ({adifEntries.Count})");
+                ButtonStyleHandler.Update(exportButton, false);
                 RecalcFiltered();
             }
             else {
@@ -340,6 +341,13 @@ namespace QSOCollector
 
             string argument = "/select, \"" + filePath + "\"";
             Process.Start("explorer.exe", argument);
+        }
+
+        private void handleButton(Button button, bool enabled, string? newText = null)
+        {
+            button.Enabled = enabled;
+            if (newText != null) button.Text = newText;
+            ButtonStyleHandler.Update(button, enabled);
         }
     }
 }

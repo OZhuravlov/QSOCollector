@@ -10,7 +10,7 @@ namespace QSOCollector
         private const string getTableColumnsSql = "SELECT UPPER(p.name) name, UPPER(p.type) type FROM sqlite_master m JOIN pragma_table_info(m.name) p WHERE lower(m.name) = lower(@tablename) and not p.pk";
         private const string selectSettingsSql = "SELECT key, value FROM settings";
         private const string insertSettingsSql = "INSERT OR REPLACE INTO settings (key, value) VALUES (@key, @value)";
-        private const string getListenerConfigsSql = "SELECT id as Id, protocol as Protocol, qso_port as QsoPort, acknowledge_port as AcknowledgePort, message_format as MessageFormat, is_active IsActive, description as Description FROM listeners WHERE is_active = true";
+        private const string getListenerConfigsSql = "SELECT name as Name, id as Id, qso_port as QsoPort, forward_port as ForwardPort, acknowledge_port as AcknowledgePort, message_format as MessageFormat, is_active IsActive FROM listeners WHERE is_active = true";
         private const string getServerQsoAmountsSql = "SELECT q.mode QsoAmountMode, COUNT(CASE WHEN q.qso_time >= current_date THEN 1 END) TodayQsoAmount, count(*) TotalQsoAmount, COUNT(e.id) ExportedQsoAmount, MAX(q.qso_time) LastQsoTime, MAX(e.end_time) LastExportedQsoTime FROM qsodata q LEFT JOIN adif_export e ON q.export_id = e.id AND e.is_confirmed = true WHERE q.is_temporary = false GROUP BY q.mode UNION ALL SELECT 'Total', COUNT(CASE WHEN q.qso_time >= current_date THEN 1 END), COUNT(*), COUNT(e.id), MAX(q.qso_time), MAX(e.end_time) FROM qsodata q LEFT JOIN adif_export e ON q.export_id = e.id AND e.is_confirmed = true WHERE q.is_temporary = false";
         private const string getQsoAmountsForExportSql = "SELECT COALESCE(q.programid, '<UNKNOWN>') ProgramId, e.id IS NOT NULL IsExported, DATE(q.qso_time) QsoDate, CASE WHEN q.mode NOT IN ('SSB', 'CW') THEN 'DATA' ELSE q.mode END ModeGroup, q.mode Mode, q.band Band, COALESCE(q.operator, '<UNKNOWN>') Operator, COALESCE(q.source_ip_address, '<UNKNOWN>') SourceIp, count(*) Count FROM qsodata q LEFT JOIN adif_export e ON q.export_id = e.id AND e.is_confirmed = true WHERE q.is_temporary = false GROUP BY COALESCE(q.programid, '<UNKNOWN>'), e.id IS NOT NULL, DATE(q.qso_time), CASE WHEN q.mode NOT IN ('SSB', 'CW') THEN 'DATA' ELSE q.mode END, q.mode, q.band, COALESCE(q.operator, '<UNKNOWN>'), COALESCE(q.source_ip_address, '<UNKNOWN>')";
         private const string insertQsoSql = "INSERT INTO qsodata (is_temporary, source_ip_address, import_id, qso_time, programid, station_callsign, qso_date, qso_date_off, call, time_on, time_off, band, freq, freq_rx, mode, contest_id, rst_sent, rst_rcvd, exch_sent, exch_rcvd, operator, my_gridsquare, gridsquare, distance, comment, pfx, dxcc_pref, cqz, ituz, cont, qslmsg, dxcc, orig_format, orig_qsodata, adif_qsodata)" +
@@ -135,9 +135,10 @@ namespace QSOCollector
                 commandImportId.Parameters.Add(new SqliteParameter("@folder", folder));
                 commandImportId.Parameters.Add(new SqliteParameter("@fileName", fileName));
                 commandImportId.Parameters.Add(new SqliteParameter("@qsoAmount", qsoRecords.Count));
-                SqliteDataReader testReader = commandImportId.ExecuteReader();
-                testReader.Read();
-                int importId = testReader.GetInt32(0);
+                SqliteDataReader reader = commandImportId.ExecuteReader();
+                reader.Read();
+                int importId = reader.GetInt32(0);
+                reader.Close();
 
                 ExecuteSavingQsoRecords(connection, qsoRecords, importId);
 
@@ -295,7 +296,7 @@ namespace QSOCollector
             try
             {
                 using var commandExport = connection.CreateCommand();
-                commandExport.CommandText = "INSERT INTO adif_export (folder, file_name, qso_amount, filter, is_confirmed) VALUES (@filePath, @fileName, @qsoAmount, @filter, @isConfirmed)";
+                commandExport.CommandText = "INSERT INTO adif_export (folder, file_name, qso_amount, filter, is_confirmed) VALUES (@folder, @fileName, @qsoAmount, @filter, @isConfirmed)";
                 commandExport.Parameters.Add(new SqliteParameter("@folder", folder));
                 commandExport.Parameters.Add(new SqliteParameter("@fileName", fileName));   
                 commandExport.Parameters.Add(new SqliteParameter("@qsoAmount", keys.Count));
@@ -304,12 +305,13 @@ namespace QSOCollector
                 commandExport.ExecuteNonQuery();
 
                 using var commandGetExport = connection.CreateCommand();
-                commandGetExport.CommandText = "SELECT id FROM adif_export WHERE end_time IS NULL and folder = @folder AND file_name = @fileName and qso_amount = @qsoAmount and is_confirmed = @isConfirmed) ORDER BY start_time DESC LIMIT 1";
+                commandGetExport.CommandText = "SELECT MAX(id) id FROM adif_export WHERE end_time IS NULL and folder = @folder AND file_name = @fileName and qso_amount = @qsoAmount and is_confirmed = @isConfirmed";
                 commandGetExport.Parameters.Add(new SqliteParameter("@folder", folder));
                 commandGetExport.Parameters.Add(new SqliteParameter("@fileName", fileName));
                 commandGetExport.Parameters.Add(new SqliteParameter("@qsoAmount", keys.Count));
                 commandGetExport.Parameters.Add(new SqliteParameter("@isConfirmed", isConfirmed));
                 using var reader = commandGetExport.ExecuteReader();
+                reader.Read();
                 int exportId = reader.GetInt32(0);
                 reader.Close();
 
@@ -349,7 +351,7 @@ namespace QSOCollector
 
         private static void AddAdifSqlCommandTextAndParams(SqliteCommand command, QsoExportFilters exportFilters)
         {
-            StringBuilder sb = new("SELECT q.id, q.adif_qsodata FROM qsodata q LEFT JOIN adif_export e ON q.export_id = e.id WHERE q.is_temporary = false AND q.adif_qsodata IS NOT NULL ");
+            StringBuilder sb = new("SELECT q.id, q.adif_qsodata FROM qsodata q LEFT JOIN adif_export e ON q.export_id = e.id AND e.is_confirmed = true WHERE q.is_temporary = false AND q.adif_qsodata IS NOT NULL ");
 
             if (exportFilters.IsNewOnly == true)
             {
@@ -511,6 +513,7 @@ namespace QSOCollector
                     object value = reader[prop.Name];
                     if (value is DBNull) continue;
                     var propType = prop.PropertyType;
+                    propType = Nullable.GetUnderlyingType(propType) ?? propType;
                     prop.SetValue(item, Convert.ChangeType(value, propType));
                 }
                 results.Add(item);
