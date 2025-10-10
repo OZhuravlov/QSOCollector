@@ -8,8 +8,13 @@ namespace QSOCollector
         private static readonly string endOfHeader = "<EOH>";
 
         // Parses an ADIF message and returns a list of key-value maps for each QSO record
-        public static List<Dictionary<string, string?>> Map(QsoMessage qsoMessage, string? sourceIpAddress = null)
+        public static List<Dictionary<string, string?>> Map(
+            QsoMessage qsoMessage, 
+            string? sourceIpAddress = null,
+            Func<string, Task>? progressUpdater = null
+            )
         {
+            progressUpdater?.Invoke("Parsing ADIF...prepare");
             if (qsoMessage.OriginalFormat == "ADIF")
             {
                 qsoMessage.AdifQsoData = qsoMessage.OriginalQsoData;
@@ -38,6 +43,7 @@ namespace QSOCollector
             int headerEnd = adifMessage.IndexOf(endOfHeader, StringComparison.OrdinalIgnoreCase);
             string headerSection = headerEnd >= 0 ? adifMessage[..(headerEnd + 5)] : string.Empty;
             string qsoSection = headerEnd >= 0 ? adifMessage[(headerEnd + 5)..] : adifMessage;
+            qsoSection = qsoSection[..qsoSection.LastIndexOf(@endOfRecord, StringComparison.OrdinalIgnoreCase)];
 
             // Parse header tags (ignore marker-tags)
             if (!string.IsNullOrEmpty(headerSection))
@@ -50,8 +56,10 @@ namespace QSOCollector
 
             // Split QSO records by <EOR>
             var qsoRecords = Regex.Split(qsoSection, @endOfRecord, RegexOptions.IgnoreCase);
+            int n = 0;
             foreach (var record in qsoRecords)
             {
+                n++;
                 if (string.IsNullOrWhiteSpace(record)) continue;
                 var qsoMap = new Dictionary<string, string>(headerMap, StringComparer.OrdinalIgnoreCase);
                 foreach (var kv in ParseTags(record))
@@ -68,8 +76,9 @@ namespace QSOCollector
                 }
 
                 result.Add(qsoMap);
+                if (n % 10 == 0) progressUpdater?.Invoke($"Parsing {n} of {qsoRecords.Length}");
             }
-
+            progressUpdater?.Invoke($"Parsed{result.Count} of {qsoRecords.Length}");
             return result;
         }
 
@@ -85,7 +94,7 @@ namespace QSOCollector
 
                 string tag = match.Groups[1].Value.ToUpperInvariant();
                 string lenStr = match.Groups[2].Value;
-                string value = match.Groups[3].Value;
+                string value = match.Groups[3].Value.ToUpperInvariant();
 
                 if (int.TryParse(lenStr, out int len))
                 {

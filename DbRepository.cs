@@ -116,13 +116,60 @@ namespace QSOCollector
             return columns;
         }
 
-        public void ImportQsoRecords(List<Dictionary<string, string?>> qsoRecords, string folder, string fileName)
+        public void ForceImportQsoRecords(List<Dictionary<string, string?>> dups, string folder, string fileName, Func<string, Task> progressUpdater)
         {
             using var connection = new SqliteConnection(connectionString);
             connection.Open();
             using var transaction = connection.BeginTransaction();
             try
             {
+                progressUpdater.Invoke("Force saving duplicate QSOs to database ... prepare");
+                using var commandImportId = connection.CreateCommand();
+                commandImportId.CommandText = "SELECT MAX(id) id FROM adif_import WHERE end_time IS NOT NULL AND folder = @folder AND file_name = @fileName";
+                commandImportId.Parameters.Add(new SqliteParameter("@folder", folder));
+                commandImportId.Parameters.Add(new SqliteParameter("@fileName", fileName));
+                SqliteDataReader reader = commandImportId.ExecuteReader();
+                reader.Read();
+                int importId = reader.GetInt32(0);
+                reader.Close();
+
+                int deleted = 0;
+                dups.ForEach(dup =>
+                {
+                    using var commandImportId = connection.CreateCommand();
+                    commandImportId.CommandText = "DELETE FROM qsodata WHERE qso_time = @qso_time AND station_callsign = @station_callsign AND band = @band AND mode = @mode AND is_temporary = false";
+                    commandImportId.Parameters.Add(new SqliteParameter("@qso_time", dup["QSO_TIME"]));
+                    commandImportId.Parameters.Add(new SqliteParameter("@station_callsign", dup["STATION_CALLSIGN"]));
+                    commandImportId.Parameters.Add(new SqliteParameter("@band", dup["BAND"]));
+                    commandImportId.Parameters.Add(new SqliteParameter("@mode", dup["MODE"]));
+                    deleted += commandImportId.ExecuteNonQuery();
+                    if (deleted % 10 == 0)
+                    {
+                        progressUpdater.Invoke($"Deleted {deleted} duplicates of {dups.Count}");
+                    }
+                });
+                progressUpdater.Invoke($"Deleted {deleted} duplicates of {dups.Count}");
+
+                ExecuteSavingQsoRecords(connection, dups, importId, progressUpdater: progressUpdater);
+
+                transaction.Commit();
+            }
+            catch (SqliteException)
+            {
+                transaction.Rollback();
+                throw;
+            }
+        }
+
+        public List<Dictionary<string, string?>> ImportQsoRecords(List<Dictionary<string, string?>> qsoRecords, string folder, string fileName, Func<string, Task> progressUpdater)
+        {
+            using var connection = new SqliteConnection(connectionString);
+            connection.Open();
+            using var transaction = connection.BeginTransaction();
+            List<Dictionary<string, string?>> dups = [];
+            try
+            {
+                progressUpdater.Invoke("Saving QSOs to database ... prepare");
                 using var commandImport = connection.CreateCommand();
                 commandImport.CommandText = "INSERT INTO adif_import (folder, file_name, qso_amount) VALUES (@folder, @fileName, @qsoAmount)";
                 commandImport.Parameters.Add(new SqliteParameter("@folder", folder));
@@ -140,7 +187,7 @@ namespace QSOCollector
                 int importId = reader.GetInt32(0);
                 reader.Close();
 
-                ExecuteSavingQsoRecords(connection, qsoRecords, importId);
+                dups = ExecuteSavingQsoRecords(connection, qsoRecords, importId, progressUpdater: progressUpdater);
 
                 using var commandImportComplete = connection.CreateCommand();
                 commandImportComplete.CommandText = "UPDATE adif_import SET end_time = CURRENT_TIMESTAMP WHERE id = @id";
@@ -148,6 +195,7 @@ namespace QSOCollector
                 commandImportComplete.ExecuteNonQuery();
 
                 transaction.Commit();
+                return dups;
             }
             catch (SqliteException)
             {
@@ -163,7 +211,7 @@ namespace QSOCollector
             using var transaction = connection.BeginTransaction();
             try
             {
-                ExecuteSavingQsoRecords(connection, qsoRecords, importId, isTemporary);
+                ExecuteSavingQsoRecords(connection, qsoRecords, importId, isTemporary: isTemporary);
                 transaction.Commit();
             }
             catch (SqliteException)
@@ -173,14 +221,20 @@ namespace QSOCollector
             }
         }
 
-        private void ExecuteSavingQsoRecords(
-            SqliteConnection connection, 
-            List<Dictionary<string, string?>> qsoRecords, 
-            int? importId, 
-            bool isTemporary = false)
+        private List<Dictionary<string, string?>> ExecuteSavingQsoRecords(
+            SqliteConnection connection,
+            List<Dictionary<string, string?>> qsoRecords,
+            int? importId,
+            bool isTemporary = false,
+            Func<string, Task>? progressUpdater = null)
         {
+            int n = 0;
+            int dupsCount = 0;
+            int succCount = 0;
+            List<Dictionary<string, string?>> dups = [];
             foreach (var qsoRecord in qsoRecords)
             {
+                n++;
                 using var command = connection.CreateCommand();
                 command.CommandText = insertQsoSql;
 
@@ -213,13 +267,21 @@ namespace QSOCollector
                 try
                 {
                     command.ExecuteNonQuery();
+                    succCount++;
                 }
                 catch (SqliteException ex)
                 {
                     if (ex.SqliteExtendedErrorCode != SQLITE_CONSTRAINT_UNIQUE) throw;
+                    dups.Add(qsoRecord);
+                    dupsCount++;
                 }
-
+                if (n % 10 == 0)
+                {
+                    progressUpdater?.Invoke($"Saved: {succCount} + dups: {dupsCount} = {n} of {qsoRecords.Count}");
+                }
             }
+            progressUpdater?.Invoke($"Saved: {succCount} + dups: {dupsCount} = {n} of {qsoRecords.Count}");
+            return dups;
         }
 
         public Dictionary<int, QsoMessage> GetTemporaryQsoMessages()
@@ -298,7 +360,7 @@ namespace QSOCollector
                 using var commandExport = connection.CreateCommand();
                 commandExport.CommandText = "INSERT INTO adif_export (folder, file_name, qso_amount, filter, is_confirmed) VALUES (@folder, @fileName, @qsoAmount, @filter, @isConfirmed)";
                 commandExport.Parameters.Add(new SqliteParameter("@folder", folder));
-                commandExport.Parameters.Add(new SqliteParameter("@fileName", fileName));   
+                commandExport.Parameters.Add(new SqliteParameter("@fileName", fileName));
                 commandExport.Parameters.Add(new SqliteParameter("@qsoAmount", keys.Count));
                 commandExport.Parameters.Add(new SqliteParameter("@isConfirmed", isConfirmed));
                 commandExport.Parameters.Add(new SqliteParameter("@filter", JsonSerializer.Serialize(filter)));
@@ -447,7 +509,8 @@ namespace QSOCollector
         private static void AddSqlParameter(SqliteCommand command, string paramKey, object paramValue, List<string>? parameterKeys = null)
         {
             command.Parameters.Add(new SqliteParameter($"@{paramKey}", paramValue ?? DBNull.Value));
-            if (parameterKeys != null) {
+            if (parameterKeys != null)
+            {
                 parameterKeys.Add(paramKey);
             }
         }

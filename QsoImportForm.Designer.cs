@@ -30,10 +30,12 @@
         {
             closeCancelButton = new Button();
             importButton = new Button();
-            exportProgressBar = new ProgressBar();
             chooseFileButton = new Button();
             filePathLabel = new Label();
             filePreviewTextBox = new TextBox();
+            importBackgroundWorker = new System.ComponentModel.BackgroundWorker();
+            importProgressBar = new ProgressBar();
+            importProgressStep = new Label();
             SuspendLayout();
             // 
             // closeCancelButton
@@ -41,9 +43,9 @@
             closeCancelButton.BackColor = Color.RosyBrown;
             closeCancelButton.FlatStyle = FlatStyle.Popup;
             closeCancelButton.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            closeCancelButton.Location = new Point(33, 413);
+            closeCancelButton.Location = new Point(39, 415);
             closeCancelButton.Name = "closeCancelButton";
-            closeCancelButton.Size = new Size(185, 38);
+            closeCancelButton.Size = new Size(180, 38);
             closeCancelButton.TabIndex = 11;
             closeCancelButton.Text = "Close";
             closeCancelButton.UseVisualStyleBackColor = false;
@@ -54,21 +56,13 @@
             importButton.Enabled = false;
             importButton.FlatStyle = FlatStyle.Popup;
             importButton.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            importButton.Location = new Point(265, 413);
+            importButton.Location = new Point(259, 415);
             importButton.Name = "importButton";
-            importButton.Size = new Size(180, 38);
+            importButton.Size = new Size(182, 38);
             importButton.TabIndex = 12;
             importButton.Text = "Import";
             importButton.UseVisualStyleBackColor = false;
             importButton.Click += importButton_Click;
-            // 
-            // exportProgressBar
-            // 
-            exportProgressBar.Location = new Point(13, 457);
-            exportProgressBar.Name = "exportProgressBar";
-            exportProgressBar.Size = new Size(477, 19);
-            exportProgressBar.TabIndex = 13;
-            exportProgressBar.Visible = false;
             // 
             // chooseFileButton
             // 
@@ -104,6 +98,30 @@
             filePreviewTextBox.TabIndex = 16;
             filePreviewTextBox.WordWrap = false;
             // 
+            // importBackgroundWorker
+            // 
+            importBackgroundWorker.WorkerReportsProgress = true;
+            importBackgroundWorker.DoWork += importBackgroundWorker_DoWork;
+            importBackgroundWorker.ProgressChanged += importBackgroundWorker_ProgressChanged;
+            importBackgroundWorker.RunWorkerCompleted += importBackgroundWorker_RunWorkerCompleted;
+            // 
+            // importProgressBar
+            // 
+            importProgressBar.Location = new Point(13, 464);
+            importProgressBar.Name = "importProgressBar";
+            importProgressBar.Size = new Size(141, 17);
+            importProgressBar.Style = ProgressBarStyle.Marquee;
+            importProgressBar.TabIndex = 17;
+            importProgressBar.Visible = false;
+            // 
+            // importProgressStep
+            // 
+            importProgressStep.Location = new Point(160, 460);
+            importProgressStep.Name = "importProgressStep";
+            importProgressStep.Size = new Size(330, 25);
+            importProgressStep.TabIndex = 18;
+            importProgressStep.TextAlign = ContentAlignment.MiddleCenter;
+            // 
             // QsoImportForm
             // 
             AccessibleRole = AccessibleRole.None;
@@ -111,10 +129,11 @@
             AutoScaleMode = AutoScaleMode.Font;
             CancelButton = closeCancelButton;
             ClientSize = new Size(502, 488);
+            Controls.Add(importProgressStep);
+            Controls.Add(importProgressBar);
             Controls.Add(filePreviewTextBox);
             Controls.Add(filePathLabel);
             Controls.Add(chooseFileButton);
-            Controls.Add(exportProgressBar);
             Controls.Add(importButton);
             Controls.Add(closeCancelButton);
             FormBorderStyle = FormBorderStyle.Fixed3D;
@@ -129,9 +148,11 @@
         #endregion
         private Button closeCancelButton;
         private Button importButton;
-        private ProgressBar exportProgressBar;
         private Button chooseFileButton;
         private Label filePathLabel;
         private TextBox filePreviewTextBox;
+        private System.ComponentModel.BackgroundWorker importBackgroundWorker;
+        private ProgressBar importProgressBar;
+        private Label importProgressStep;
     }
 }

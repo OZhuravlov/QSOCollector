@@ -11,7 +11,7 @@ namespace QSOCollector
                 qsoMessage.AdifQsoData = DeserializeN1mmContactInfoAndMapToAdif(qsoMessage);
             }
 
-            return AdifToTableFieldsMapper.Map(qsoMessage, sourceIpAddress);
+            return AdifToTableFieldsMapper.Map(qsoMessage, sourceIpAddress: sourceIpAddress);
         }
 
         private static string DeserializeN1mmContactInfoAndMapToAdif(QsoMessage qsoMessage)

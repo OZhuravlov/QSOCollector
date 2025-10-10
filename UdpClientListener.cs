@@ -27,6 +27,7 @@ namespace QSOCollector
         public async Task Start()
         {
             Task.Run(() => StartAcknowledge());
+
             int localPort = listenerConfig.QsoPort;
             using UdpClient udpClient = new (localPort);
             qsoUdpClient = udpClient;

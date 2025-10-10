@@ -149,7 +149,7 @@ namespace QSOCollector
                 string sourceIpAddress = IPAddress.Loopback.ToString();
                 qsoRecords = qsoMessage.OriginalFormat switch
                 {
-                    "ADIF" => AdifToTableFieldsMapper.Map(qsoMessage, sourceIpAddress),
+                    "ADIF" => AdifToTableFieldsMapper.Map(qsoMessage, sourceIpAddress: sourceIpAddress),
                     "N1MM" => N1mmContactInfoToTableFieldsMapper.Map(qsoMessage, sourceIpAddress),
                     _ => throw new ArgumentException($"Unsupported message format: {qsoMessage.OriginalFormat}"),
                 };
