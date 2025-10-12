@@ -1,4 +1,4 @@
-﻿namespace QSOCollector
+﻿namespace QSOCollector.Helpers
 {
     public static class ButtonStyleHandler
     {

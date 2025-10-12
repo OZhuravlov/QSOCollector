@@ -1,9 +1,10 @@
 using Microsoft.Data.Sqlite;
+using QSOCollector.Models;
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
 
-namespace QSOCollector
+namespace QSOCollector.Data
 {
     public class DbRepository
     {
@@ -12,10 +13,10 @@ namespace QSOCollector
         private const string insertSettingsSql = "INSERT OR REPLACE INTO settings (key, value) VALUES (@key, @value)";
         private const string getListenerConfigsSql = "SELECT name as Name, id as Id, qso_port as QsoPort, forward_port as ForwardPort, acknowledge_port as AcknowledgePort, message_format as MessageFormat, is_active IsActive FROM listeners WHERE is_active = true";
         private const string getServerQsoAmountsSql = "SELECT q.mode QsoAmountMode, COUNT(CASE WHEN q.qso_time >= current_date THEN 1 END) TodayQsoAmount, count(*) TotalQsoAmount, COUNT(e.id) ExportedQsoAmount, MAX(q.qso_time) LastQsoTime, MAX(e.end_time) LastExportedQsoTime FROM qsodata q LEFT JOIN adif_export e ON q.export_id = e.id AND e.is_confirmed = true WHERE q.is_temporary = false GROUP BY q.mode UNION ALL SELECT 'Total', COUNT(CASE WHEN q.qso_time >= current_date THEN 1 END), COUNT(*), COUNT(e.id), MAX(q.qso_time), MAX(e.end_time) FROM qsodata q LEFT JOIN adif_export e ON q.export_id = e.id AND e.is_confirmed = true WHERE q.is_temporary = false";
-        private const string getQsoAmountsForExportSql = "SELECT COALESCE(q.programid, '<UNKNOWN>') ProgramId, e.id IS NOT NULL IsExported, DATE(q.qso_time) QsoDate, CASE WHEN q.mode NOT IN ('SSB', 'CW') THEN 'DATA' ELSE q.mode END ModeGroup, q.mode Mode, q.band Band, COALESCE(q.operator, '<UNKNOWN>') Operator, COALESCE(q.source_ip_address, '<UNKNOWN>') SourceIp, count(*) Count FROM qsodata q LEFT JOIN adif_export e ON q.export_id = e.id AND e.is_confirmed = true WHERE q.is_temporary = false GROUP BY COALESCE(q.programid, '<UNKNOWN>'), e.id IS NOT NULL, DATE(q.qso_time), CASE WHEN q.mode NOT IN ('SSB', 'CW') THEN 'DATA' ELSE q.mode END, q.mode, q.band, COALESCE(q.operator, '<UNKNOWN>'), COALESCE(q.source_ip_address, '<UNKNOWN>')";
-        private const string insertQsoSql = "INSERT INTO qsodata (is_temporary, source_ip_address, import_id, qso_time, programid, station_callsign, qso_date, qso_date_off, call, time_on, time_off, band, freq, freq_rx, mode, contest_id, rst_sent, rst_rcvd, exch_sent, exch_rcvd, operator, my_gridsquare, gridsquare, distance, comment, pfx, dxcc_pref, cqz, ituz, cont, qslmsg, dxcc, orig_format, orig_qsodata, adif_qsodata)" +
-                    " VALUES (@is_temporary, @source_ip_address, @import_id, @qso_time, @programid, @station_callsign, @qso_date, @qso_date_off, @call, @time_on, @time_off, @band, @freq, @freq_rx, @mode, @contest_id, @rst_sent, @rst_rcvd, @exch_sent, @exch_rcvd, @operator, @my_gridsquare, @gridsquare, @distance, @comment, @pfx, @dxcc_pref, @cqz, @ituz, @cont, @qslmsg, @dxcc, @orig_format, @orig_qsodata, @adif_qsodata)";
-        private const string getTemporaryQsoSql = "SELECT id, programid, orig_format, orig_qsodata, adif_qsodata " +
+        private const string getQsoAmountsForExportSql = "SELECT COALESCE(q.source_name, '<UNKNOWN>') SourceName, e.id IS NOT NULL IsExported, DATE(q.qso_time) QsoDate, q.mode_group ModeGroup, q.mode Mode, q.band Band, COALESCE(q.operator, '<UNKNOWN>') Operator, COALESCE(q.source_ip_address, '<UNKNOWN>') SourceIp, count(*) Count FROM qsodata q LEFT JOIN adif_export e ON q.export_id = e.id AND e.is_confirmed = true WHERE q.is_temporary = false GROUP BY COALESCE(q.source_name, '<UNKNOWN>'), e.id IS NOT NULL, DATE(q.qso_time), q.mode_group, q.mode, q.band, COALESCE(q.operator, '<UNKNOWN>'), COALESCE(q.source_ip_address, '<UNKNOWN>')";
+        private const string insertQsoSql = "INSERT INTO qsodata (is_temporary, source_name, source_ip_address, import_id, qso_time, programid, station_callsign, qso_date, qso_date_off, call, time_on, time_off, band, freq, freq_rx, mode, mode_group, contest_id, rst_sent, rst_rcvd, exch_sent, exch_rcvd, operator, my_gridsquare, gridsquare, distance, comment, pfx, dxcc_pref, cqz, ituz, cont, qslmsg, dxcc, orig_format, orig_qsodata, adif_qsodata)" +
+                    " VALUES (@is_temporary, @source_name, @source_ip_address, @import_id, @qso_time, @programid, @station_callsign, @qso_date, @qso_date_off, @call, @time_on, @time_off, @band, @freq, @freq_rx, @mode, @mode_group, @contest_id, @rst_sent, @rst_rcvd, @exch_sent, @exch_rcvd, @operator, @my_gridsquare, @gridsquare, @distance, @comment, @pfx, @dxcc_pref, @cqz, @ituz, @cont, @qslmsg, @dxcc, @orig_format, @orig_qsodata, @adif_qsodata)";
+        private const string getTemporaryQsoSql = "SELECT id, source_name, orig_format, orig_qsodata, adif_qsodata " +
             "  FROM qsodata " +
             " WHERE is_temporary = 1 AND orig_format IS NOT NULL AND orig_qsodata IS NOT NULL " +
             " ORDER BY id " +
@@ -441,15 +442,8 @@ namespace QSOCollector
 
             if (exportFilters.ModeGroup != null && exportFilters.Mode == null)
             {
-                if (exportFilters.ModeGroup == "DATA")
-                {
-                    sb.Append(" AND q.mode NOT IN ('CW', 'SSB')");
-                }
-                else
-                {
-                    sb.Append(" AND q.mode = @modeGroup");
-                    AddSqlParameter(command, "modeGroup", exportFilters.ModeGroup);
-                }
+                sb.Append(" AND q.mode_group = @mode_group");
+                AddSqlParameter(command, "mode_group", exportFilters.ModeGroup);
             }
 
             if (exportFilters.Mode != null)
@@ -464,16 +458,16 @@ namespace QSOCollector
                 AddSqlParameter(command, "band", exportFilters.Band);
             }
 
-            if (exportFilters.ProgramId != null)
+            if (exportFilters.SourceName != null)
             {
-                if (exportFilters.ProgramId == "UNKNOWN")
+                if (exportFilters.SourceName == "UNKNOWN")
                 {
-                    sb.Append(" AND q.programId IS NULL");
+                    sb.Append(" AND q.source_name IS NULL");
                 }
                 else
                 {
-                    sb.Append(" AND q.programId = @programId");
-                    AddSqlParameter(command, "programId", exportFilters.ProgramId);
+                    sb.Append(" AND q.source_name = @source_name");
+                    AddSqlParameter(command, "source_name", exportFilters.SourceName);
                 }
             }
 
@@ -544,10 +538,10 @@ namespace QSOCollector
             {
                 return columnType.ToUpper() switch
                 {
-                    "INTEGER" => Int32.Parse(value),
-                    "REAL" => Double.Parse(value, System.Globalization.CultureInfo.InvariantCulture),
-                    "DOUBLE" => Double.Parse(value, System.Globalization.CultureInfo.InvariantCulture),
-                    "BOOLEAN" => Boolean.Parse(value),
+                    "INTEGER" => int.Parse(value),
+                    "REAL" => double.Parse(value, System.Globalization.CultureInfo.InvariantCulture),
+                    "DOUBLE" => double.Parse(value, System.Globalization.CultureInfo.InvariantCulture),
+                    "BOOLEAN" => bool.Parse(value),
                     "DATE" => DateOnly.Parse(value),
                     "DATETIME" => DateTime.Parse(value),
                     "BLOB" => Encoding.UTF8.GetBytes(value),

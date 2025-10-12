@@ -147,7 +147,12 @@ namespace QSOCollector
             // Ensure the current edit is committed.
             dataGridView1.EndEdit();
             // Save the data from the DataGridView to the database.
-            dataAdapter.Update((DataTable)bindingSource1.DataSource);
+            try {
+                dataAdapter.Update((DataTable)bindingSource1.DataSource);
+            } catch (DBConcurrencyException)
+            {
+            }
+
             cancelEditListenersButton.Text = "Close";
             cancelEditListenersButton.Focus();
             saveListenersButton.Enabled = false;
@@ -182,10 +187,11 @@ namespace QSOCollector
             int qsoPortColumnIndex = dataGridView1.Columns["qso_port"].Index;
             int acknowledgePortColumnIndex = dataGridView1.Columns["acknowledge_port"].Index;
 
-            if (currentColumnIndex != qsoPortColumnIndex && currentColumnIndex != acknowledgePortColumnIndex) {
+            if (currentColumnIndex != qsoPortColumnIndex && currentColumnIndex != acknowledgePortColumnIndex)
+            {
                 return;
             }
-            
+
             if (!char.IsControl(e.KeyChar) && !char.IsDigit(e.KeyChar))
             {
                 e.Handled = true;

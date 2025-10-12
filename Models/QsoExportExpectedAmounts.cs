@@ -1,8 +1,8 @@
-﻿namespace QSOCollector
+﻿namespace QSOCollector.Models
 {
     public class QsoExportExpectedAmounts
     {
-        public string ProgramId { get; set; }
+        public string SourceName { get; set; }
         public bool IsExported { get; set; }
         public DateTime QsoDate { get; set; }
         public string ModeGroup { get; set; }

@@ -1,6 +1,9 @@
+using QSOCollector.Data;
+using QSOCollector.Models;
+using QSOCollector.Network;
 using System.Collections.Concurrent;
 
-namespace QSOCollector
+namespace QSOCollector.Helpers
 {
     public class TemporarelySavedQsoHandler(DbRepository dbRepository, BlockingCollection<QsoMessage> qsoMessageQueue,
         QsoMessageSender qsoMessageSender, ClientProgressUpdater progressUpdater, CancellationTokenSource cancellationTokenSource)
@@ -16,7 +19,8 @@ namespace QSOCollector
                 try
                 {
                     tryNumber++;
-                    if (qsoMessageSender.IsConnected() || tryNumber >= 5) {
+                    if (qsoMessageSender.IsConnected() || tryNumber >= 5)
+                    {
                         tryNumber = 0;
                         var tempQsoMessages = dbRepository.GetTemporaryQsoMessages();
                         foreach (var qsoMessage in tempQsoMessages)

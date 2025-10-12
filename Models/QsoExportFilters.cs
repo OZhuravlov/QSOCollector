@@ -1,8 +1,8 @@
-﻿namespace QSOCollector
+﻿namespace QSOCollector.Models
 {
     public class QsoExportFilters : ICloneable
     {
-        public string? ProgramId { get; set; }
+        public string? SourceName { get; set; }
         public bool? IsNewOnly { get; set; }
         public DateTime? DateFrom { get; set; }
         public DateTime? DateTo { get; set; }
@@ -15,7 +15,7 @@
         #region ICloneable Members
         public object Clone()
         {
-            return this.MemberwiseClone();
+            return MemberwiseClone();
         }
         #endregion
     }

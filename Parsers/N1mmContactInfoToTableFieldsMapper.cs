@@ -1,13 +1,15 @@
+using QSOCollector.Models;
 using System.Xml.Serialization;
 
-namespace QSOCollector
+namespace QSOCollector.Parsers
 {
     public static class N1mmContactInfoToTableFieldsMapper
     {
         // Parses an N1MM contact info and returns a list of key-value maps for each QSO record
         public static List<Dictionary<string, string>> Map(QsoMessage qsoMessage, string sourceIpAddress)
         {
-            if (string.IsNullOrEmpty(qsoMessage.AdifQsoData)) {
+            if (string.IsNullOrEmpty(qsoMessage.AdifQsoData))
+            {
                 qsoMessage.AdifQsoData = DeserializeN1mmContactInfoAndMapToAdif(qsoMessage);
             }
 
@@ -23,7 +25,6 @@ namespace QSOCollector
                 contactInfo = (N1mmContactInfo)serializer.Deserialize(reader)!;
 
             }
-            qsoMessage.Source = contactInfo.App;
             return N1mmContactInfoToAdifQsoMessageMapper.Map(contactInfo);
         }
     }

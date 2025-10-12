@@ -1,4 +1,8 @@
-﻿using System.ComponentModel;
+﻿using QSOCollector.Data;
+using QSOCollector.Helpers;
+using QSOCollector.Models;
+using QSOCollector.Parsers;
+using System.ComponentModel;
 
 namespace QSOCollector
 {
@@ -36,7 +40,7 @@ namespace QSOCollector
         {
             importProgressStep.Text = string.Empty;
             using OpenFileDialog openFileDialog = new();
-            openFileDialog.InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.CommonDocuments);
+            openFileDialog.InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
             openFileDialog.Filter = "ADIF files (*.adi)|*.adi|All files (*.*)|*.*";
             openFileDialog.RestoreDirectory = true;
             if (openFileDialog.ShowDialog() == DialogResult.OK)

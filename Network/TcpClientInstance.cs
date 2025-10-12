@@ -1,7 +1,9 @@
-﻿using System.Net.Sockets;
+﻿using QSOCollector.Helpers;
+using QSOCollector.Models;
+using System.Net.Sockets;
 using System.Text.Json;
 
-namespace QSOCollector
+namespace QSOCollector.Network
 {
     internal class TcpClientInstance
     {
@@ -50,7 +52,8 @@ namespace QSOCollector
             {
                 progressUpdater.UpdateProgress(false, true, false, false, $"QSO from {source} sent to server");
             }
-            else {
+            else
+            {
                 progressUpdater.UpdateLog("Server status requested", true);
             }
 

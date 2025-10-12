@@ -1,6 +1,7 @@
+using QSOCollector.Models;
 using System.Text;
 
-namespace QSOCollector
+namespace QSOCollector.Parsers
 {
     public static class N1mmContactInfoToAdifQsoMessageMapper
     {
@@ -10,6 +11,7 @@ namespace QSOCollector
         public static string Map(N1mmContactInfo contactInfo)
         {
             StringBuilder adif = new();
+            AddToAdif(adif, "PROGRAMID", contactInfo.App);
             AddToAdif(adif, "STATION_CALLSIGN", contactInfo.MyCall);
             AddToAdif(adif, "OPERATOR", contactInfo.Operator);
             AddToAdif(adif, "CALL", contactInfo.Call);
@@ -48,7 +50,8 @@ namespace QSOCollector
 
         private static string? GetFormattedFreq(int origFreq, string origBand)
         {
-            if (origBand.EndsWith("GHz", StringComparison.OrdinalIgnoreCase)) {
+            if (origBand.EndsWith("GHz", StringComparison.OrdinalIgnoreCase))
+            {
                 return null;
             }
 
@@ -64,6 +67,7 @@ namespace QSOCollector
 
         private static string MapToAdifBand(string origBand)
         {
+            origBand = origBand.Replace(",", ".");
             return origBand switch
             {
                 "0.136" => "2190M",

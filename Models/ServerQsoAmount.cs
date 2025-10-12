@@ -1,4 +1,4 @@
-﻿namespace QSOCollector
+﻿namespace QSOCollector.Models
 {
     public class ServerQsoAmount
     {

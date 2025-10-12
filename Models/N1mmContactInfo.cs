@@ -1,6 +1,6 @@
 ﻿using System.Xml.Serialization;
 
-namespace QSOCollector
+namespace QSOCollector.Models
 {
 
     [XmlRoot("contactinfo")]
@@ -16,10 +16,10 @@ namespace QSOCollector
         public int? ContestNr { get; set; }
 
         [XmlElement("timestamp")]
-        public String TimestampStr
+        public string TimestampStr
         {
-            get { return this.Timestamp.ToString("yyyy-MM-dd HH:mm:ss"); }
-            set { this.Timestamp = DateTime.Parse(value); }
+            get { return Timestamp.ToString("yyyy-MM-dd HH:mm:ss"); }
+            set { Timestamp = DateTime.Parse(value); }
         }
 
         [XmlIgnore]
@@ -155,11 +155,11 @@ namespace QSOCollector
         public string? IsClaimedQso { get; set; }
 
         [XmlElement("oldtimestamp")]
-        public String? OldTimestampStr
+        public string? OldTimestampStr
         {
-            get { return this.OldTimestamp?.ToString("yyyy-MM-dd HH:mm:ss"); }
+            get { return OldTimestamp?.ToString("yyyy-MM-dd HH:mm:ss"); }
 
-            set => this.OldTimestamp = value == null ? null : DateTime.Parse(value);
+            set => OldTimestamp = value == null ? null : DateTime.Parse(value);
         }
 
         [XmlIgnore]

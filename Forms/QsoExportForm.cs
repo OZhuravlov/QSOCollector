@@ -1,4 +1,7 @@
-﻿using System.Diagnostics;
+﻿using QSOCollector.Data;
+using QSOCollector.Helpers;
+using QSOCollector.Models;
+using System.Diagnostics;
 using System.Text;
 
 namespace QSOCollector
@@ -90,15 +93,15 @@ namespace QSOCollector
             exportFilters.ModeGroup = null;
             exportFilters.Mode = null;
             exportFilters.Band = null;
-            exportFilters.ProgramId = null;
+            exportFilters.SourceName = null;
             exportFilters.Operator = null;
             exportFilters.SourceIp = null;
             ResetSecondaryFilter(modeGroupComboBox, GetFilteredAmounts(exportFilters).Select(r => r.ModeGroup).Distinct().OrderBy(r => r));
             ResetSecondaryFilter(modeComboBox, GetFilteredAmounts(exportFilters).Select(r => r.Mode).Distinct().OrderBy(r => r));
             ResetSecondaryFilter(bandComboBox, GetFilteredAmounts(exportFilters).Select(r => r.Band).Distinct().OrderByDescending(r => Int32.Parse(r.TrimEnd('M'))));
-            ResetSecondaryFilter(programIdComboBox, GetFilteredAmounts(exportFilters).Select(r => r.ProgramId).Distinct().OrderBy(r => r == "<UNKNOWN>").ThenBy(r => r));
+            ResetSecondaryFilter(sourceNameComboBox, GetFilteredAmounts(exportFilters).Select(r => r.SourceName).Distinct().OrderBy(r => r == "<UNKNOWN>").ThenBy(r => r));
             ResetSecondaryFilter(operatorComboBox, GetFilteredAmounts(exportFilters).Select(r => r.Operator).Distinct().OrderBy(r => r == "<UNKNOWN>").ThenBy(r => r));
-            ResetSecondaryFilter(sourceIpComboBox, GetFilteredAmounts(exportFilters).Select(r => r.Operator).Distinct().OrderBy(r => r == "<UNKNOWN>").ThenBy(r => r));
+            ResetSecondaryFilter(sourceIpComboBox, GetFilteredAmounts(exportFilters).Select(r => r.SourceIp).Distinct().OrderBy(r => r == "<UNKNOWN>").ThenBy(r => r));
         }
 
         private static void ResetSecondaryFilter(ComboBox comboBox, IOrderedEnumerable<string> newValues)
@@ -194,7 +197,7 @@ namespace QSOCollector
                 .Where(r => filters.Mode == null || r.Mode == filters.Mode)
                 .Where(r => filters.Band == null || r.Band == filters.Band)
                 .Where(r => filters.Operator == null || r.Operator == filters.Operator)
-                .Where(r => filters.ProgramId == null || r.ProgramId == filters.ProgramId)
+                .Where(r => filters.SourceName == null || r.SourceName == filters.SourceName)
                 .Where(r => filters.SourceIp == null || r.SourceIp == filters.SourceIp)];
         }
 
@@ -223,9 +226,9 @@ namespace QSOCollector
             RecalcFiltered();
         }
 
-        private void programIdComboBox_SelectedValueChanged(object sender, EventArgs e)
+        private void sourceNameComboBox_SelectedValueChanged(object sender, EventArgs e)
         {
-            exportFilters.ProgramId = GetComboBoxValue(programIdComboBox);
+            exportFilters.SourceName = GetComboBoxValue(sourceNameComboBox);
             RecalcFiltered();
         }
 
@@ -335,7 +338,8 @@ namespace QSOCollector
                 ButtonStyleHandler.Update(exportButton, false);
                 RecalcFiltered();
             }
-            else {
+            else
+            {
                 dbRepository.SetQSOsExported([.. adifEntries.Keys], folder, fileName, exportFilters, false);
             }
 

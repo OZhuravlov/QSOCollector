@@ -1,4 +1,4 @@
-namespace QSOCollector
+namespace QSOCollector.Helpers
 {
     public class ClientProgressUpdater(
             Label receivedLabel,
@@ -20,18 +20,18 @@ namespace QSOCollector
         private int tempSaved;
         private int rejected;
 
-        private readonly Object receivedLock = new();
-        private readonly Object sentToServerLock = new();
-        private readonly Object tempSavedLock = new();
-        private readonly Object rejectedLock = new();
-        private readonly Object statusLock = new();
+        private readonly object receivedLock = new();
+        private readonly object sentToServerLock = new();
+        private readonly object tempSavedLock = new();
+        private readonly object rejectedLock = new();
+        private readonly object statusLock = new();
 
         public void UpdateProgress(
             bool isReceived,
             bool isSentToServer,
             bool isTempSaved,
             bool isRejected,
-            string? logMessage)
+            string? logMessage = null)
         {
             string updateTs = DateTime.UtcNow.ToString("dd-MMM HH:mm");
             if (isReceived) UpdateReceived(updateTs);
@@ -60,7 +60,8 @@ namespace QSOCollector
                         clientLog.AppendText($"{message}\r\n");
                     });
                 }
-            };
+            }
+            ;
         }
 
         public void UpdateTempSaved(int amount)
@@ -132,7 +133,8 @@ namespace QSOCollector
                     if (status == "Active")
                     {
                         serverStatusLabel.ForeColor = Color.Green;
-                        if (serverStatusLabel.Text != "Active") {
+                        if (serverStatusLabel.Text != "Active")
+                        {
                             clientLog.AppendText($"Server is available now\r\n");
                         }
                     }

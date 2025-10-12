@@ -44,8 +44,8 @@
             secondaryFiltersGroupBox = new GroupBox();
             sourceIpComboBox = new ComboBox();
             sourceIpLabel = new Label();
-            programIdComboBox = new ComboBox();
-            programIdLabel = new Label();
+            sourceNameComboBox = new ComboBox();
+            sourceNameLabel = new Label();
             operatorComboBox = new ComboBox();
             OperatorLabel = new Label();
             modeGroupComboBox = new ComboBox();
@@ -219,8 +219,8 @@
             // 
             secondaryFiltersGroupBox.Controls.Add(sourceIpComboBox);
             secondaryFiltersGroupBox.Controls.Add(sourceIpLabel);
-            secondaryFiltersGroupBox.Controls.Add(programIdComboBox);
-            secondaryFiltersGroupBox.Controls.Add(programIdLabel);
+            secondaryFiltersGroupBox.Controls.Add(sourceNameComboBox);
+            secondaryFiltersGroupBox.Controls.Add(sourceNameLabel);
             secondaryFiltersGroupBox.Controls.Add(operatorComboBox);
             secondaryFiltersGroupBox.Controls.Add(OperatorLabel);
             secondaryFiltersGroupBox.Controls.Add(modeGroupComboBox);
@@ -257,26 +257,26 @@
             sourceIpLabel.TabIndex = 9;
             sourceIpLabel.Text = "Source IP";
             // 
-            // programIdComboBox
+            // sourceNameComboBox
             // 
-            programIdComboBox.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            programIdComboBox.FormattingEnabled = true;
-            programIdComboBox.ItemHeight = 20;
-            programIdComboBox.Location = new Point(283, 25);
-            programIdComboBox.Name = "programIdComboBox";
-            programIdComboBox.Size = new Size(105, 28);
-            programIdComboBox.TabIndex = 3;
-            programIdComboBox.SelectedValueChanged += programIdComboBox_SelectedValueChanged;
+            sourceNameComboBox.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            sourceNameComboBox.FormattingEnabled = true;
+            sourceNameComboBox.ItemHeight = 20;
+            sourceNameComboBox.Location = new Point(283, 25);
+            sourceNameComboBox.Name = "sourceNameComboBox";
+            sourceNameComboBox.Size = new Size(105, 28);
+            sourceNameComboBox.TabIndex = 3;
+            sourceNameComboBox.SelectedValueChanged += sourceNameComboBox_SelectedValueChanged;
             // 
-            // programIdLabel
+            // sourceNameLabel
             // 
-            programIdLabel.AutoSize = true;
-            programIdLabel.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            programIdLabel.Location = new Point(212, 28);
-            programIdLabel.Name = "programIdLabel";
-            programIdLabel.Size = new Size(66, 20);
-            programIdLabel.TabIndex = 1;
-            programIdLabel.Text = "Program";
+            sourceNameLabel.AutoSize = true;
+            sourceNameLabel.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            sourceNameLabel.Location = new Point(212, 28);
+            sourceNameLabel.Name = "sourceNameLabel";
+            sourceNameLabel.Size = new Size(66, 20);
+            sourceNameLabel.TabIndex = 1;
+            sourceNameLabel.Text = "Source";
             // 
             // operatorComboBox
             // 
@@ -434,8 +434,8 @@
         private Label totalAmountLabel;
         private Label filteredAmountLabel;
         private GroupBox secondaryFiltersGroupBox;
-        private ComboBox programIdComboBox;
-        private Label programIdLabel;
+        private ComboBox sourceNameComboBox;
+        private Label sourceNameLabel;
         private ComboBox modeComboBox;
         private Label modeLabel;
         private Label bandLabel;

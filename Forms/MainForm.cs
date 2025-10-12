@@ -1,3 +1,7 @@
+using QSOCollector.Data;
+using QSOCollector.Helpers;
+using QSOCollector.Models;
+using QSOCollector.Network;
 using System.Collections.Concurrent;
 using System.Data;
 using System.Data.SQLite;
@@ -157,7 +161,7 @@ namespace QSOCollector
 
         private void GetDataForServerQsoAmountDataGridView()
         {
-            string selectCommand ="SELECT q.mode QsoAmountMode, COUNT(CASE WHEN q.qso_time >= current_date THEN 1 END) TodayQsoAmount, count(*) TotalQsoAmount, COUNT(e.id) ExportedQsoAmount, MAX(q.qso_time) LastQsoTime, MAX(e.end_time) LastExportedQsoTime FROM qsodata q LEFT JOIN adif_export e ON q.export_id = e.id AND e.is_confirmed = true WHERE q.is_temporary = false GROUP BY q.mode UNION ALL SELECT 'Total', COUNT(CASE WHEN q.qso_time >= current_date THEN 1 END), COUNT(*), COUNT(e.id), MAX(q.qso_time), MAX(e.end_time) FROM qsodata q LEFT JOIN adif_export e ON q.export_id = e.id AND e.is_confirmed = true WHERE q.is_temporary = false";
+            string selectCommand = "SELECT q.mode QsoAmountMode, COUNT(CASE WHEN q.qso_time >= current_date THEN 1 END) TodayQsoAmount, count(*) TotalQsoAmount, COUNT(e.id) ExportedQsoAmount, MAX(q.qso_time) LastQsoTime, MAX(e.end_time) LastExportedQsoTime FROM qsodata q LEFT JOIN adif_export e ON q.export_id = e.id AND e.is_confirmed = true WHERE q.is_temporary = false GROUP BY q.mode UNION ALL SELECT 'Total', COUNT(CASE WHEN q.qso_time >= current_date THEN 1 END), COUNT(*), COUNT(e.id), MAX(q.qso_time), MAX(e.end_time) FROM qsodata q LEFT JOIN adif_export e ON q.export_id = e.id AND e.is_confirmed = true WHERE q.is_temporary = false";
             try
             {
                 serverQsoAmountsDataAdapter = new SQLiteDataAdapter(selectCommand, connectionString);
@@ -176,8 +180,9 @@ namespace QSOCollector
             }
         }
 
-        private void ClearDataForServerQsoAmountDataGridView() {
-            serverQsoAmountDataTable.Rows.Clear();
+        private void ClearDataForServerQsoAmountDataGridView()
+        {
+            serverQsoAmountDataTable?.Rows.Clear();
         }
 
         private void ServerPortTextBox_TextChanged(object sender, EventArgs e)
@@ -427,7 +432,8 @@ namespace QSOCollector
         private void qsoImportButton_Click(object sender, EventArgs e)
         {
             new QsoImportForm(dbRepository).ShowDialog(this);
-            if (enableServerCheckBox.Checked) {
+            if (enableServerCheckBox.Checked)
+            {
                 GetDataForServerQsoAmountDataGridView();
                 HandleExportEnabled();
             }

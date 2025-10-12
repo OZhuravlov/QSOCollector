@@ -1,9 +1,13 @@
+using QSOCollector.Data;
+using QSOCollector.Helpers;
+using QSOCollector.Models;
+using QSOCollector.Parsers;
 using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
 using System.Text.Json;
 
-namespace QSOCollector
+namespace QSOCollector.Network
 {
     public class QsoMessageSender
     {
@@ -95,7 +99,7 @@ namespace QSOCollector
 
         private async Task SendToServer(QsoMessage qsoMessage)
         {
-            string qsoMessageJson = JsonSerializer.Serialize<QsoMessage>(qsoMessage);
+            string qsoMessageJson = JsonSerializer.Serialize(qsoMessage);
             try
             {
                 bool retry = false;

@@ -1,11 +1,11 @@
 using System.Data;
 
-namespace QSOCollector
+namespace QSOCollector.Helpers
 {
     public class ServerProgressUpdater(DataTable dataTable, TextBox serverLog)
     {
         public bool IsDebug { get; set; } = false;
-        public Object GridLock { get; } = new();
+        public object GridLock { get; } = new();
 
         private readonly DataTable dataTable = dataTable;
         private readonly TextBox serverLog = serverLog;
@@ -53,7 +53,8 @@ namespace QSOCollector
             return dateTime.ToString(format);
         }
 
-        private void UpdateRow(DataRow row, DateTime qsoDateTime) {
+        private void UpdateRow(DataRow row, DateTime qsoDateTime)
+        {
             row["TodayQsoAmount"] = (int)(long)row["TodayQsoAmount"] + 1;
             row["TotalQsoAmount"] = (int)(long)row["TotalQsoAmount"] + 1;
 
@@ -62,7 +63,7 @@ namespace QSOCollector
             {
                 row["LastQsoTime"] = ParseDateTime(qsoDateTime);
             }
-            DateOnly qsoDate = DateOnly.FromDateTime((DateTime)qsoDateTime);
+            DateOnly qsoDate = DateOnly.FromDateTime(qsoDateTime);
             if (qsoDate > today)
             {
                 today = qsoDate;

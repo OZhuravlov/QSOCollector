@@ -1,7 +1,7 @@
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 
-namespace QSOCollector
+namespace QSOCollector.Models
 {
     public class ServerResponse(ServerResponseStatus status, string? errorDescription = null)
     {

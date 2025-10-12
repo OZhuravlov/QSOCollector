@@ -1,9 +1,9 @@
 using DbUp;
 using Microsoft.Data.Sqlite;
-using System.Reflection;
 using SQLitePCL;
+using System.Reflection;
 
-namespace QSOCollector
+namespace QSOCollector.Root
 {
     internal static class Program
     {

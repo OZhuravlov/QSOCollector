@@ -1,10 +1,14 @@
 ﻿using Microsoft.Data.Sqlite;
+using QSOCollector.Data;
+using QSOCollector.Helpers;
+using QSOCollector.Models;
+using QSOCollector.Parsers;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
 
-namespace QSOCollector
+namespace QSOCollector.Network
 {
     internal class TcpServer
     {
@@ -17,8 +21,7 @@ namespace QSOCollector
 
         public TcpServer(int port, ServerProgressUpdater serverProgressUpdater)
         {
-            IPAddress ip = IPAddress.Loopback;
-            ipEndPoint = new(ip, port);
+            ipEndPoint = new(IPAddress.Any, port);
             cts = new CancellationTokenSource();
             this.serverProgressUpdater = serverProgressUpdater;
         }
@@ -85,7 +88,8 @@ namespace QSOCollector
                 List<Dictionary<string, string>> qsoRecords = [];
                 try
                 {
-                    if (!qsoMessage.IsTest) {
+                    if (!qsoMessage.IsTest)
+                    {
                         qsoRecords = ParseQsoMessage(qsoMessage);
                         if (qsoRecords.Count == 0)
                         {
@@ -124,12 +128,13 @@ namespace QSOCollector
                     string message = $"Got server status request from {clientIPAddress}. Status: {response.Status}";
                     serverProgressUpdater.UpdateLog(message, true);
                 }
-                else {
+                else
+                {
                     var rec = qsoRecords[qsoRecords.Count - 1];
-                    string message = $"{rec["QSO_TIME"]} {rec["SOURCE_IP_ADDRESS"]} {rec["PROGRAMID"]} {rec["MODE"]} {qsoRecords.Count} QSO added";
+                    string message = $"{rec["QSO_TIME"]} {rec["SOURCE_IP_ADDRESS"]} {rec["SOURCE_NAME"]} {rec["MODE"]} {qsoRecords.Count} QSO added";
                     serverProgressUpdater.UpdateLog(message);
                 }
-                await w.WriteLineAsync(JsonSerializer.Serialize<ServerResponse>(response));
+                await w.WriteLineAsync(JsonSerializer.Serialize(response));
             }
         }
 
@@ -145,7 +150,8 @@ namespace QSOCollector
                     _ => throw new ArgumentException($"Unsupported message format: {qsoMessage.OriginalFormat}"),
                 };
 
-                if (serverProgressUpdater.IsDebug) {
+                if (serverProgressUpdater.IsDebug)
+                {
                     // Log parsed records
                     foreach (var record in qsoRecords)
                     {

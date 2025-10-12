@@ -1,8 +1,10 @@
+using QSOCollector.Helpers;
+using QSOCollector.Models;
 using System.Collections.Concurrent;
 using System.Net.Sockets;
 using System.Text;
 
-namespace QSOCollector
+namespace QSOCollector.Network
 {
     public class UdpClientListener
     {
@@ -29,7 +31,7 @@ namespace QSOCollector
             Task.Run(() => StartAcknowledge());
 
             int localPort = listenerConfig.QsoPort;
-            using UdpClient udpClient = new (localPort);
+            using UdpClient udpClient = new(localPort);
             qsoUdpClient = udpClient;
             progressUpdater.UpdateLog($"UDP Port {localPort} ({listenerConfig.Name}) QSO Listener started");
             CancellationToken cancellationToken = cancellationTokenSource.Token;
@@ -66,7 +68,7 @@ namespace QSOCollector
                     qsoUdpClient.Close();
                     qsoUdpClient.Dispose();
                     cancellationTokenSource.Dispose();
-                    string message = (ex is OperationCanceledException)
+                    string message = ex is OperationCanceledException
                         ? $"UDP Port {localPort} ({listenerConfig.Name}) QSO Listener was stopped"
                         : $"!!!UDP Port {localPort} ({listenerConfig.Name}) QSO Listener unexpectedly stopped";
                     progressUpdater.UpdateLog(message);
@@ -93,7 +95,7 @@ namespace QSOCollector
                     byte[] receivedBytes = receivedResults.Buffer;
                     string receivedData = Encoding.UTF8.GetString(receivedBytes);
 
-                    progressUpdater.UpdateProgress(true, false, false, false, $"App info received on port {localPort} ({listenerConfig.Name})");
+                    progressUpdater.UpdateLog($"App info received on port {localPort} ({listenerConfig.Name})", true);
                     progressUpdater.UpdateLog($"Data: {receivedData}", true);
                 }
                 catch (Exception ex)
@@ -101,7 +103,7 @@ namespace QSOCollector
                     acknowledgeUdpClient.Close();
                     acknowledgeUdpClient.Dispose();
                     cancellationTokenSource.Dispose();
-                    string message = (ex is OperationCanceledException)
+                    string message = ex is OperationCanceledException
                         ? $"UDP Port {localPort} ({listenerConfig.Name}) Acknowledge listener was stopped"
                         : $"!!!UDP Port {localPort} ({listenerConfig.Name}) Acknowledge listener unexpectedly stopped";
                     progressUpdater.UpdateLog(message);

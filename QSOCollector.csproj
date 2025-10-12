@@ -11,6 +11,8 @@
   <ItemGroup>
     <EmbeddedResource Include="Migrations\002_adifImportTable.sql" />
     <EmbeddedResource Include="Migrations\001_adifExportTable.sql" />
+    <EmbeddedResource Include="Migrations\007_add-culumn-mode_group-to-QsoTable.sql" />
+    <EmbeddedResource Include="Migrations\006_add-culumn-to-QsoTable.sql" />
     <EmbeddedResource Include="Migrations\005_createListenersTable.sql" />
     <EmbeddedResource Include="Migrations\004_createSettingsTable.sql" />
     <EmbeddedResource Include="Migrations\003_createServerQsoTable.sql" />
@@ -32,7 +34,7 @@
       <AutoGen>True</AutoGen>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
-    <Compile Update="QsoImportForm.cs">
+    <Compile Update="Forms\QsoImportForm.cs">
       <SubType>Form</SubType>
     </Compile>
   </ItemGroup>
@@ -42,7 +44,7 @@
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
-    <EmbeddedResource Update="QsoImportForm.resx">
+    <EmbeddedResource Update="Forms\QsoImportForm.resx">
       <SubType>Designer</SubType>
     </EmbeddedResource>
   </ItemGroup>

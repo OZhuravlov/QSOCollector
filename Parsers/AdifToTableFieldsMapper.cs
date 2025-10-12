@@ -1,6 +1,7 @@
+using QSOCollector.Models;
 using System.Text.RegularExpressions;
 
-namespace QSOCollector
+namespace QSOCollector.Parsers
 {
     public static class AdifToTableFieldsMapper
     {
@@ -8,8 +9,8 @@ namespace QSOCollector
         private static readonly string endOfHeader = "<EOH>";
 
         // Parses an ADIF message and returns a list of key-value maps for each QSO record
-        public static List<Dictionary<string, string?>> Map(
-            QsoMessage qsoMessage, 
+        public static List<Dictionary<string, string>> Map(
+            QsoMessage qsoMessage,
             string? sourceIpAddress = null,
             Func<string, Task>? progressUpdater = null
             )
@@ -31,7 +32,7 @@ namespace QSOCollector
                 headerMap["SOURCE_IP_ADDRESS"] = sourceIpAddress;
             }
 
-            string sourceKey = "PROGRAMID";
+            string sourceKey = "SOURCE_NAME";
             if (!string.IsNullOrEmpty(qsoMessage.Source))
             {
                 headerMap[sourceKey] = qsoMessage.Source;
@@ -71,9 +72,11 @@ namespace QSOCollector
                 qsoMap["ADIF_QSODATA"] = adifRecord;
                 qsoMap["QSO_TIME"] = GetQsoTime(qsoMap).ToString("yyyy-MM-dd HH:mm:ss");
                 string? qsoOperator;
-                if (!qsoMap.ContainsKey("STATION_CALLSIGN") && qsoMap.TryGetValue("OPERATOR", out qsoOperator)) {
+                if (!qsoMap.ContainsKey("STATION_CALLSIGN") && qsoMap.TryGetValue("OPERATOR", out qsoOperator))
+                {
                     qsoMap["STATION_CALLSIGN"] = qsoOperator;
                 }
+                qsoMap["MODE_GROUP"] = GetModeGroup(qsoMap["MODE"]);
 
                 result.Add(qsoMap);
                 if (n % 10 == 0) progressUpdater?.Invoke($"Parsing {n} of {qsoRecords.Length}");
@@ -133,6 +136,18 @@ namespace QSOCollector
                 return qsoTime;
             }
             throw new ArgumentException("Cannot convert ADIF QSO Date and Time to DATETIME value"); ;
+        }
+
+        private static string GetModeGroup(string mode)
+        {
+            return mode switch
+            {
+                "CW" => "CW",
+                "SSB" or "USB" or "LSB" or "AM" or "FM" => "PHONE",
+                "FT8" or "FT4" or "RTTY" or "PSK31" or "PSK63" or "JT65" or "JT9" => "DATA",
+                "SAT" => "SAT",
+                _ => "OTHER"
+            };
         }
     }
 }
