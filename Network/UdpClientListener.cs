@@ -30,17 +30,17 @@ namespace QSOCollector.Network
         {
             Task.Run(() => StartAcknowledge());
 
-            int localPort = listenerConfig.QsoPort;
-            using UdpClient udpClient = new(localPort);
+            int qsoPort = listenerConfig.QsoPort;
+            using UdpClient udpClient = new(qsoPort);
             qsoUdpClient = udpClient;
-            progressUpdater.UpdateLog($"UDP Port {localPort} ({listenerConfig.Name}) QSO Listener started");
+            progressUpdater.UpdateLog($"UDP Port {qsoPort} ({listenerConfig.Name}) QSO Listener started");
             CancellationToken cancellationToken = cancellationTokenSource.Token;
 
             if (listenerConfig.ForwardPort != null)
             {
                 forwardUdpClient = new UdpClient();
                 forwardUdpClient.Connect("localhost", listenerConfig.ForwardPort.Value);
-                progressUpdater.UpdateLog($"UDP Port {localPort} ({listenerConfig.Name}) Forwarding to port {listenerConfig.ForwardPort.Value}");
+                progressUpdater.UpdateLog($"UDP Port {qsoPort} ({listenerConfig.Name}) Forwarding to port {listenerConfig.ForwardPort.Value}");
             }
 
             while (!cancellationToken.IsCancellationRequested)
@@ -49,18 +49,15 @@ namespace QSOCollector.Network
                 {
                     var receivedResults = await qsoUdpClient.ReceiveAsync(cancellationToken);
                     byte[] receivedBytes = receivedResults.Buffer;
-                    if (listenerConfig.ForwardPort != null)
+                    if (forwardUdpClient != null)
                     {
-                        if (forwardUdpClient != null)
-                        {
-                            await forwardUdpClient.SendAsync(receivedBytes, receivedBytes.Length);
-                        }
+                        await forwardUdpClient.SendAsync(receivedBytes, receivedBytes.Length);
                     }
                     string receivedData = Encoding.UTF8.GetString(receivedBytes);
 
                     QsoMessage qsoMessage = new() { Source = listenerConfig.Name, OriginalFormat = listenerConfig.MessageFormat, OriginalQsoData = receivedData };
                     qsoMessageQueue.Add(qsoMessage);
-                    progressUpdater.UpdateProgress(true, false, false, false, $"QSO received on port {localPort} ({listenerConfig.Name})");
+                    progressUpdater.UpdateProgress(true, false, false, false, $"QSO received on port {qsoPort} ({listenerConfig.Name})");
                     progressUpdater.UpdateLog($"Data: {receivedData}", true);
                 }
                 catch (Exception ex)
@@ -69,8 +66,8 @@ namespace QSOCollector.Network
                     qsoUdpClient.Dispose();
                     cancellationTokenSource.Dispose();
                     string message = ex is OperationCanceledException
-                        ? $"UDP Port {localPort} ({listenerConfig.Name}) QSO Listener was stopped"
-                        : $"!!!UDP Port {localPort} ({listenerConfig.Name}) QSO Listener unexpectedly stopped";
+                        ? $"UDP Port {qsoPort} ({listenerConfig.Name}) QSO Listener was stopped"
+                        : $"!!!UDP Port {qsoPort} ({listenerConfig.Name}) QSO Listener unexpectedly stopped";
                     progressUpdater.UpdateLog(message);
                     break;
                 }
@@ -79,12 +76,12 @@ namespace QSOCollector.Network
 
         private async Task StartAcknowledge()
         {
-            int? localPort = listenerConfig.AcknowledgePort;
-            if (localPort == null) return;
+            int? acknowledgePort = listenerConfig.AcknowledgePort;
+            if (acknowledgePort == null) return;
 
-            using UdpClient udpClient = new(localPort.Value);
+            using UdpClient udpClient = new(acknowledgePort.Value);
             acknowledgeUdpClient = udpClient;
-            progressUpdater.UpdateLog($"UDP Port {localPort} ({listenerConfig.Name}) Acknowledge listener started");
+            progressUpdater.UpdateLog($"UDP Port {acknowledgePort} ({listenerConfig.Name}) Acknowledge listener started");
             CancellationToken cancellationToken = cancellationTokenSource.Token;
 
             while (!cancellationToken.IsCancellationRequested)
@@ -95,7 +92,7 @@ namespace QSOCollector.Network
                     byte[] receivedBytes = receivedResults.Buffer;
                     string receivedData = Encoding.UTF8.GetString(receivedBytes);
 
-                    progressUpdater.UpdateLog($"App info received on port {localPort} ({listenerConfig.Name})", true);
+                    progressUpdater.UpdateLog($"App info received on port {acknowledgePort} ({listenerConfig.Name})", true);
                     progressUpdater.UpdateLog($"Data: {receivedData}", true);
                 }
                 catch (Exception ex)
@@ -104,8 +101,8 @@ namespace QSOCollector.Network
                     acknowledgeUdpClient.Dispose();
                     cancellationTokenSource.Dispose();
                     string message = ex is OperationCanceledException
-                        ? $"UDP Port {localPort} ({listenerConfig.Name}) Acknowledge listener was stopped"
-                        : $"!!!UDP Port {localPort} ({listenerConfig.Name}) Acknowledge listener unexpectedly stopped";
+                        ? $"UDP Port {acknowledgePort} ({listenerConfig.Name}) Acknowledge listener was stopped"
+                        : $"!!!UDP Port {acknowledgePort} ({listenerConfig.Name}) Acknowledge listener unexpectedly stopped";
                     progressUpdater.UpdateLog(message);
                     break;
                 }
