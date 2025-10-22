@@ -30,6 +30,7 @@ namespace QSOCollector
         /// </summary>
         private void InitializeComponent()
         {
+            components = new System.ComponentModel.Container();
             DataGridViewCellStyle dataGridViewCellStyle1 = new DataGridViewCellStyle();
             DataGridViewCellStyle dataGridViewCellStyle2 = new DataGridViewCellStyle();
             DataGridViewCellStyle dataGridViewCellStyle3 = new DataGridViewCellStyle();
@@ -84,6 +85,7 @@ namespace QSOCollector
             serverPortLabel = new Label();
             enableServerCheckBox = new CheckBox();
             sqliteConnection1 = new Microsoft.Data.Sqlite.SqliteConnection();
+            trayNotifyIcon = new NotifyIcon(components);
             mainTabControl.SuspendLayout();
             clientTab.SuspendLayout();
             processingGroupBox.SuspendLayout();
@@ -745,6 +747,12 @@ namespace QSOCollector
             // 
             sqliteConnection1.DefaultTimeout = 30;
             // 
+            // trayNotifyIcon
+            // 
+            trayNotifyIcon.Text = "notifyIcon1";
+            trayNotifyIcon.Visible = true;
+            trayNotifyIcon.DoubleClick += trayNotifyIcon_DoubleClick;
+            // 
             // QsoCollectorForm
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
@@ -756,6 +764,7 @@ namespace QSOCollector
             Name = "QsoCollectorForm";
             Text = "DXpedition QSO Collector © Alex UR8UQ";
             FormClosing += QsoCollectorForm_FormClosing;
+            SizeChanged += QsoCollectorForm_SizeChanged;
             mainTabControl.ResumeLayout(false);
             clientTab.ResumeLayout(false);
             clientTab.PerformLayout();
@@ -826,5 +835,6 @@ namespace QSOCollector
         private DataGridViewTextBoxColumn exportedQsoAmount;
         private DataGridViewTextBoxColumn lastQsoTime;
         private DataGridViewTextBoxColumn lastExportedQsoTime;
+        private NotifyIcon trayNotifyIcon;
     }
 }

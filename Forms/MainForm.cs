@@ -19,7 +19,7 @@ namespace QSOCollector
         private DataTable? serverQsoAmountDataTable;
         private TcpServer? tcpServer = null;
 
-        public QsoCollectorForm(string connectionString)
+        public QsoCollectorForm(string connectionString, StartupParams startupParams)
         {
             this.connectionString = connectionString;
             dbRepository = new DbRepository(connectionString);
@@ -31,6 +31,36 @@ namespace QSOCollector
             serverLogTextBox.Clear();
             HandleClientCheckBoxChanged(enableClientCheckBox);
             clientLogTextBox.Clear();
+            HandleStartupParams(startupParams);
+        }
+
+        private void HandleStartupParams(StartupParams startupParams)
+        {
+            if (startupParams.IsQuiet)
+            {
+                MinimizeAppToTray();
+            }
+
+            if (startupParams.StartServer)
+            {
+                enableServerCheckBox.Checked = true;
+                StartServerButton_Click(this, EventArgs.Empty);
+            }
+
+            if (startupParams.StartClient)
+            {
+                enableClientCheckBox.Checked = true;
+                StartClientButton_Click(this, EventArgs.Empty);
+            }
+        }
+
+        private void MinimizeAppToTray()
+        {
+            trayNotifyIcon.Icon = SystemIcons.Application;
+            trayNotifyIcon.BalloonTipText = "QSO Collector is running in the background";
+            trayNotifyIcon.ShowBalloonTip(1000);
+            this.ShowInTaskbar = false;
+            trayNotifyIcon.Visible = true;
         }
 
         private void QsoCollectorForm_FormClosing(object sender, FormClosingEventArgs e)
@@ -454,5 +484,26 @@ namespace QSOCollector
             qsoExportButton.Enabled = serverQsoAmountsDataGridView.RowCount > 1;
         }
 
+        private void QsoCollectorForm_SizeChanged(object sender, EventArgs e)
+        {
+            bool mousePointerNotOnTaskBar = Screen.GetWorkingArea(this).Contains(Cursor.Position);
+            if (this.WindowState == FormWindowState.Minimized && mousePointerNotOnTaskBar)
+            {
+                MinimizeAppToTray();
+                return;
+            }
+            trayNotifyIcon.Visible = false;
+            this.ShowInTaskbar = true;
+        }
+
+        private void trayNotifyIcon_DoubleClick(object sender, EventArgs e)
+        {
+            this.WindowState = FormWindowState.Normal;
+            if (this.WindowState == FormWindowState.Normal)
+            {
+                this.ShowInTaskbar = true;
+                trayNotifyIcon.Visible = false;
+            }
+        }
     }
 }

@@ -1,5 +1,6 @@
 using DbUp;
 using Microsoft.Data.Sqlite;
+using QSOCollector.Models;
 using SQLitePCL;
 using System.Reflection;
 
@@ -7,6 +8,8 @@ namespace QSOCollector.Root
 {
     internal static class Program
     {
+        private static readonly string appGuid = "dce43cbd-39a4-49df-9e4e-4e3e85adfd83";
+
         /// <summary>
         ///  The main entry point for the application.
         /// </summary>
@@ -20,6 +23,8 @@ namespace QSOCollector.Root
                 return;
             }
 
+            StartupParams startupParams = GetStartupParams();
+
             Batteries.Init();
             // To customize application configuration such as set high DPI settings or default font,
             // see https://aka.ms/applicationconfiguration.
@@ -29,10 +34,8 @@ namespace QSOCollector.Root
             string dbFileName = "qsoCollector.s3db";
             string connectionString = InitializeDatabase(dbPath, dbFileName);
             RunMigrations(connectionString);
-            Application.Run(new QsoCollectorForm(connectionString));
+            Application.Run(new QsoCollectorForm(connectionString, startupParams));
         }
-
-        private static string appGuid = "dce43cbd-39a4-49df-9e4e-4e3e85adfd83";
 
         static string InitializeDatabase(string dbPath, string dbFileName)
         {
@@ -80,6 +83,35 @@ namespace QSOCollector.Root
             {
                 throw new Exception("Database migration failed", result.Error);
             }
+        }
+
+
+        private static StartupParams GetStartupParams()
+        {
+            StartupParams startupParams = new();
+            string[] args = Environment.GetCommandLineArgs();
+            foreach (var param in args)
+            {
+                switch (param)
+                {
+                    case "--quiet":
+                    case "-q":
+                    case "/q":
+                        startupParams.IsQuiet = true;
+                        break;
+                    case "--start-server":
+                    case "-s":
+                    case "/s":
+                        startupParams.StartServer = true;
+                        break;
+                    case "--start-client":
+                    case "-c":
+                    case "/c":
+                        startupParams.StartClient = true;
+                        break;
+                }
+            }
+            return startupParams;
         }
     }
 }
