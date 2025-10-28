@@ -48,6 +48,8 @@ namespace QSOCollector
             deleteSelectedListenersButton = new Button();
             cancelEditListenersButton = new Button();
             saveListenersButton = new Button();
+            exportConfigButton = new Button();
+            importConfigButton = new Button();
             ((System.ComponentModel.ISupportInitialize)dataGridView1).BeginInit();
             SuspendLayout();
             // 
@@ -172,9 +174,9 @@ namespace QSOCollector
             // 
             // deleteSelectedListenersButton
             // 
-            deleteSelectedListenersButton.Location = new Point(66, 265);
+            deleteSelectedListenersButton.Location = new Point(12, 266);
             deleteSelectedListenersButton.Name = "deleteSelectedListenersButton";
-            deleteSelectedListenersButton.Size = new Size(180, 41);
+            deleteSelectedListenersButton.Size = new Size(121, 55);
             deleteSelectedListenersButton.TabIndex = 1;
             deleteSelectedListenersButton.Text = "Delete Selected Rows";
             deleteSelectedListenersButton.UseVisualStyleBackColor = true;
@@ -182,9 +184,9 @@ namespace QSOCollector
             // 
             // cancelEditListenersButton
             // 
-            cancelEditListenersButton.Location = new Point(318, 265);
+            cancelEditListenersButton.Location = new Point(381, 274);
             cancelEditListenersButton.Name = "cancelEditListenersButton";
-            cancelEditListenersButton.Size = new Size(118, 41);
+            cancelEditListenersButton.Size = new Size(102, 41);
             cancelEditListenersButton.TabIndex = 2;
             cancelEditListenersButton.Text = "Close";
             cancelEditListenersButton.UseVisualStyleBackColor = true;
@@ -193,7 +195,7 @@ namespace QSOCollector
             // saveListenersButton
             // 
             saveListenersButton.Enabled = false;
-            saveListenersButton.Location = new Point(442, 265);
+            saveListenersButton.Location = new Point(489, 274);
             saveListenersButton.Name = "saveListenersButton";
             saveListenersButton.Size = new Size(94, 41);
             saveListenersButton.TabIndex = 3;
@@ -201,11 +203,34 @@ namespace QSOCollector
             saveListenersButton.UseVisualStyleBackColor = true;
             saveListenersButton.Click += saveListenersButton_Click;
             // 
+            // exportConfigButton
+            // 
+            exportConfigButton.Enabled = false;
+            exportConfigButton.Location = new Point(247, 270);
+            exportConfigButton.Name = "exportConfigButton";
+            exportConfigButton.Size = new Size(84, 50);
+            exportConfigButton.TabIndex = 4;
+            exportConfigButton.Text = "Export config";
+            exportConfigButton.UseVisualStyleBackColor = true;
+            exportConfigButton.Click += exportConfigButton_Click;
+            // 
+            // importConfigButton
+            // 
+            importConfigButton.Location = new Point(156, 270);
+            importConfigButton.Name = "importConfigButton";
+            importConfigButton.Size = new Size(84, 50);
+            importConfigButton.TabIndex = 5;
+            importConfigButton.Text = "Import config";
+            importConfigButton.UseVisualStyleBackColor = true;
+            importConfigButton.Click += importConfigButton_Click;
+            // 
             // ListenersForm
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(583, 310);
+            ClientSize = new Size(583, 327);
+            Controls.Add(importConfigButton);
+            Controls.Add(exportConfigButton);
             Controls.Add(saveListenersButton);
             Controls.Add(cancelEditListenersButton);
             Controls.Add(deleteSelectedListenersButton);
@@ -236,5 +261,7 @@ namespace QSOCollector
         private DataGridViewTextBoxColumn acknowledge_port;
         private DataGridViewComboBoxColumn message_format;
         private DataGridViewCheckBoxColumn is_active;
+        private Button exportConfigButton;
+        private Button importConfigButton;
     }
 }

@@ -1,16 +1,22 @@
-﻿using System.Data;
+﻿using Newtonsoft.Json.Linq;
+using QSOCollector.Data;
+using QSOCollector.Root;
+using System.Data;
 using System.Data.SQLite;
 using System.Globalization;
+using System.Text.Json;
 
 namespace QSOCollector
 {
     public partial class ListenersForm : Form
     {
-        private string connectionString;
+        private readonly string connectionString;
+        private readonly DbRepository dbRepository;
 
         public ListenersForm(string connectionString)
         {
             this.connectionString = connectionString;
+            dbRepository = new DbRepository(connectionString);
             InitializeComponent();
         }
 
@@ -20,6 +26,7 @@ namespace QSOCollector
             // and load the data from the database.
             dataGridView1.DataSource = bindingSource1;
             GetListenersConfigDataForDataGridView1(connectionString, "select id, name, qso_port, forward_port, acknowledge_port, message_format, is_active from listeners");
+            exportConfigButton.Enabled = dataGridView1.Rows.Count > 0;
         }
 
         private void GetListenersConfigDataForDataGridView1(string connectionString, string selectCommand)
@@ -100,16 +107,18 @@ namespace QSOCollector
                 if (cell.FormattedValue == null || string.IsNullOrWhiteSpace(cell.FormattedValue.ToString()))
                 {
                     row.ErrorText = $"The value of '{column.HeaderText}' must not be empty";
+                    exportConfigButton.Enabled = false;
                     return;
                 }
                 row.ErrorText = string.Empty;
             }
+            exportConfigButton.Enabled = true;
         }
 
         private void dataGridView1_DefaultValuesNeeded(object sender, DataGridViewRowEventArgs e)
         {
             e.Row.Cells["is_active"].Value = true;
-            e.Row.Cells["message_format"].Value = "ADIF";
+            e.Row.Cells["message_format"].Value = "N1MM";
         }
 
         private void cancelEditListenersButton_Click(object sender, EventArgs e)
@@ -147,9 +156,11 @@ namespace QSOCollector
             // Ensure the current edit is committed.
             dataGridView1.EndEdit();
             // Save the data from the DataGridView to the database.
-            try {
+            try
+            {
                 dataAdapter.Update((DataTable)bindingSource1.DataSource);
-            } catch (DBConcurrencyException)
+            }
+            catch (DBConcurrencyException)
             {
             }
 
@@ -174,6 +185,7 @@ namespace QSOCollector
             rowsToDelete.ForEach(r => dataGridView1.Rows.Remove(r));
             cancelEditListenersButton.Text = "Cancel";
             saveListenersButton.Enabled = true;
+            exportConfigButton.Enabled = dataGridView1.Rows.Count > 0;
         }
 
         private void dataGridView1_EditingControlShowing(object sender, DataGridViewEditingControlShowingEventArgs e)
@@ -195,6 +207,70 @@ namespace QSOCollector
             if (!char.IsControl(e.KeyChar) && !char.IsDigit(e.KeyChar))
             {
                 e.Handled = true;
+            }
+        }
+
+        private void exportConfigButton_Click(object sender, EventArgs e)
+        {
+            if (saveListenersButton.Enabled)
+            {
+                DialogResult result = MessageBox.Show("All changes must be saved first.\nDo you want to save them now and continue?", "Saving changes before export", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+                if (result == DialogResult.No)
+                {
+                    return;
+                }
+                saveListenersButton_Click(saveListenersButton, EventArgs.Empty);
+            }
+
+            using SaveFileDialog saveFileDialog = new()
+            {
+                InitialDirectory = Program.configFolder,
+                FileName = "listeners-config.json",
+                Filter = "JSON files (*.json)|*.json|All files (*.*)|*.*",
+                DefaultExt = "json",
+                AddExtension = true,
+                RestoreDirectory = true
+            };
+
+            if (saveFileDialog.ShowDialog() == DialogResult.OK)
+            {
+                List<Models.ListenerConfig> listenerConfigs = dbRepository.GetListenerConfigs();
+                string jsonListenerConfigs = JToken.Parse(
+                    JsonSerializer.Serialize<List<Models.ListenerConfig>>(listenerConfigs)
+                    ).ToString();
+                string filePath = saveFileDialog.FileName;
+                File.WriteAllText(filePath, jsonListenerConfigs);
+            }
+            else
+            {
+                return;
+            }
+        }
+
+        private void importConfigButton_Click(object sender, EventArgs e)
+        {
+            if (dataGridView1.Rows.Count > 0 || dbRepository.GetListenerConfigs().Count > 0) {
+                DialogResult result = MessageBox.Show("Existing configs will be replaced by imported. Do you want to continue?", "Existing config replacement", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+                if (result == DialogResult.No)
+                {
+                    return;
+                }
+                using OpenFileDialog openFileDialog = new();
+                openFileDialog.InitialDirectory = Program.configFolder;
+                openFileDialog.Filter = "JSON files (*.json)|*.json|All files (*.*)|*.*";
+                openFileDialog.RestoreDirectory = true;
+
+                if (openFileDialog.ShowDialog() != DialogResult.OK)
+                {
+                    return;
+                }
+
+                var fileStream = openFileDialog.OpenFile();
+                using StreamReader reader = new(fileStream);
+                string jsonListenerConfigs = reader.ReadToEnd();
+                List<Models.ListenerConfig> listenerConfigs  = JsonSerializer.Deserialize<List<Models.ListenerConfig>>(jsonListenerConfigs);
+                dbRepository.ReplaceListenerConfigs(listenerConfigs);
+                ListenersForm_Load(this, EventArgs.Empty);
             }
         }
     }

@@ -1,5 +1,6 @@
 using Microsoft.Data.Sqlite;
 using QSOCollector.Models;
+using System.Collections.Generic;
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
@@ -12,6 +13,8 @@ namespace QSOCollector.Data
         private const string selectSettingsSql = "SELECT key, value FROM settings";
         private const string insertSettingsSql = "INSERT OR REPLACE INTO settings (key, value) VALUES (@key, @value)";
         private const string getListenerConfigsSql = "SELECT name as Name, id as Id, qso_port as QsoPort, forward_port as ForwardPort, acknowledge_port as AcknowledgePort, message_format as MessageFormat, is_active IsActive FROM listeners WHERE is_active = true";
+        private const string insertListenerConfigsSql = "INSERT INTO listeners (name, qso_port, forward_port, acknowledge_port, message_format, is_active) " +
+                    " VALUES (@Name, @QsoPort, @ForwardPort, @AcknowledgePort, @MessageFormat, @IsActive)";
         private const string getServerQsoAmountsSql = "SELECT q.mode QsoAmountMode, COUNT(CASE WHEN q.qso_time >= current_date THEN 1 END) TodayQsoAmount, count(*) TotalQsoAmount, COUNT(e.id) ExportedQsoAmount, MAX(q.qso_time) LastQsoTime, MAX(e.end_time) LastExportedQsoTime FROM qsodata q LEFT JOIN adif_export e ON q.export_id = e.id AND e.is_confirmed = true WHERE q.is_temporary = false GROUP BY q.mode UNION ALL SELECT 'Total', COUNT(CASE WHEN q.qso_time >= current_date THEN 1 END), COUNT(*), COUNT(e.id), MAX(q.qso_time), MAX(e.end_time) FROM qsodata q LEFT JOIN adif_export e ON q.export_id = e.id AND e.is_confirmed = true WHERE q.is_temporary = false";
         private const string getQsoAmountsForExportSql = "SELECT COALESCE(q.source_name, '<UNKNOWN>') SourceName, e.id IS NOT NULL IsExported, DATE(q.qso_time) QsoDate, q.mode_group ModeGroup, q.mode Mode, q.band Band, COALESCE(q.operator, '<UNKNOWN>') Operator, COALESCE(q.source_ip_address, '<UNKNOWN>') SourceIp, count(*) Count FROM qsodata q LEFT JOIN adif_export e ON q.export_id = e.id AND e.is_confirmed = true WHERE q.is_temporary = false GROUP BY COALESCE(q.source_name, '<UNKNOWN>'), e.id IS NOT NULL, DATE(q.qso_time), q.mode_group, q.mode, q.band, COALESCE(q.operator, '<UNKNOWN>'), COALESCE(q.source_ip_address, '<UNKNOWN>')";
         private const string insertQsoSql = "INSERT INTO qsodata (is_temporary, source_name, source_ip_address, import_id, qso_time, programid, station_callsign, qso_date, qso_date_off, call, time_on, time_off, band, freq, freq_rx, mode, mode_group, contest_id, rst_sent, rst_rcvd, exch_sent, exch_rcvd, operator, my_gridsquare, gridsquare, distance, comment, pfx, dxcc_pref, cqz, ituz, cont, qslmsg, dxcc, orig_format, orig_qsodata, adif_qsodata)" +
@@ -25,12 +28,11 @@ namespace QSOCollector.Data
         private const int SQLITE_CONSTRAINT_UNIQUE = 2067;
 
         private readonly string connectionString;
-        private readonly Dictionary<string, string> qsodataColumns;
+        private Dictionary<string, string>? qsodataColumns = null;
 
         public DbRepository(string dbConnectionString)
         {
             connectionString = dbConnectionString;
-            qsodataColumns = GetTableColumns("qsodata");
         }
 
         public Dictionary<string, string?> LoadSettings()
@@ -79,6 +81,39 @@ namespace QSOCollector.Data
             command.CommandText = getListenerConfigsSql;
             using var reader = command.ExecuteReader();
             return GetData<ListenerConfig>(reader);
+        }
+
+        public void ReplaceListenerConfigs(List<ListenerConfig> configs)
+        {
+            using var connection = new SqliteConnection(connectionString);
+            connection.Open();
+            using var transaction = connection.BeginTransaction();
+            DeleteListenerConfigs(connection, configs);
+            SaveListenerConfigs(connection, configs);
+            transaction.Commit();
+        }
+
+        private static void DeleteListenerConfigs(SqliteConnection connection, List<ListenerConfig> configs)
+        {
+            using var command = connection.CreateCommand();
+            command.CommandText = "DELETE FROM listeners";
+            command.ExecuteNonQuery();
+        }
+
+        private static void SaveListenerConfigs(SqliteConnection connection, List<ListenerConfig> configs)
+        {
+            configs.ForEach(config =>
+            {
+                using var command = connection.CreateCommand();
+                command.CommandText = insertListenerConfigsSql;
+                command.Parameters.Add(new SqliteParameter("@Name", config.Name));
+                command.Parameters.Add(new SqliteParameter("@QsoPort", config.QsoPort));
+                command.Parameters.Add(new SqliteParameter("@ForwardPort", config.ForwardPort));
+                command.Parameters.Add(new SqliteParameter("@AcknowledgePort", config.AcknowledgePort));
+                command.Parameters.Add(new SqliteParameter("@MessageFormat", config.MessageFormat));
+                command.Parameters.Add(new SqliteParameter("@IsActive", config.IsActive));
+                command.ExecuteNonQuery();
+            });
         }
 
         public List<ServerQsoAmount> GetServerQsoAmounts()
@@ -233,6 +268,7 @@ namespace QSOCollector.Data
             int dupsCount = 0;
             int succCount = 0;
             List<Dictionary<string, string?>> dups = [];
+            qsodataColumns ??= GetTableColumns("qsodata");
             foreach (var qsoRecord in qsoRecords)
             {
                 n++;

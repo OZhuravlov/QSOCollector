@@ -749,7 +749,7 @@ namespace QSOCollector
             // 
             // trayNotifyIcon
             // 
-            trayNotifyIcon.Text = "notifyIcon1";
+            trayNotifyIcon.Text = "QSO Collector running";
             trayNotifyIcon.Visible = true;
             trayNotifyIcon.DoubleClick += trayNotifyIcon_DoubleClick;
             // 
@@ -764,6 +764,7 @@ namespace QSOCollector
             Name = "QsoCollectorForm";
             Text = "DXpedition QSO Collector © Alex UR8UQ";
             FormClosing += QsoCollectorForm_FormClosing;
+            Shown += QsoCollectorForm_Shown;
             SizeChanged += QsoCollectorForm_SizeChanged;
             mainTabControl.ResumeLayout(false);
             clientTab.ResumeLayout(false);

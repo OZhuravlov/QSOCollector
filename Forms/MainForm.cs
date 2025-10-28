@@ -6,6 +6,7 @@ using System.Collections.Concurrent;
 using System.Data;
 using System.Data.SQLite;
 using System.Globalization;
+using System.Reflection;
 
 namespace QSOCollector
 {
@@ -13,6 +14,7 @@ namespace QSOCollector
     {
         private readonly string connectionString;
         private readonly DbRepository dbRepository;
+        private StartupParams startupParams;
         private CancellationTokenSource? clientCancellationTokenSource = new();
         private ClientProgressUpdater? clientProgressUpdater;
         private ServerProgressUpdater? serverProgressUpdater;
@@ -23,44 +25,75 @@ namespace QSOCollector
         {
             this.connectionString = connectionString;
             dbRepository = new DbRepository(connectionString);
+            this.startupParams = startupParams;
+
 
             InitializeComponent();
-            this.Text += $"        v.{System.Reflection.Assembly.GetExecutingAssembly().GetName().Version}";
+            this.Text += $"        v.{Assembly.GetExecutingAssembly().GetName().Version}";
             RestoreSavedFormValuesFromDB();
             HandleServerCheckBoxChanged(enableServerCheckBox);
             serverLogTextBox.Clear();
             HandleClientCheckBoxChanged(enableClientCheckBox);
             clientLogTextBox.Clear();
+        }
+
+        private void QsoCollectorForm_Shown(object sender, EventArgs e)
+        {
             HandleStartupParams(startupParams);
         }
 
         private void HandleStartupParams(StartupParams startupParams)
         {
-            if (startupParams.IsQuiet)
-            {
-                MinimizeAppToTray();
-            }
-
             if (startupParams.StartServer)
             {
-                enableServerCheckBox.Checked = true;
-                StartServerButton_Click(this, EventArgs.Empty);
+                AutoStartServer();
             }
 
             if (startupParams.StartClient)
             {
-                enableClientCheckBox.Checked = true;
-                StartClientButton_Click(this, EventArgs.Empty);
+                AutoStartClient();
+            }
+
+            if (startupParams.IsQuiet)
+            {
+                this.WindowState = FormWindowState.Minimized;
+                this.Refresh();
+                MinimizeAppToTray();
             }
         }
 
-        private void MinimizeAppToTray()
+        private void AutoStartClient()
         {
-            trayNotifyIcon.Icon = SystemIcons.Application;
-            trayNotifyIcon.BalloonTipText = "QSO Collector is running in the background";
-            trayNotifyIcon.ShowBalloonTip(1000);
-            this.ShowInTaskbar = false;
-            trayNotifyIcon.Visible = true;
+            enableClientCheckBox.Enabled = true;
+            HandleClientCheckBoxChanged(enableClientCheckBox);
+            clientServerPortTextBox_TextChanged(clientServerPortTextBox, EventArgs.Empty);
+            if (startClientButton.Enabled)
+            {
+                mainTabControl.SelectedTab = clientTab;
+                StartClientButton_Click(startClientButton, EventArgs.Empty);
+                clientTab.Refresh();
+            }
+            else
+            {
+                MessageBox.Show("Cannot start client automatically because client is not configured properly", "Cannot Start Clienmt", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        private void AutoStartServer()
+        {
+            enableServerCheckBox.Enabled = true;
+            HandleServerCheckBoxChanged(enableServerCheckBox);
+            ServerPortTextBox_TextChanged(serverPortTextBox, EventArgs.Empty);
+            if (startServerButton.Enabled)
+            {
+                mainTabControl.SelectedTab = serverTab;
+                StartServerButton_Click(startServerButton, EventArgs.Empty);
+                serverTab.Refresh();
+            }
+            else
+            {
+                MessageBox.Show("Cannot start client automatically because server is not configured properly", "Cannot Start Server", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
         }
 
         private void QsoCollectorForm_FormClosing(object sender, FormClosingEventArgs e)
@@ -504,6 +537,21 @@ namespace QSOCollector
                 this.ShowInTaskbar = true;
                 trayNotifyIcon.Visible = false;
             }
+        }
+
+        private void MinimizeAppToTray()
+        {
+            string[] roles = [];
+            if (startupParams.StartServer) roles = [.. roles, "Server"];
+            if (startupParams.StartClient) roles = [.. roles, "Client"];
+            string message = "QSO Collector " + string.Join(" and ", roles) + ((roles.Length > 1) ? " are " : " is " ) + "running on background\nDouble-click to restore";
+            trayNotifyIcon.BalloonTipText = message;
+            trayNotifyIcon.Text = message;
+
+            trayNotifyIcon.Icon = Icon.ExtractAssociatedIcon(Assembly.GetExecutingAssembly().Location);
+            trayNotifyIcon.ShowBalloonTip(1000);
+            this.ShowInTaskbar = false;
+            trayNotifyIcon.Visible = true;
         }
     }
 }

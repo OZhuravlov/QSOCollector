@@ -1,6 +1,7 @@
 ﻿using QSOCollector.Data;
 using QSOCollector.Helpers;
 using QSOCollector.Models;
+using QSOCollector.Root;
 using System.Diagnostics;
 using System.Text;
 
@@ -301,7 +302,7 @@ namespace QSOCollector
 
             using (SaveFileDialog saveFileDialog = new()
             {
-                InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                InitialDirectory = Program.exportFolder,
                 FileName = $"export_{now:yyyyMMdd_HHmmss}.adi",
                 Filter = "ADIF files (*.adi)|*.adi|All files (*.*)|*.*",
                 DefaultExt = "adi",

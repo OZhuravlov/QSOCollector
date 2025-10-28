@@ -55,7 +55,7 @@ namespace QSOCollector.Helpers
             {
                 lock (statusLock)
                 {
-                    clientLog.Invoke((MethodInvoker)delegate
+                    clientLog.BeginInvoke((MethodInvoker)delegate
                     {
                         clientLog.AppendText($"{message}\r\n");
                     });
@@ -69,7 +69,7 @@ namespace QSOCollector.Helpers
             lock (tempSavedLock)
             {
                 tempSaved = Math.Max(0, tempSaved + amount);
-                tempSavedLabel.Invoke((MethodInvoker)delegate
+                tempSavedLabel.BeginInvoke((MethodInvoker)delegate
                 {
                     tempSavedLabel.Text = tempSaved.ToString();
                 });
@@ -81,7 +81,7 @@ namespace QSOCollector.Helpers
             lock (receivedLock)
             {
                 received++;
-                receivedLabel.Invoke((MethodInvoker)delegate
+                receivedLabel.BeginInvoke((MethodInvoker)delegate
                 {
                     receivedLabel.Text = received.ToString();
                     receivedAtLabel.Text = updateTs;
@@ -93,7 +93,7 @@ namespace QSOCollector.Helpers
             lock (sentToServerLock)
             {
                 sentToServer++;
-                sentToServerLabel.Invoke((MethodInvoker)delegate
+                sentToServerLabel.BeginInvoke((MethodInvoker)delegate
                 {
                     sentToServerLabel.Text = sentToServer.ToString();
                     sentToServerAtLabel.Text = updateTs;
@@ -105,7 +105,7 @@ namespace QSOCollector.Helpers
             lock (tempSavedLock)
             {
                 tempSaved++;
-                tempSavedLabel.Invoke((MethodInvoker)delegate
+                tempSavedLabel.BeginInvoke((MethodInvoker)delegate
                 {
                     tempSavedLabel.Text = tempSaved.ToString();
                     tempSavedAtLabel.Text = updateTs;
@@ -117,7 +117,7 @@ namespace QSOCollector.Helpers
             lock (rejectedLock)
             {
                 rejected++;
-                rejectedLabel.Invoke((MethodInvoker)delegate
+                rejectedLabel.BeginInvoke((MethodInvoker)delegate
                 {
                     rejectedLabel.Text = rejected.ToString();
                     rejectedAtLabel.Text = updateTs;
@@ -128,7 +128,7 @@ namespace QSOCollector.Helpers
         {
             lock (statusLock)
             {
-                serverStatusLabel.Invoke((MethodInvoker)delegate
+                serverStatusLabel.BeginInvoke((MethodInvoker)delegate
                 {
                     if (status == "Active")
                     {

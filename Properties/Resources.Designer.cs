@@ -59,5 +59,15 @@ namespace QSOCollector.Properties {
                 resourceCulture = value;
             }
         }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap compass_icon_185893 {
+            get {
+                object obj = ResourceManager.GetObject("compass_icon_185893", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
     }
 }

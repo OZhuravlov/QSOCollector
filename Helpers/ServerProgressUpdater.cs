@@ -34,7 +34,7 @@ namespace QSOCollector.Helpers
 
             if (!string.IsNullOrEmpty(message))
             {
-                serverLog.Invoke((MethodInvoker)delegate
+                serverLog.BeginInvoke((MethodInvoker)delegate
                 {
                     serverLog.AppendText($"{message}\r\n");
                 });

@@ -6,9 +6,15 @@ using System.Reflection;
 
 namespace QSOCollector.Root
 {
-    internal static class Program
+    public static class Program
     {
-        private static readonly string appGuid = "dce43cbd-39a4-49df-9e4e-4e3e85adfd83";
+        public static readonly string appGuid = "dce43cbd-39a4-49df-9e4e-4e3e85adfd83";
+        public static readonly string appDataFolder = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + "\\"
+                + Assembly.GetExecutingAssembly().GetName().Name;
+        private static readonly string dbFolder = appDataFolder + "\\db";
+        public static readonly string importFolder = appDataFolder + "\\import";
+        public static readonly string exportFolder = appDataFolder + "\\export";
+        public static readonly string configFolder = appDataFolder + "\\config";
 
         /// <summary>
         ///  The main entry point for the application.
@@ -19,7 +25,7 @@ namespace QSOCollector.Root
             using Mutex mutex = new(false, "Global\\" + appGuid);
             if (!mutex.WaitOne(0, false))
             {
-                MessageBox.Show("Instance already running");
+                MessageBox.Show("The QSO Collector is already running.\nPlease check it in System tray or from Task Manager");
                 return;
             }
 
@@ -29,23 +35,28 @@ namespace QSOCollector.Root
             // To customize application configuration such as set high DPI settings or default font,
             // see https://aka.ms/applicationconfiguration.
             ApplicationConfiguration.Initialize();
+
             // Check and initialize the database
-            string dbPath = ".\\db";
             string dbFileName = "qsoCollector.s3db";
-            string connectionString = InitializeDatabase(dbPath, dbFileName);
+            string connectionString = InitializeDatabase(dbFileName);
             RunMigrations(connectionString);
+            InitializeAdditionalFolders();
             Application.Run(new QsoCollectorForm(connectionString, startupParams));
         }
 
-        static string InitializeDatabase(string dbPath, string dbFileName)
+        private static void InitializeAdditionalFolders()
+        {
+            InitializeFolder(importFolder);
+            InitializeFolder(exportFolder);
+            InitializeFolder(configFolder);
+        }
+
+        private static string InitializeDatabase(string dbFileName)
         {
             try
             {
-                if (!Directory.Exists(dbPath))
-                {
-                    Directory.CreateDirectory(dbPath);
-                }
-                string dbFullPath = Path.Combine(dbPath, dbFileName);
+                InitializeFolder(dbFolder);
+                string dbFullPath = Path.Combine(dbFolder, dbFileName);
                 string connectionString = $"Data Source={dbFullPath}";
                 if (!File.Exists(dbFullPath))
                 {
@@ -84,7 +95,13 @@ namespace QSOCollector.Root
                 throw new Exception("Database migration failed", result.Error);
             }
         }
-
+        private static void InitializeFolder(string folder)
+        {
+            if (!Directory.Exists(folder))
+            {
+                Directory.CreateDirectory(folder);
+            }
+        }
 
         private static StartupParams GetStartupParams()
         {

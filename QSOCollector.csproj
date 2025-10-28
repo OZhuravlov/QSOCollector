@@ -7,6 +7,7 @@
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
+    <ApplicationIcon>compass_icon_185893.ico</ApplicationIcon>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -14,8 +15,16 @@
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <DebugType>portable</DebugType>
+      <DebugType>portable</DebugType>
+	  <ProduceReferenceAssembly>true</ProduceReferenceAssembly>
+	  <AssemblyVersion>1.1.*</AssemblyVersion>
+	  <GenerateAssemblyFileVersionAttribute>false</GenerateAssemblyFileVersionAttribute>
+	  <Deterministic>false</Deterministic>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="compass_icon_185893.ico" />
+  </ItemGroup>
 
   <ItemGroup>
     <EmbeddedResource Include="Migrations\002_adifImportTable.sql" />
@@ -30,7 +39,7 @@
   <ItemGroup>
     <PackageReference Include="dbup-core" Version="6.0.4" />
     <PackageReference Include="dbup-sqlite" Version="6.0.1" />
-    <PackageReference Include="Microsoft.Data.Sqlite.Core" Version="9.0.10" />
+    <PackageReference Include="Microsoft.Data.Sqlite.Core" Version="10.0.0-rc.2.25502.107" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
     <PackageReference Include="SQLite" Version="3.13.0" />
     <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.2" />
@@ -46,6 +55,11 @@
     <Compile Update="Forms\QsoImportForm.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Update="Properties\Settings.Designer.cs">
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Settings.settings</DependentUpon>
+    </Compile>
   </ItemGroup>
 
   <ItemGroup>
@@ -56,6 +70,13 @@
     <EmbeddedResource Update="Forms\QsoImportForm.resx">
       <SubType>Designer</SubType>
     </EmbeddedResource>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
   </ItemGroup>
 
 </Project>

@@ -9,4 +9,4 @@ UPDATE qsodata SET mode_group =
 		ELSE 'OTHER'
 	END;
 
-CREATE INDEX idx_qsodata_source_name ON qsodata(mode_group);
+CREATE INDEX idx_qsodata_mode_group ON qsodata(mode_group);
