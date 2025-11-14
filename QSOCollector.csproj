@@ -17,13 +17,13 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
       <DebugType>portable</DebugType>
 	  <ProduceReferenceAssembly>true</ProduceReferenceAssembly>
-	  <AssemblyVersion>1.1.*</AssemblyVersion>
+	  <AssemblyVersion>1.2.*</AssemblyVersion>
 	  <GenerateAssemblyFileVersionAttribute>false</GenerateAssemblyFileVersionAttribute>
 	  <Deterministic>false</Deterministic>
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="compass_icon_185893.ico" />
+    <None Remove="README.md" />
   </ItemGroup>
 
   <ItemGroup>
@@ -34,6 +34,9 @@
     <EmbeddedResource Include="Migrations\005_createListenersTable.sql" />
     <EmbeddedResource Include="Migrations\004_createSettingsTable.sql" />
     <EmbeddedResource Include="Migrations\003_createServerQsoTable.sql" />
+	<EmbeddedResource Include="README.md">
+	  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	</EmbeddedResource>
   </ItemGroup>
 
   <ItemGroup>

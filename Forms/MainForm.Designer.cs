@@ -84,8 +84,11 @@ namespace QSOCollector
             serverPortTextBox = new TextBox();
             serverPortLabel = new Label();
             enableServerCheckBox = new CheckBox();
+            aboutTab = new TabPage();
+            aboutTextBox = new TextBox();
             sqliteConnection1 = new Microsoft.Data.Sqlite.SqliteConnection();
             trayNotifyIcon = new NotifyIcon(components);
+            autoStartCheckbox = new CheckBox();
             mainTabControl.SuspendLayout();
             clientTab.SuspendLayout();
             processingGroupBox.SuspendLayout();
@@ -93,17 +96,19 @@ namespace QSOCollector
             serverTab.SuspendLayout();
             serverProcessingGroupBox.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)serverQsoAmountsDataGridView).BeginInit();
+            aboutTab.SuspendLayout();
             SuspendLayout();
             // 
             // mainTabControl
             // 
             mainTabControl.Controls.Add(clientTab);
             mainTabControl.Controls.Add(serverTab);
+            mainTabControl.Controls.Add(aboutTab);
             mainTabControl.Font = new Font("Segoe UI", 10.2F, FontStyle.Bold, GraphicsUnit.Point, 0);
             mainTabControl.Location = new Point(-1, 0);
             mainTabControl.Name = "mainTabControl";
             mainTabControl.SelectedIndex = 0;
-            mainTabControl.Size = new Size(693, 594);
+            mainTabControl.Size = new Size(719, 594);
             mainTabControl.TabIndex = 0;
             // 
             // clientTab
@@ -122,7 +127,7 @@ namespace QSOCollector
             clientTab.Location = new Point(4, 32);
             clientTab.Name = "clientTab";
             clientTab.Padding = new Padding(3);
-            clientTab.Size = new Size(685, 558);
+            clientTab.Size = new Size(711, 558);
             clientTab.TabIndex = 0;
             clientTab.Text = "Client";
             // 
@@ -130,9 +135,9 @@ namespace QSOCollector
             // 
             clientServerCheckedAtLabel.BackColor = Color.Transparent;
             clientServerCheckedAtLabel.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            clientServerCheckedAtLabel.Location = new Point(526, 83);
+            clientServerCheckedAtLabel.Location = new Point(516, 83);
             clientServerCheckedAtLabel.Name = "clientServerCheckedAtLabel";
-            clientServerCheckedAtLabel.Size = new Size(130, 23);
+            clientServerCheckedAtLabel.Size = new Size(166, 23);
             clientServerCheckedAtLabel.TabIndex = 10;
             clientServerCheckedAtLabel.Text = "---";
             clientServerCheckedAtLabel.TextAlign = ContentAlignment.MiddleCenter;
@@ -142,7 +147,7 @@ namespace QSOCollector
             clientServerStatusValueLabel.BackColor = Color.Thistle;
             clientServerStatusValueLabel.BorderStyle = BorderStyle.FixedSingle;
             clientServerStatusValueLabel.Font = new Font("Segoe UI", 10.2F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            clientServerStatusValueLabel.Location = new Point(526, 31);
+            clientServerStatusValueLabel.Location = new Point(526, 33);
             clientServerStatusValueLabel.Name = "clientServerStatusValueLabel";
             clientServerStatusValueLabel.Size = new Size(147, 25);
             clientServerStatusValueLabel.TabIndex = 9;
@@ -153,17 +158,17 @@ namespace QSOCollector
             // 
             clientServerStatusLastCheckedLabel.AutoSize = true;
             clientServerStatusLastCheckedLabel.Font = new Font("Segoe UI Semibold", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            clientServerStatusLastCheckedLabel.Location = new Point(538, 63);
+            clientServerStatusLastCheckedLabel.Location = new Point(555, 63);
             clientServerStatusLastCheckedLabel.Name = "clientServerStatusLastCheckedLabel";
-            clientServerStatusLastCheckedLabel.Size = new Size(112, 20);
+            clientServerStatusLastCheckedLabel.Size = new Size(84, 20);
             clientServerStatusLastCheckedLabel.TabIndex = 8;
-            clientServerStatusLastCheckedLabel.Text = "Last checked at";
+            clientServerStatusLastCheckedLabel.Text = "Checked at";
             // 
             // clientServerStatusLabel
             // 
             clientServerStatusLabel.AutoSize = true;
             clientServerStatusLabel.Font = new Font("Segoe UI Semibold", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            clientServerStatusLabel.Location = new Point(540, 6);
+            clientServerStatusLabel.Location = new Point(548, 6);
             clientServerStatusLabel.Name = "clientServerStatusLabel";
             clientServerStatusLabel.Size = new Size(99, 20);
             clientServerStatusLabel.TabIndex = 7;
@@ -189,7 +194,7 @@ namespace QSOCollector
             processingGroupBox.Controls.Add(clientLogTextBox);
             processingGroupBox.Location = new Point(9, 103);
             processingGroupBox.Name = "processingGroupBox";
-            processingGroupBox.Size = new Size(670, 449);
+            processingGroupBox.Size = new Size(696, 449);
             processingGroupBox.TabIndex = 6;
             processingGroupBox.TabStop = false;
             processingGroupBox.Text = "QSO processing";
@@ -197,7 +202,7 @@ namespace QSOCollector
             // clientLogDetailsCheckBox
             // 
             clientLogDetailsCheckBox.AutoSize = true;
-            clientLogDetailsCheckBox.Location = new Point(624, 52);
+            clientLogDetailsCheckBox.Location = new Point(648, 52);
             clientLogDetailsCheckBox.Name = "clientLogDetailsCheckBox";
             clientLogDetailsCheckBox.Size = new Size(18, 17);
             clientLogDetailsCheckBox.TabIndex = 20;
@@ -207,7 +212,7 @@ namespace QSOCollector
             // clientLogDetailsLabel
             // 
             clientLogDetailsLabel.Font = new Font("Segoe UI", 7.8F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            clientLogDetailsLabel.Location = new Point(602, 8);
+            clientLogDetailsLabel.Location = new Point(626, 8);
             clientLogDetailsLabel.Name = "clientLogDetailsLabel";
             clientLogDetailsLabel.Size = new Size(62, 41);
             clientLogDetailsLabel.TabIndex = 19;
@@ -217,7 +222,7 @@ namespace QSOCollector
             // clientQsoRejectedAtLabel
             // 
             clientQsoRejectedAtLabel.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            clientQsoRejectedAtLabel.Location = new Point(481, 58);
+            clientQsoRejectedAtLabel.Location = new Point(516, 58);
             clientQsoRejectedAtLabel.Name = "clientQsoRejectedAtLabel";
             clientQsoRejectedAtLabel.Size = new Size(99, 20);
             clientQsoRejectedAtLabel.TabIndex = 18;
@@ -227,7 +232,7 @@ namespace QSOCollector
             // clientQsoTempSavedAtLabel
             // 
             clientQsoTempSavedAtLabel.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            clientQsoTempSavedAtLabel.Location = new Point(334, 58);
+            clientQsoTempSavedAtLabel.Location = new Point(365, 58);
             clientQsoTempSavedAtLabel.Name = "clientQsoTempSavedAtLabel";
             clientQsoTempSavedAtLabel.Size = new Size(90, 20);
             clientQsoTempSavedAtLabel.TabIndex = 17;
@@ -237,7 +242,7 @@ namespace QSOCollector
             // clientQsoSentToServerAtLabel
             // 
             clientQsoSentToServerAtLabel.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            clientQsoSentToServerAtLabel.Location = new Point(180, 58);
+            clientQsoSentToServerAtLabel.Location = new Point(200, 58);
             clientQsoSentToServerAtLabel.Name = "clientQsoSentToServerAtLabel";
             clientQsoSentToServerAtLabel.Size = new Size(77, 20);
             clientQsoSentToServerAtLabel.TabIndex = 16;
@@ -268,7 +273,7 @@ namespace QSOCollector
             // 
             clientQsoRejectedCountLabel.AutoSize = true;
             clientQsoRejectedCountLabel.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            clientQsoRejectedCountLabel.Location = new Point(563, 29);
+            clientQsoRejectedCountLabel.Location = new Point(598, 29);
             clientQsoRejectedCountLabel.Name = "clientQsoRejectedCountLabel";
             clientQsoRejectedCountLabel.Size = new Size(17, 20);
             clientQsoRejectedCountLabel.TabIndex = 13;
@@ -278,7 +283,7 @@ namespace QSOCollector
             // 
             clientQsoRejectedLabel.AutoSize = true;
             clientQsoRejectedLabel.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            clientQsoRejectedLabel.Location = new Point(481, 29);
+            clientQsoRejectedLabel.Location = new Point(516, 29);
             clientQsoRejectedLabel.Name = "clientQsoRejectedLabel";
             clientQsoRejectedLabel.Size = new Size(70, 20);
             clientQsoRejectedLabel.TabIndex = 12;
@@ -288,7 +293,7 @@ namespace QSOCollector
             // 
             clientQsoTempSavedCountLabel.AutoSize = true;
             clientQsoTempSavedCountLabel.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            clientQsoTempSavedCountLabel.Location = new Point(430, 29);
+            clientQsoTempSavedCountLabel.Location = new Point(461, 29);
             clientQsoTempSavedCountLabel.Name = "clientQsoTempSavedCountLabel";
             clientQsoTempSavedCountLabel.Size = new Size(17, 20);
             clientQsoTempSavedCountLabel.TabIndex = 11;
@@ -298,7 +303,7 @@ namespace QSOCollector
             // 
             clientQsoTempSavedLabel.AutoSize = true;
             clientQsoTempSavedLabel.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            clientQsoTempSavedLabel.Location = new Point(287, 29);
+            clientQsoTempSavedLabel.Location = new Point(318, 29);
             clientQsoTempSavedLabel.Name = "clientQsoTempSavedLabel";
             clientQsoTempSavedLabel.Size = new Size(137, 20);
             clientQsoTempSavedLabel.TabIndex = 10;
@@ -308,7 +313,7 @@ namespace QSOCollector
             // 
             clientQsoSentToServerCountLabel.AutoSize = true;
             clientQsoSentToServerCountLabel.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            clientQsoSentToServerCountLabel.Location = new Point(240, 29);
+            clientQsoSentToServerCountLabel.Location = new Point(260, 29);
             clientQsoSentToServerCountLabel.Name = "clientQsoSentToServerCountLabel";
             clientQsoSentToServerCountLabel.Size = new Size(17, 20);
             clientQsoSentToServerCountLabel.TabIndex = 9;
@@ -318,7 +323,7 @@ namespace QSOCollector
             // 
             clientQsoSentToServerLabel.AutoSize = true;
             clientQsoSentToServerLabel.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            clientQsoSentToServerLabel.Location = new Point(135, 29);
+            clientQsoSentToServerLabel.Location = new Point(155, 29);
             clientQsoSentToServerLabel.Name = "clientQsoSentToServerLabel";
             clientQsoSentToServerLabel.Size = new Size(104, 20);
             clientQsoSentToServerLabel.TabIndex = 8;
@@ -357,7 +362,7 @@ namespace QSOCollector
             clientLogTextBox.PlaceholderText = "Client logs will be here ...";
             clientLogTextBox.ReadOnly = true;
             clientLogTextBox.ScrollBars = ScrollBars.Both;
-            clientLogTextBox.Size = new Size(664, 368);
+            clientLogTextBox.Size = new Size(690, 368);
             clientLogTextBox.TabIndex = 5;
             // 
             // listenersConfigButton
@@ -478,7 +483,7 @@ namespace QSOCollector
             serverTab.Location = new Point(4, 32);
             serverTab.Name = "serverTab";
             serverTab.Padding = new Padding(3);
-            serverTab.Size = new Size(685, 558);
+            serverTab.Size = new Size(711, 558);
             serverTab.TabIndex = 1;
             serverTab.Text = "Server";
             serverTab.UseVisualStyleBackColor = true;
@@ -515,7 +520,7 @@ namespace QSOCollector
             serverProcessingGroupBox.Controls.Add(serverLogTextBox);
             serverProcessingGroupBox.Location = new Point(3, 50);
             serverProcessingGroupBox.Name = "serverProcessingGroupBox";
-            serverProcessingGroupBox.Size = new Size(679, 435);
+            serverProcessingGroupBox.Size = new Size(705, 461);
             serverProcessingGroupBox.TabIndex = 7;
             serverProcessingGroupBox.TabStop = false;
             serverProcessingGroupBox.Text = "Processing";
@@ -565,7 +570,7 @@ namespace QSOCollector
             serverQsoAmountsDataGridView.RowTemplate.ReadOnly = true;
             serverQsoAmountsDataGridView.RowTemplate.Resizable = DataGridViewTriState.False;
             serverQsoAmountsDataGridView.ShowEditingIcon = false;
-            serverQsoAmountsDataGridView.Size = new Size(673, 154);
+            serverQsoAmountsDataGridView.Size = new Size(702, 154);
             serverQsoAmountsDataGridView.TabIndex = 7;
             serverQsoAmountsDataGridView.RowsAdded += serverQsoAmountsDataGridView_RowsAdded;
             serverQsoAmountsDataGridView.RowsRemoved += serverQsoAmountsDataGridView_RowsRemoved;
@@ -627,27 +632,27 @@ namespace QSOCollector
             // 
             lastQsoTime.DataPropertyName = "LastQsoTime";
             lastQsoTime.Frozen = true;
-            lastQsoTime.HeaderText = "Last QSO";
+            lastQsoTime.HeaderText = "Latest Logged QSO";
             lastQsoTime.MaxInputLength = 20;
             lastQsoTime.MinimumWidth = 6;
             lastQsoTime.Name = "lastQsoTime";
             lastQsoTime.ReadOnly = true;
             lastQsoTime.Resizable = DataGridViewTriState.False;
             lastQsoTime.SortMode = DataGridViewColumnSortMode.NotSortable;
-            lastQsoTime.Width = 150;
+            lastQsoTime.Width = 165;
             // 
             // lastExportedQsoTime
             // 
             lastExportedQsoTime.DataPropertyName = "LastExportedQsoTime";
             lastExportedQsoTime.Frozen = true;
-            lastExportedQsoTime.HeaderText = "Last Exported QSO";
+            lastExportedQsoTime.HeaderText = "Latest Exported QSO";
             lastExportedQsoTime.MaxInputLength = 20;
             lastExportedQsoTime.MinimumWidth = 6;
             lastExportedQsoTime.Name = "lastExportedQsoTime";
             lastExportedQsoTime.ReadOnly = true;
             lastExportedQsoTime.Resizable = DataGridViewTriState.False;
             lastExportedQsoTime.SortMode = DataGridViewColumnSortMode.NotSortable;
-            lastExportedQsoTime.Width = 150;
+            lastExportedQsoTime.Width = 165;
             // 
             // serverLogTextBox
             // 
@@ -659,8 +664,9 @@ namespace QSOCollector
             serverLogTextBox.Multiline = true;
             serverLogTextBox.Name = "serverLogTextBox";
             serverLogTextBox.PlaceholderText = "Server logs will be here ...";
-            serverLogTextBox.ScrollBars = ScrollBars.Both;
-            serverLogTextBox.Size = new Size(670, 272);
+            serverLogTextBox.ReadOnly = true;
+            serverLogTextBox.ScrollBars = ScrollBars.Vertical;
+            serverLogTextBox.Size = new Size(696, 272);
             serverLogTextBox.TabIndex = 6;
             // 
             // stopServerButton
@@ -670,7 +676,7 @@ namespace QSOCollector
             stopServerButton.Enabled = false;
             stopServerButton.FlatStyle = FlatStyle.Popup;
             stopServerButton.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            stopServerButton.Location = new Point(426, 11);
+            stopServerButton.Location = new Point(592, 14);
             stopServerButton.Name = "stopServerButton";
             stopServerButton.Size = new Size(109, 33);
             stopServerButton.TabIndex = 5;
@@ -701,7 +707,7 @@ namespace QSOCollector
             startServerButton.FlatStyle = FlatStyle.Popup;
             startServerButton.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
             startServerButton.ForeColor = Color.Black;
-            startServerButton.Location = new Point(307, 11);
+            startServerButton.Location = new Point(470, 14);
             startServerButton.Name = "startServerButton";
             startServerButton.Size = new Size(107, 33);
             startServerButton.TabIndex = 3;
@@ -713,7 +719,7 @@ namespace QSOCollector
             // 
             serverPortTextBox.Enabled = false;
             serverPortTextBox.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            serverPortTextBox.Location = new Point(204, 17);
+            serverPortTextBox.Location = new Point(349, 18);
             serverPortTextBox.Name = "serverPortTextBox";
             serverPortTextBox.PlaceholderText = "(port number)";
             serverPortTextBox.Size = new Size(82, 27);
@@ -725,11 +731,11 @@ namespace QSOCollector
             // 
             serverPortLabel.AutoSize = true;
             serverPortLabel.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            serverPortLabel.Location = new Point(100, 20);
+            serverPortLabel.Location = new Point(174, 21);
             serverPortLabel.Name = "serverPortLabel";
-            serverPortLabel.Size = new Size(98, 20);
+            serverPortLabel.Size = new Size(169, 20);
             serverPortLabel.TabIndex = 1;
-            serverPortLabel.Text = "Listen on Port";
+            serverPortLabel.Text = "Listen for Clients on Port";
             // 
             // enableServerCheckBox
             // 
@@ -743,6 +749,30 @@ namespace QSOCollector
             enableServerCheckBox.UseVisualStyleBackColor = true;
             enableServerCheckBox.CheckedChanged += EnableServerCheckBox_CheckedChanged;
             // 
+            // aboutTab
+            // 
+            aboutTab.Controls.Add(aboutTextBox);
+            aboutTab.Location = new Point(4, 32);
+            aboutTab.Name = "aboutTab";
+            aboutTab.Size = new Size(711, 558);
+            aboutTab.TabIndex = 2;
+            aboutTab.Text = "About";
+            aboutTab.UseVisualStyleBackColor = true;
+            // 
+            // aboutTextBox
+            // 
+            aboutTextBox.BackColor = SystemColors.Window;
+            aboutTextBox.Font = new Font("Consolas", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            aboutTextBox.ForeColor = SystemColors.WindowText;
+            aboutTextBox.Location = new Point(7, 19);
+            aboutTextBox.MaxLength = 1000000;
+            aboutTextBox.Multiline = true;
+            aboutTextBox.Name = "aboutTextBox";
+            aboutTextBox.ReadOnly = true;
+            aboutTextBox.ScrollBars = ScrollBars.Vertical;
+            aboutTextBox.Size = new Size(704, 534);
+            aboutTextBox.TabIndex = 7;
+            // 
             // sqliteConnection1
             // 
             sqliteConnection1.DefaultTimeout = 30;
@@ -753,11 +783,24 @@ namespace QSOCollector
             trayNotifyIcon.Visible = true;
             trayNotifyIcon.DoubleClick += trayNotifyIcon_DoubleClick;
             // 
+            // autoStartCheckbox
+            // 
+            autoStartCheckbox.AutoSize = true;
+            autoStartCheckbox.Font = new Font("Segoe UI Semibold", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            autoStartCheckbox.Location = new Point(387, 4);
+            autoStartCheckbox.Name = "autoStartCheckbox";
+            autoStartCheckbox.Size = new Size(275, 24);
+            autoStartCheckbox.TabIndex = 1;
+            autoStartCheckbox.Text = "Start automatically (Recommended)";
+            autoStartCheckbox.UseVisualStyleBackColor = true;
+            autoStartCheckbox.CheckedChanged += autoStartCheckbox_CheckedChanged;
+            // 
             // QsoCollectorForm
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(694, 597);
+            ClientSize = new Size(716, 597);
+            Controls.Add(autoStartCheckbox);
             Controls.Add(mainTabControl);
             FormBorderStyle = FormBorderStyle.Fixed3D;
             MaximizeBox = false;
@@ -778,7 +821,10 @@ namespace QSOCollector
             serverProcessingGroupBox.ResumeLayout(false);
             serverProcessingGroupBox.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)serverQsoAmountsDataGridView).EndInit();
+            aboutTab.ResumeLayout(false);
+            aboutTab.PerformLayout();
             ResumeLayout(false);
+            PerformLayout();
         }
 
         #endregion
@@ -830,12 +876,15 @@ namespace QSOCollector
         private CheckBox clientLogDetailsCheckBox;
         private Label clientLogDetailsLabel;
         private CheckBox serverShowLogDetailsCheckBox;
+        private NotifyIcon trayNotifyIcon;
+        private CheckBox autoStartCheckbox;
+        private TabPage aboutTab;
+        private TextBox aboutTextBox;
         private DataGridViewTextBoxColumn qsoAmountMode;
         private DataGridViewTextBoxColumn todayQsoAmount;
         private DataGridViewTextBoxColumn totalQsoAmount;
         private DataGridViewTextBoxColumn exportedQsoAmount;
         private DataGridViewTextBoxColumn lastQsoTime;
         private DataGridViewTextBoxColumn lastExportedQsoTime;
-        private NotifyIcon trayNotifyIcon;
     }
 }

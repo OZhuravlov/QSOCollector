@@ -1,3 +1,4 @@
+using Microsoft.Win32;
 using QSOCollector.Data;
 using QSOCollector.Helpers;
 using QSOCollector.Models;
@@ -7,6 +8,7 @@ using System.Data;
 using System.Data.SQLite;
 using System.Globalization;
 using System.Reflection;
+using System.Text;
 
 namespace QSOCollector
 {
@@ -27,7 +29,6 @@ namespace QSOCollector
             dbRepository = new DbRepository(connectionString);
             this.startupParams = startupParams;
 
-
             InitializeComponent();
             this.Text += $"        v.{Assembly.GetExecutingAssembly().GetName().Version}";
             RestoreSavedFormValuesFromDB();
@@ -35,6 +36,22 @@ namespace QSOCollector
             serverLogTextBox.Clear();
             HandleClientCheckBoxChanged(enableClientCheckBox);
             clientLogTextBox.Clear();
+            PopulateAboutTab();
+        }
+
+        private void PopulateAboutTab()
+        {
+            string readme = Assembly.GetExecutingAssembly().GetName().Name + ".README.md";
+            Stream? stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(readme);
+            if (stream != null)
+            {
+                using StreamReader reader = new(stream);
+                string result = reader.ReadToEnd();
+                aboutTextBox.Text = result;
+            } else
+            {
+                aboutTab.Visible = false;
+            }
         }
 
         private void QsoCollectorForm_Shown(object sender, EventArgs e)
@@ -147,6 +164,7 @@ namespace QSOCollector
                 ButtonStyleHandler.Update(startServerButton, false);
                 serverPortTextBox.Focus();
             }
+            autoStartCheckbox_CheckedChanged(autoStartCheckbox, EventArgs.Empty);
         }
 
         private void HandleCheckBoxChanged(CheckBox checkbox)
@@ -224,7 +242,7 @@ namespace QSOCollector
 
         private void GetDataForServerQsoAmountDataGridView()
         {
-            string selectCommand = "SELECT q.mode QsoAmountMode, COUNT(CASE WHEN q.qso_time >= current_date THEN 1 END) TodayQsoAmount, count(*) TotalQsoAmount, COUNT(e.id) ExportedQsoAmount, MAX(q.qso_time) LastQsoTime, MAX(e.end_time) LastExportedQsoTime FROM qsodata q LEFT JOIN adif_export e ON q.export_id = e.id AND e.is_confirmed = true WHERE q.is_temporary = false GROUP BY q.mode UNION ALL SELECT 'Total', COUNT(CASE WHEN q.qso_time >= current_date THEN 1 END), COUNT(*), COUNT(e.id), MAX(q.qso_time), MAX(e.end_time) FROM qsodata q LEFT JOIN adif_export e ON q.export_id = e.id AND e.is_confirmed = true WHERE q.is_temporary = false";
+            string selectCommand = "SELECT q.mode QsoAmountMode, COUNT(CASE WHEN q.qso_time >= current_date THEN 1 END) TodayQsoAmount, COUNT(*) TotalQsoAmount, COUNT(e.id) ExportedQsoAmount, MAX(q.qso_time) LastQsoTime, MAX(CASE WHEN e.id IS NOT NULL THEN q.qso_time END) LastExportedQsoTime FROM qsodata q LEFT JOIN adif_export e ON q.export_id = e.id AND e.is_confirmed = true WHERE q.is_temporary = false GROUP BY q.mode UNION ALL SELECT 'Total', COUNT(CASE WHEN q.qso_time >= current_date THEN 1 END), COUNT(*), COUNT(e.id), MAX(q.qso_time), MAX(e.end_time) FROM qsodata q LEFT JOIN adif_export e ON q.export_id = e.id AND e.is_confirmed = true WHERE q.is_temporary = false";
             try
             {
                 serverQsoAmountsDataAdapter = new SQLiteDataAdapter(selectCommand, connectionString);
@@ -300,6 +318,7 @@ namespace QSOCollector
                 ButtonStyleHandler.Update(startClientButton, false);
                 clientServerNameIpTextBox.Focus();
             }
+            autoStartCheckbox_CheckedChanged(autoStartCheckbox, EventArgs.Empty);
         }
 
         private void StartClientButton_Click(object sender, EventArgs e)
@@ -444,6 +463,8 @@ namespace QSOCollector
                 clientServerNameIpTextBox.Text = clientServerNameIp;
             if (settings.TryGetValue("ClientServerPort", out var clientServerPort))
                 clientServerPortTextBox.Text = clientServerPort;
+            if (settings.TryGetValue("AutoStart", out var autoStart))
+                autoStartCheckbox.Checked = Convert.ToBoolean(autoStart);
         }
 
         private void SaveFormValuesToDB()
@@ -453,6 +474,7 @@ namespace QSOCollector
             dbRepository.SaveSetting("ClientEnabled", enableClientCheckBox.Checked.ToString());
             dbRepository.SaveSetting("ClientServerNameIp", clientServerNameIpTextBox.Text);
             dbRepository.SaveSetting("ClientServerPort", clientServerPortTextBox.Text);
+            dbRepository.SaveSetting("AutoStart", autoStartCheckbox.Checked.ToString());
         }
 
         private void ListenersConfigButton_Click(object sender, EventArgs e)
@@ -544,7 +566,7 @@ namespace QSOCollector
             string[] roles = [];
             if (startupParams.StartServer) roles = [.. roles, "Server"];
             if (startupParams.StartClient) roles = [.. roles, "Client"];
-            string message = "QSO Collector " + string.Join(" and ", roles) + ((roles.Length > 1) ? " are " : " is " ) + "running on background\nDouble-click to restore";
+            string message = "QSO Collector " + string.Join(" and ", roles) + ((roles.Length > 1) ? " are " : " is ") + "running on background\nDouble-click to restore";
             trayNotifyIcon.BalloonTipText = message;
             trayNotifyIcon.Text = message;
 
@@ -552,6 +574,38 @@ namespace QSOCollector
             trayNotifyIcon.ShowBalloonTip(1000);
             this.ShowInTaskbar = false;
             trayNotifyIcon.Visible = true;
+        }
+
+        private void autoStartCheckbox_CheckedChanged(object sender, EventArgs e)
+        {
+            RegistryKey rk = Registry.CurrentUser.OpenSubKey("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", true);
+            if (autoStartCheckbox.Checked)
+            {
+                rk.SetValue(Assembly.GetExecutingAssembly().GetName().Name, GetAppStartupCmd());
+            }
+            else
+            {
+                rk.DeleteValue(Assembly.GetExecutingAssembly().GetName().Name, false);
+            }
+        }
+
+        private string GetAppStartupCmd()
+        {
+            StringBuilder sb = new();
+            sb.Append($"\"{Application.ExecutablePath}\"");
+            if (enableServerCheckBox.Enabled)
+            {
+                sb.Append(" --start-server");
+            }
+            if (enableClientCheckBox.Enabled)
+            {
+                sb.Append(" --start-client");
+            }
+            if (enableClientCheckBox.Enabled || enableServerCheckBox.Enabled)
+            {
+                sb.Append(" --quiet");
+            }
+            return sb.ToString();
         }
     }
 }
