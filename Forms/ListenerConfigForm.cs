@@ -11,11 +11,13 @@ namespace QSOCollector
     public partial class ListenersForm : Form
     {
         private readonly string connectionString;
+        private readonly bool isClientRunning;
         private readonly DbRepository dbRepository;
 
-        public ListenersForm(string connectionString)
+        public ListenersForm(string connectionString, bool isClientRunning)
         {
             this.connectionString = connectionString;
+            this.isClientRunning = isClientRunning;
             dbRepository = new DbRepository(connectionString);
             InitializeComponent();
         }
@@ -167,6 +169,9 @@ namespace QSOCollector
             cancelEditListenersButton.Text = "Close";
             cancelEditListenersButton.Focus();
             saveListenersButton.Enabled = false;
+            if (isClientRunning) { 
+                MessageBox.Show("New config will be applied only after restarting Client", "Restart required", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
         }
 
         private void deleteSelectedListenersButton_Click(object sender, EventArgs e)

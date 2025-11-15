@@ -479,7 +479,7 @@ namespace QSOCollector
 
         private void ListenersConfigButton_Click(object sender, EventArgs e)
         {
-            new ListenersForm(connectionString).ShowDialog(this);
+            new ListenersForm(connectionString, stopClientButton.Enabled).ShowDialog(this);
         }
 
         private void clientLogDetailsCheckBox_CheckedChanged(object sender, EventArgs e)

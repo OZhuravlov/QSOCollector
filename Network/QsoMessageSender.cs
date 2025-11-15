@@ -145,7 +145,7 @@ namespace QSOCollector.Network
             progressUpdater.UpdateLog($"{qsoRecords.Count} QSOs from {qsoMessage.Source} saved to local Database");
         }
 
-        private List<Dictionary<string, string>> ParseMessage(QsoMessage qsoMessage)
+        private static List<Dictionary<string, string>> ParseMessage(QsoMessage qsoMessage)
         {
             List<Dictionary<string, string>> qsoRecords;
             try

@@ -1,6 +1,5 @@
 using Microsoft.Data.Sqlite;
 using QSOCollector.Models;
-using System.Collections.Generic;
 using System.Reflection;
 using System.Text;
 using System.Text.Json;

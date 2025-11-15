@@ -56,6 +56,10 @@ namespace QSOCollector.Network
                     string receivedData = Encoding.UTF8.GetString(receivedBytes);
 
                     QsoMessage qsoMessage = new() { Source = listenerConfig.Name, OriginalFormat = listenerConfig.MessageFormat, OriginalQsoData = receivedData };
+                    if (!IsExpectedMessageFormat(qsoMessage)) {
+                        continue;
+                    }
+                    
                     qsoMessageQueue.Add(qsoMessage);
                     progressUpdater.UpdateProgress(true, false, false, false, $"QSO received on port {qsoPort} ({listenerConfig.Name})");
                     progressUpdater.UpdateLog($"Data: {receivedData}", true);
@@ -72,6 +76,25 @@ namespace QSOCollector.Network
                     break;
                 }
             }
+        }
+
+        private bool IsExpectedMessageFormat(QsoMessage qsoMessage)
+        {
+            string[] requiredTexts = listenerConfig.MessageFormat switch
+            {
+                "ADIF" => ["<EOR>", "<QSO_DATE:"],
+                "N1MM" => ["<contactinfo>", "</contactinfo>"],
+                _ => []
+            };
+            foreach (string text in requiredTexts)
+            {
+                if (!qsoMessage.OriginalQsoData.Contains(text, StringComparison.OrdinalIgnoreCase))
+                {
+                    progressUpdater.UpdateLog($"Warning: Received QSO message does not appear to be in expected format ({listenerConfig.MessageFormat}). Ignoring", true);
+                    return false;
+                }
+            }
+            return true;
         }
 
         private async Task StartAcknowledge()

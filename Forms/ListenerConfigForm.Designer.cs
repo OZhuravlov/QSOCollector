@@ -38,11 +38,6 @@ namespace QSOCollector
             DataGridViewCellStyle dataGridViewCellStyle2 = new DataGridViewCellStyle();
             DataGridViewCellStyle dataGridViewCellStyle3 = new DataGridViewCellStyle();
             dataGridView1 = new DataGridView();
-            deleteSelectedListenersButton = new Button();
-            cancelEditListenersButton = new Button();
-            saveListenersButton = new Button();
-            exportConfigButton = new Button();
-            importConfigButton = new Button();
             id = new DataGridViewTextBoxColumn();
             name = new DataGridViewTextBoxColumn();
             qso_port = new DataGridViewTextBoxColumn();
@@ -50,11 +45,17 @@ namespace QSOCollector
             acknowledge_port = new DataGridViewTextBoxColumn();
             message_format = new DataGridViewComboBoxColumn();
             is_active = new DataGridViewCheckBoxColumn();
+            deleteSelectedListenersButton = new Button();
+            cancelEditListenersButton = new Button();
+            saveListenersButton = new Button();
+            exportConfigButton = new Button();
+            importConfigButton = new Button();
             ((System.ComponentModel.ISupportInitialize)dataGridView1).BeginInit();
             SuspendLayout();
             // 
             // dataGridView1
             // 
+            dataGridView1.AllowUserToOrderColumns = true;
             dataGridView1.AllowUserToResizeColumns = false;
             dataGridView1.AllowUserToResizeRows = false;
             dataGridViewCellStyle1.SelectionBackColor = Color.Gray;
@@ -84,65 +85,13 @@ namespace QSOCollector
             dataGridView1.Name = "dataGridView1";
             dataGridView1.RowHeadersWidth = 20;
             dataGridView1.RowHeadersWidthSizeMode = DataGridViewRowHeadersWidthSizeMode.DisableResizing;
-            dataGridView1.Size = new Size(585, 257);
+            dataGridView1.Size = new Size(714, 302);
             dataGridView1.TabIndex = 0;
             dataGridView1.CellBeginEdit += dataGridView1_CellBeginEdit;
             dataGridView1.CellValidating += dataGridView1_CellValidating;
             dataGridView1.DefaultValuesNeeded += dataGridView1_DefaultValuesNeeded;
             dataGridView1.EditingControlShowing += dataGridView1_EditingControlShowing;
             dataGridView1.RowValidating += dataGridView1_RowValidating;
-            // 
-            // deleteSelectedListenersButton
-            // 
-            deleteSelectedListenersButton.Location = new Point(7, 266);
-            deleteSelectedListenersButton.Name = "deleteSelectedListenersButton";
-            deleteSelectedListenersButton.Size = new Size(118, 51);
-            deleteSelectedListenersButton.TabIndex = 1;
-            deleteSelectedListenersButton.Text = "Delete Selected Rows";
-            deleteSelectedListenersButton.UseVisualStyleBackColor = true;
-            deleteSelectedListenersButton.Click += deleteSelectedListenersButton_Click;
-            // 
-            // cancelEditListenersButton
-            // 
-            cancelEditListenersButton.Location = new Point(402, 272);
-            cancelEditListenersButton.Name = "cancelEditListenersButton";
-            cancelEditListenersButton.Size = new Size(88, 41);
-            cancelEditListenersButton.TabIndex = 2;
-            cancelEditListenersButton.Text = "Close";
-            cancelEditListenersButton.UseVisualStyleBackColor = true;
-            cancelEditListenersButton.Click += cancelEditListenersButton_Click;
-            // 
-            // saveListenersButton
-            // 
-            saveListenersButton.Enabled = false;
-            saveListenersButton.Location = new Point(496, 272);
-            saveListenersButton.Name = "saveListenersButton";
-            saveListenersButton.Size = new Size(81, 41);
-            saveListenersButton.TabIndex = 3;
-            saveListenersButton.Text = "Save";
-            saveListenersButton.UseVisualStyleBackColor = true;
-            saveListenersButton.Click += saveListenersButton_Click;
-            // 
-            // exportConfigButton
-            // 
-            exportConfigButton.Enabled = false;
-            exportConfigButton.Location = new Point(268, 268);
-            exportConfigButton.Name = "exportConfigButton";
-            exportConfigButton.Size = new Size(102, 49);
-            exportConfigButton.TabIndex = 4;
-            exportConfigButton.Text = "Export config";
-            exportConfigButton.UseVisualStyleBackColor = true;
-            exportConfigButton.Click += exportConfigButton_Click;
-            // 
-            // importConfigButton
-            // 
-            importConfigButton.Location = new Point(159, 267);
-            importConfigButton.Name = "importConfigButton";
-            importConfigButton.Size = new Size(105, 50);
-            importConfigButton.TabIndex = 5;
-            importConfigButton.Text = "Import config";
-            importConfigButton.UseVisualStyleBackColor = true;
-            importConfigButton.Click += importConfigButton_Click;
             // 
             // id
             // 
@@ -211,7 +160,7 @@ namespace QSOCollector
             message_format.Name = "message_format";
             message_format.Resizable = DataGridViewTriState.False;
             message_format.ToolTipText = "QSO message format like ADIF, N1MM";
-            message_format.Width = 110;
+            message_format.Width = 120;
             // 
             // is_active
             // 
@@ -222,13 +171,65 @@ namespace QSOCollector
             is_active.MinimumWidth = 6;
             is_active.Name = "is_active";
             is_active.Resizable = DataGridViewTriState.False;
-            is_active.Width = 70;
+            is_active.Width = 80;
+            // 
+            // deleteSelectedListenersButton
+            // 
+            deleteSelectedListenersButton.Location = new Point(12, 310);
+            deleteSelectedListenersButton.Name = "deleteSelectedListenersButton";
+            deleteSelectedListenersButton.Size = new Size(118, 51);
+            deleteSelectedListenersButton.TabIndex = 1;
+            deleteSelectedListenersButton.Text = "Delete Selected Rows";
+            deleteSelectedListenersButton.UseVisualStyleBackColor = true;
+            deleteSelectedListenersButton.Click += deleteSelectedListenersButton_Click;
+            // 
+            // cancelEditListenersButton
+            // 
+            cancelEditListenersButton.Location = new Point(507, 316);
+            cancelEditListenersButton.Name = "cancelEditListenersButton";
+            cancelEditListenersButton.Size = new Size(88, 41);
+            cancelEditListenersButton.TabIndex = 2;
+            cancelEditListenersButton.Text = "Close";
+            cancelEditListenersButton.UseVisualStyleBackColor = true;
+            cancelEditListenersButton.Click += cancelEditListenersButton_Click;
+            // 
+            // saveListenersButton
+            // 
+            saveListenersButton.Enabled = false;
+            saveListenersButton.Location = new Point(601, 316);
+            saveListenersButton.Name = "saveListenersButton";
+            saveListenersButton.Size = new Size(81, 41);
+            saveListenersButton.TabIndex = 3;
+            saveListenersButton.Text = "Save";
+            saveListenersButton.UseVisualStyleBackColor = true;
+            saveListenersButton.Click += saveListenersButton_Click;
+            // 
+            // exportConfigButton
+            // 
+            exportConfigButton.Enabled = false;
+            exportConfigButton.Location = new Point(345, 313);
+            exportConfigButton.Name = "exportConfigButton";
+            exportConfigButton.Size = new Size(102, 49);
+            exportConfigButton.TabIndex = 4;
+            exportConfigButton.Text = "Export config";
+            exportConfigButton.UseVisualStyleBackColor = true;
+            exportConfigButton.Click += exportConfigButton_Click;
+            // 
+            // importConfigButton
+            // 
+            importConfigButton.Location = new Point(234, 312);
+            importConfigButton.Name = "importConfigButton";
+            importConfigButton.Size = new Size(105, 50);
+            importConfigButton.TabIndex = 5;
+            importConfigButton.Text = "Import config";
+            importConfigButton.UseVisualStyleBackColor = true;
+            importConfigButton.Click += importConfigButton_Click;
             // 
             // ListenersForm
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(585, 322);
+            ClientSize = new Size(712, 373);
             Controls.Add(importConfigButton);
             Controls.Add(exportConfigButton);
             Controls.Add(saveListenersButton);
