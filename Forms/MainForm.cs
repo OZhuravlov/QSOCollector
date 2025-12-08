@@ -16,7 +16,7 @@ namespace QSOCollector
     {
         private readonly string connectionString;
         private readonly DbRepository dbRepository;
-        private StartupParams startupParams;
+        private readonly StartupParams startupParams;
         private CancellationTokenSource? clientCancellationTokenSource = new();
         private ClientProgressUpdater? clientProgressUpdater;
         private ServerProgressUpdater? serverProgressUpdater;
@@ -65,11 +65,13 @@ namespace QSOCollector
         {
             if (startupParams.StartServer)
             {
+                Thread.Sleep(2000);
                 AutoStartServer();
             }
 
             if (startupParams.StartClient)
             {
+                Thread.Sleep(2000);
                 AutoStartClient();
             }
 
@@ -108,7 +110,6 @@ namespace QSOCollector
                 mainTabControl.SelectedTab = serverTab;
                 StartServerButton_Click(startServerButton, EventArgs.Empty);
                 serverTab.Refresh();
-                Thread.Sleep(2000);
             }
             else
             {
