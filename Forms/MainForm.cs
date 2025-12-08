@@ -22,6 +22,8 @@ namespace QSOCollector
         private ServerProgressUpdater? serverProgressUpdater;
         private DataTable? serverQsoAmountDataTable;
         private TcpServer? tcpServer = null;
+        private bool isLocalClientRunning = false;
+        private bool isLocalServerRunning = false;
 
         public QsoCollectorForm(string connectionString, StartupParams startupParams)
         {
@@ -106,6 +108,7 @@ namespace QSOCollector
                 mainTabControl.SelectedTab = serverTab;
                 StartServerButton_Click(startServerButton, EventArgs.Empty);
                 serverTab.Refresh();
+                Thread.Sleep(2000);
             }
             else
             {
@@ -115,7 +118,7 @@ namespace QSOCollector
 
         private void QsoCollectorForm_FormClosing(object sender, FormClosingEventArgs e)
         {
-            if (stopClientButton.Enabled)
+            if (isLocalClientRunning)
             {
                 DialogResult result = MessageBox.Show("The client is still running. Are you sure you want to exit?", "Confirm Exit", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
                 if (result != DialogResult.Yes)
@@ -124,7 +127,7 @@ namespace QSOCollector
                 }
             }
 
-            if (stopServerButton.Enabled)
+            if (!e.Cancel && isLocalServerRunning)
             {
                 DialogResult result = MessageBox.Show("The server is still running. Are you sure you want to exit?", "Confirm Exit", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
                 if (result != DialogResult.Yes)
@@ -132,7 +135,10 @@ namespace QSOCollector
                     e.Cancel = true;
                 }
             }
-            SaveFormValuesToDB();
+            if (!e.Cancel)
+            {
+                SaveFormValuesToDB();
+            }
         }
 
         private void EnableServerCheckBox_CheckedChanged(object sender, EventArgs e)
@@ -167,7 +173,7 @@ namespace QSOCollector
             autoStartCheckbox_CheckedChanged(autoStartCheckbox, EventArgs.Empty);
         }
 
-        private void HandleCheckBoxChanged(CheckBox checkbox)
+        private static void HandleCheckBoxChanged(CheckBox checkbox)
         {
             Control? parent = checkbox.Parent;
             if (parent == null)
@@ -213,6 +219,7 @@ namespace QSOCollector
             enableServerCheckBox.Enabled = true;
             serverPortTextBox.Enabled = true;
             startServerButton.Text = "Start Server";
+            isLocalServerRunning = false;
             serverLogTextBox.AppendText("Server stopped...\r\n");
             ButtonStyleHandler.Update(startServerButton, true, Color.DarkSeaGreen);
             ButtonStyleHandler.Update(stopServerButton, false);
@@ -237,6 +244,7 @@ namespace QSOCollector
 
             serverProgressUpdater = new(serverQsoAmountDataTable, serverLogTextBox);
             tcpServer = new(port, serverProgressUpdater);
+            isLocalServerRunning = true;
             await tcpServer.Start(connectionString);
         }
 
@@ -344,8 +352,10 @@ namespace QSOCollector
                 clientQsoRejectedAtLabel,
                 clientServerStatusValueLabel,
                 clientServerCheckedAtLabel,
-                clientLogTextBox);
-            clientProgressUpdater.IsDebug = clientLogDetailsCheckBox.Checked;
+                clientLogTextBox)
+            {
+                IsDebug = clientLogDetailsCheckBox.Checked
+            };
 
             QsoMessageSender qsoMessageSender = StartQsoMessageHandler(qsoMessageQueue, serverIp, serverPort, clientProgressUpdater);
             if (!qsoMessageSender.IsConnected())
@@ -367,6 +377,7 @@ namespace QSOCollector
             startClientButton.Text = "Executing...";
             ButtonStyleHandler.Update(startClientButton, false, Color.Lavender);
             ButtonStyleHandler.Update(stopClientButton, true, Color.RosyBrown);
+            isLocalClientRunning = true;
         }
 
         private QsoMessageSender StartQsoMessageHandler(BlockingCollection<QsoMessage> qsoMessageQueue, string serverIp, int serverPort, ClientProgressUpdater clientProgressUpdater)
@@ -424,6 +435,7 @@ namespace QSOCollector
             clientServerCheckedAtLabel.Text = "---";
             ButtonStyleHandler.Update(startClientButton, true, Color.DarkSeaGreen);
             ButtonStyleHandler.Update(stopClientButton, false);
+            isLocalClientRunning = false;
         }
 
         private void clientServerNameIpTextBox_TextChanged(object sender, EventArgs e)
@@ -479,7 +491,7 @@ namespace QSOCollector
 
         private void ListenersConfigButton_Click(object sender, EventArgs e)
         {
-            new ListenersForm(connectionString, stopClientButton.Enabled).ShowDialog(this);
+            new ListenersForm(connectionString, isLocalClientRunning).ShowDialog(this);
         }
 
         private void clientLogDetailsCheckBox_CheckedChanged(object sender, EventArgs e)

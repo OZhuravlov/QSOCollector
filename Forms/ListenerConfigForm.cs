@@ -11,13 +11,13 @@ namespace QSOCollector
     public partial class ListenersForm : Form
     {
         private readonly string connectionString;
-        private readonly bool isClientRunning;
+        private readonly bool isLocalClientRunning;
         private readonly DbRepository dbRepository;
 
-        public ListenersForm(string connectionString, bool isClientRunning)
+        public ListenersForm(string connectionString, bool isLocalClientRunning)
         {
             this.connectionString = connectionString;
-            this.isClientRunning = isClientRunning;
+            this.isLocalClientRunning = isLocalClientRunning;
             dbRepository = new DbRepository(connectionString);
             InitializeComponent();
         }
@@ -66,32 +66,68 @@ namespace QSOCollector
             e.Cancel = column.Name.EndsWith("_port") && !handlePortValue(e.RowIndex, e.ColumnIndex, column.HeaderText);
         }
 
-        private bool handlePortValue(int rowIndex, int columnIndex, string columnHeader)
+        private bool handlePortValue(int currentRowIndex, int currentColumnIndex, string currentColumnHeader)
         {
-            DataGridViewRow row = dataGridView1.Rows[rowIndex];
-            DataGridViewCell cell = row.Cells[columnIndex];
-            if (!string.IsNullOrEmpty((string?)cell.EditedFormattedValue)
-                && (!int.TryParse(cell.EditedFormattedValue.ToString(), out int port) || port < 1 || port > 65535))
+            DataGridViewRow currentRow = dataGridView1.Rows[currentRowIndex];
+            DataGridViewCell currentCell = currentRow.Cells[currentColumnIndex];
+            string? portValue = currentCell.EditedFormattedValue?.ToString();
+
+            // Skip checking empty values
+            if (string.IsNullOrEmpty(portValue)) return true;
+
+            if (!int.TryParse(portValue, out int port) || port < 1 || port > 65535)
             {
-                row.ErrorText = $"The value of '{columnHeader}' must be a number between 1 and 65535";
+                currentRow.ErrorText = $"The value {portValue} of '{currentColumnHeader}' must be a number between 1 and 65535";
                 return false;
             }
+
+            // Get port columns indexes
+            List<DataGridViewColumn> portColumns = [
+                dataGridView1.Columns["qso_port"],
+                dataGridView1.Columns["acknowledge_port"],
+                dataGridView1.Columns["forward_port"]
+            ];
+
+            int nameIndex = dataGridView1.Columns["name"].Index;
+
             // Check for uniqueness
-            for (int i = 0; i < dataGridView1.Rows.Count; i++)
+            foreach (DataGridViewRow otherRow in dataGridView1.Rows)
             {
-                if (i == rowIndex) continue;
-                DataGridViewRow otherRow = dataGridView1.Rows[i];
+                // Skip empty rows
                 if (otherRow.IsNewRow) continue;
-                if (!string.IsNullOrEmpty((string?)otherRow.Cells[columnIndex].EditedFormattedValue)
-                    && !string.IsNullOrEmpty((string?)cell.EditedFormattedValue)
-                    && otherRow.Cells[columnIndex].EditedFormattedValue.ToString() == cell.EditedFormattedValue.ToString())
+
+                foreach (DataGridViewColumn column in dataGridView1.Columns)
                 {
-                    row.ErrorText = $"The value of '{columnHeader}' must be unique";
-                    return false;
+                    DataGridViewCell otherCell = otherRow.Cells[column.Index];
+                    // Skip checking the current cell
+                    if (otherCell == currentCell)
+                        continue;
+                    // Skipp non-port columns
+                    if (!portColumns.Contains(column))
+                        continue;
+                    string? otherPort = otherCell.FormattedValue?.ToString();
+                    // Skip checking other cell if empty
+                    if (string.IsNullOrEmpty(otherPort))
+                    {
+                        continue;
+                    }
+
+                    if (otherPort == portValue)
+                    {
+                        dataGridView1.BeginEdit(true);
+                        string errorMessage = $"Port must be unique accross all ports in config but {portValue} conflicts with '{dataGridView1.Columns[otherCell.ColumnIndex].HeaderText}' of '{otherRow.Cells[nameIndex].FormattedValue}' Listener";
+                        MessageBox.Show(errorMessage, "Port Uniqueness Violation", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        currentCell.ErrorText = errorMessage;
+                        currentRow.ErrorText = errorMessage;
+                        dataGridView1.EndEdit();
+                        return false;
+                    }
                 }
             }
-
-            row.ErrorText = string.Empty;
+            dataGridView1.BeginEdit(true);
+            currentCell.ErrorText = string.Empty;
+            currentRow.ErrorText = string.Empty;
+            dataGridView1.EndEdit();
             return true;
         }
 
@@ -108,8 +144,13 @@ namespace QSOCollector
                 DataGridViewCell cell = row.Cells[column.Index];
                 if (cell.FormattedValue == null || string.IsNullOrWhiteSpace(cell.FormattedValue.ToString()))
                 {
-                    row.ErrorText = $"The value of '{column.HeaderText}' must not be empty";
+                    dataGridView1.BeginEdit(true);
+                    string errorMessage = $"The value of '{column.HeaderText}' must not be empty";
+                    cell.ErrorText = errorMessage;
+                    row.ErrorText = errorMessage;
                     exportConfigButton.Enabled = false;
+                    dataGridView1.EndEdit();
+                    data.Cancel = true;
                     return;
                 }
                 row.ErrorText = string.Empty;
@@ -169,7 +210,8 @@ namespace QSOCollector
             cancelEditListenersButton.Text = "Close";
             cancelEditListenersButton.Focus();
             saveListenersButton.Enabled = false;
-            if (isClientRunning) { 
+            if (isLocalClientRunning)
+            {
                 MessageBox.Show("New config will be applied only after restarting Client", "Restart required", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
@@ -203,8 +245,9 @@ namespace QSOCollector
             int currentColumnIndex = dataGridView1.CurrentCell.ColumnIndex;
             int qsoPortColumnIndex = dataGridView1.Columns["qso_port"].Index;
             int acknowledgePortColumnIndex = dataGridView1.Columns["acknowledge_port"].Index;
+            int forwardPortColumnIndex = dataGridView1.Columns["forward_port"].Index;
 
-            if (currentColumnIndex != qsoPortColumnIndex && currentColumnIndex != acknowledgePortColumnIndex)
+            if (currentColumnIndex != qsoPortColumnIndex && currentColumnIndex != acknowledgePortColumnIndex && currentColumnIndex != forwardPortColumnIndex)
             {
                 return;
             }
@@ -254,7 +297,8 @@ namespace QSOCollector
 
         private void importConfigButton_Click(object sender, EventArgs e)
         {
-            if (dataGridView1.Rows.Count > 0 || dbRepository.GetListenerConfigs().Count > 0) {
+            if (dataGridView1.Rows.Count > 0 || dbRepository.GetListenerConfigs().Count > 0)
+            {
                 DialogResult result = MessageBox.Show("Existing configs will be replaced by imported. Do you want to continue?", "Existing config replacement", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
                 if (result == DialogResult.No)
                 {
@@ -273,7 +317,7 @@ namespace QSOCollector
                 var fileStream = openFileDialog.OpenFile();
                 using StreamReader reader = new(fileStream);
                 string jsonListenerConfigs = reader.ReadToEnd();
-                List<Models.ListenerConfig> listenerConfigs  = JsonSerializer.Deserialize<List<Models.ListenerConfig>>(jsonListenerConfigs);
+                List<Models.ListenerConfig> listenerConfigs = JsonSerializer.Deserialize<List<Models.ListenerConfig>>(jsonListenerConfigs);
                 dbRepository.ReplaceListenerConfigs(listenerConfigs);
                 ListenersForm_Load(this, EventArgs.Empty);
             }
