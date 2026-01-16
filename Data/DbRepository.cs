@@ -92,6 +92,17 @@ namespace QSOCollector.Data
             transaction.Commit();
         }
 
+        public void CleanTemporarelySavedQsos()
+        {
+            using var connection = new SqliteConnection(connectionString);
+            connection.Open();
+            using var transaction = connection.BeginTransaction();
+            using var command = connection.CreateCommand();
+            command.CommandText = "DELETE FROM qsodata WHERE is_temporary = 1";
+            command.ExecuteNonQuery();
+            transaction.Commit();
+        }
+
         private static void DeleteListenerConfigs(SqliteConnection connection, List<ListenerConfig> configs)
         {
             using var command = connection.CreateCommand();

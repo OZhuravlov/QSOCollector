@@ -40,7 +40,6 @@ namespace QSOCollector.Network
                 tcpClient = null;
                 progressUpdater.UpdateServerStatus("Unavailable", $"Unexpected error while creating QSO sender: {ex.Message}");
             }
-
         }
 
         public bool IsConnected()

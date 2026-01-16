@@ -24,6 +24,7 @@ namespace QSOCollector.Network
             ipEndPoint = new(IPAddress.Any, port);
             cts = new CancellationTokenSource();
             this.serverProgressUpdater = serverProgressUpdater;
+            this.serverProgressUpdater.UpdateLog($"TCP Server initialized on port {port}");
         }
 
         public void Stop()
@@ -47,8 +48,11 @@ namespace QSOCollector.Network
                 CancellationTokenSource clientCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cts.Token);
                 try
                 {
+                    serverProgressUpdater.UpdateLog("Waiting for incoming TCP client connection...");
                     TcpClient tcpClient = await listener.AcceptTcpClientAsync(cts.Token);
                     Client client = new(tcpClient, clientCancellationTokenSource, serverProgressUpdater);
+                    IPEndPoint? remoteIpEndPoint = tcpClient.Client.RemoteEndPoint as IPEndPoint;
+                    serverProgressUpdater.UpdateLog($"New client with IP {remoteIpEndPoint?.Address} connected");
                     clients.Add(client);
                     Task clientTask = client.Run(connectionString); //don't await
                     clientTask.ContinueWith(t => clients.Remove(client));
@@ -58,6 +62,13 @@ namespace QSOCollector.Network
                     listener.Stop();
                     listener.Dispose();
                     break;
+                }
+                catch (Exception e)
+                {
+                    serverProgressUpdater.UpdateLog($"Error accepting TCP client: {e.Message}", true);
+                    listener.Stop();
+                    listener.Dispose();
+                    throw;
                 }
             }
         }
