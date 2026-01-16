@@ -73,6 +73,7 @@ namespace QSOCollector
 
         private void HandleStartupParams(StartupParams startupParams)
         {
+            enableDebugWhenAutoStartCheckbox.Checked = startupParams.Debug;
             if (startupParams.StartServer)
             {
                 if (startupParams.Debug)
