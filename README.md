@@ -99,8 +99,9 @@ Each UDP listener could be configured with the following options (* marked as ma
 - Forward Port     - the port to forward received QSO messages. Because on Windows only 1 application from the same PC could listen on specific UDP port,
                      this port could be used by other application on the same PC to listen for QSOs (for example Clublog Livestream application).
                      If no other application needs to listen for QSOs then leave this field empty.
-- Application Port - the port to listen for application info or radio info from logger (if supported by logger).
-                     Could be used for future features. If logger doesn't support application messages then leave this field empty.
+- Heart Beat Port  - the port to listen for heart beat message from logger (if supported by logger).
+                     Could be used to make sure the application is alive even if it doesn't send QSO data. 
+                     If logger doesn't support such messages then leave this field empty.
 - *Format          - the format of QSOs broadcasted by logger. Supported formats are N1MM (the one used for ClubLog livestream) and ADIF.
 - Active           - checkbox to enable/disable this listener without removing it from the list.
 

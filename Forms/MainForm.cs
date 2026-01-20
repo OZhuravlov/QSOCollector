@@ -1,5 +1,6 @@
 using Microsoft.Win32;
 using QSOCollector.Data;
+using QSOCollector.Forms;
 using QSOCollector.Helpers;
 using QSOCollector.Models;
 using QSOCollector.Network;
@@ -254,6 +255,7 @@ namespace QSOCollector
             serverLogTextBox.AppendText("Server stopped...\r\n");
             ButtonStyleHandler.Update(startServerButton, true, Color.DarkSeaGreen);
             ButtonStyleHandler.Update(stopServerButton, false);
+            ButtonStyleHandler.Update(resetServerButton, true, Color.LightGray);
         }
 
         private void StartServerButton_Click(object sender, EventArgs e)
@@ -266,6 +268,7 @@ namespace QSOCollector
             startServerButton.Text = "Executing...";
             ButtonStyleHandler.Update(startServerButton, false, Color.Lavender);
             ButtonStyleHandler.Update(stopServerButton, true, Color.RosyBrown);
+            ButtonStyleHandler.Update(resetServerButton, false, Color.Lavender);
             serverLogTextBox.AppendText("Server started...\r\n");
         }
 
@@ -707,6 +710,12 @@ namespace QSOCollector
         private void enableDebugWhenAutoStartCheckbox_CheckedChanged(object sender, EventArgs e)
         {
             autoStartCheckbox_CheckedChanged(autoStartCheckbox, EventArgs.Empty);
+        }
+
+        private void resetServerButton_Click(object sender, EventArgs e)
+        {
+            new ServerCleanupForm(dbRepository).ShowDialog(this);
+            HandleServerCheckBoxChanged(enableServerCheckBox);
         }
     }
 }

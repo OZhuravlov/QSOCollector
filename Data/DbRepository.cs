@@ -92,13 +92,41 @@ namespace QSOCollector.Data
             transaction.Commit();
         }
 
-        public void CleanTemporarelySavedQsos()
+        public void CleanClientQsos()
         {
             using var connection = new SqliteConnection(connectionString);
             connection.Open();
             using var transaction = connection.BeginTransaction();
             using var command = connection.CreateCommand();
             command.CommandText = "DELETE FROM qsodata WHERE is_temporary = 1";
+            command.ExecuteNonQuery();
+            transaction.Commit();
+        }
+
+        public void CleanupServerQsoData()
+        {
+            using var connection = new SqliteConnection(connectionString);
+            connection.Open();
+            using var transaction = connection.BeginTransaction();
+            using var deleteQsoCommand = connection.CreateCommand();
+            deleteQsoCommand.CommandText = "DELETE FROM qsodata WHERE is_temporary = 0";
+            deleteQsoCommand.ExecuteNonQuery();
+            using var deleteImports = connection.CreateCommand();
+            deleteImports.CommandText = "DELETE FROM adif_import";
+            deleteImports.ExecuteNonQuery();
+            using var deleteExports = connection.CreateCommand();
+            deleteExports.CommandText = "DELETE FROM adif_export";
+            deleteExports.ExecuteNonQuery();
+            transaction.Commit();
+        }
+
+        public void CleanImports()
+        {
+            using var connection = new SqliteConnection(connectionString);
+            connection.Open();
+            using var transaction = connection.BeginTransaction();
+            using var command = connection.CreateCommand();
+            command.CommandText = "DELETE FROM qsodata WHERE is_temporary = 0";
             command.ExecuteNonQuery();
             transaction.Commit();
         }
@@ -116,12 +144,12 @@ namespace QSOCollector.Data
             {
                 using var command = connection.CreateCommand();
                 command.CommandText = insertListenerConfigsSql;
-                command.Parameters.Add(new SqliteParameter("@Name", config.Name));
-                command.Parameters.Add(new SqliteParameter("@QsoPort", config.QsoPort));
-                command.Parameters.Add(new SqliteParameter("@ForwardPort", config.ForwardPort));
-                command.Parameters.Add(new SqliteParameter("@AcknowledgePort", config.AcknowledgePort));
-                command.Parameters.Add(new SqliteParameter("@MessageFormat", config.MessageFormat));
-                command.Parameters.Add(new SqliteParameter("@IsActive", config.IsActive));
+                AddSqlParameter(command, "Name", config.Name);
+                AddSqlParameter(command, "QsoPort", config.QsoPort);
+                AddSqlParameter(command, "ForwardPort", config.ForwardPort);
+                AddSqlParameter(command, "AcknowledgePort", config.AcknowledgePort);
+                AddSqlParameter(command, "MessageFormat", config.MessageFormat);
+                AddSqlParameter(command, "IsActive", config.IsActive);
                 command.ExecuteNonQuery();
             });
         }
@@ -546,7 +574,7 @@ namespace QSOCollector.Data
             command.CommandText = sb.ToString();
         }
 
-        private static void AddSqlParameter(SqliteCommand command, string paramKey, object paramValue, List<string>? parameterKeys = null)
+        private static void AddSqlParameter(SqliteCommand command, string paramKey, object? paramValue, List<string>? parameterKeys = null)
         {
             command.Parameters.Add(new SqliteParameter($"@{paramKey}", paramValue ?? DBNull.Value));
             if (parameterKeys != null)

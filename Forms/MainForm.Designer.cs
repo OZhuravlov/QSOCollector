@@ -31,9 +31,9 @@ namespace QSOCollector
         private void InitializeComponent()
         {
             components = new System.ComponentModel.Container();
-            DataGridViewCellStyle dataGridViewCellStyle1 = new DataGridViewCellStyle();
-            DataGridViewCellStyle dataGridViewCellStyle2 = new DataGridViewCellStyle();
-            DataGridViewCellStyle dataGridViewCellStyle3 = new DataGridViewCellStyle();
+            DataGridViewCellStyle dataGridViewCellStyle4 = new DataGridViewCellStyle();
+            DataGridViewCellStyle dataGridViewCellStyle5 = new DataGridViewCellStyle();
+            DataGridViewCellStyle dataGridViewCellStyle6 = new DataGridViewCellStyle();
             mainTabControl = new TabControl();
             clientTab = new TabPage();
             clientServerCheckedAtLabel = new Label();
@@ -68,6 +68,7 @@ namespace QSOCollector
             startClientButton = new Button();
             enableClientCheckBox = new CheckBox();
             serverTab = new TabPage();
+            resetServerButton = new Button();
             serverShowLogDetailsCheckBox = new CheckBox();
             qsoImportButton = new Button();
             serverProcessingGroupBox = new GroupBox();
@@ -527,6 +528,7 @@ namespace QSOCollector
             // 
             // serverTab
             // 
+            serverTab.Controls.Add(resetServerButton);
             serverTab.Controls.Add(serverShowLogDetailsCheckBox);
             serverTab.Controls.Add(qsoImportButton);
             serverTab.Controls.Add(serverProcessingGroupBox);
@@ -544,6 +546,22 @@ namespace QSOCollector
             serverTab.TabIndex = 1;
             serverTab.Text = "Server";
             serverTab.UseVisualStyleBackColor = true;
+            // 
+            // resetServerButton
+            // 
+            resetServerButton.BackColor = Color.LightGray;
+            resetServerButton.Enabled = false;
+            resetServerButton.FlatStyle = FlatStyle.Popup;
+            resetServerButton.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            resetServerButton.Location = new Point(578, 10);
+            resetServerButton.Margin = new Padding(3, 2, 3, 2);
+            resetServerButton.Name = "resetServerButton";
+            resetServerButton.Size = new Size(98, 25);
+            resetServerButton.TabIndex = 12;
+            resetServerButton.Text = "Reset Server";
+            myToolTip.SetToolTip(resetServerButton, "This helps to reset Server completely. Use only before Expedition starts to delete previous dxpedition data or to remove  test data");
+            resetServerButton.UseVisualStyleBackColor = false;
+            resetServerButton.Click += resetServerButton_Click;
             // 
             // serverShowLogDetailsCheckBox
             // 
@@ -564,10 +582,10 @@ namespace QSOCollector
             qsoImportButton.Enabled = false;
             qsoImportButton.FlatStyle = FlatStyle.System;
             qsoImportButton.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            qsoImportButton.Location = new Point(437, 424);
+            qsoImportButton.Location = new Point(437, 420);
             qsoImportButton.Margin = new Padding(3, 2, 3, 2);
             qsoImportButton.Name = "qsoImportButton";
-            qsoImportButton.Size = new Size(84, 26);
+            qsoImportButton.Size = new Size(84, 30);
             qsoImportButton.TabIndex = 1;
             qsoImportButton.Text = "QSO Import";
             qsoImportButton.UseVisualStyleBackColor = false;
@@ -581,7 +599,7 @@ namespace QSOCollector
             serverProcessingGroupBox.Margin = new Padding(3, 2, 3, 2);
             serverProcessingGroupBox.Name = "serverProcessingGroupBox";
             serverProcessingGroupBox.Padding = new Padding(3, 2, 3, 2);
-            serverProcessingGroupBox.Size = new Size(678, 346);
+            serverProcessingGroupBox.Size = new Size(678, 382);
             serverProcessingGroupBox.TabIndex = 7;
             serverProcessingGroupBox.TabStop = false;
             serverProcessingGroupBox.Text = "Processing";
@@ -594,38 +612,38 @@ namespace QSOCollector
             serverQsoAmountsDataGridView.AllowUserToResizeRows = false;
             serverQsoAmountsDataGridView.BackgroundColor = SystemColors.Control;
             serverQsoAmountsDataGridView.ClipboardCopyMode = DataGridViewClipboardCopyMode.EnableAlwaysIncludeHeaderText;
-            dataGridViewCellStyle1.Alignment = DataGridViewContentAlignment.MiddleCenter;
-            dataGridViewCellStyle1.BackColor = SystemColors.Control;
-            dataGridViewCellStyle1.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            dataGridViewCellStyle1.ForeColor = SystemColors.WindowText;
-            dataGridViewCellStyle1.SelectionBackColor = SystemColors.Highlight;
-            dataGridViewCellStyle1.SelectionForeColor = SystemColors.HighlightText;
-            dataGridViewCellStyle1.WrapMode = DataGridViewTriState.True;
-            serverQsoAmountsDataGridView.ColumnHeadersDefaultCellStyle = dataGridViewCellStyle1;
+            dataGridViewCellStyle4.Alignment = DataGridViewContentAlignment.MiddleCenter;
+            dataGridViewCellStyle4.BackColor = SystemColors.Control;
+            dataGridViewCellStyle4.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            dataGridViewCellStyle4.ForeColor = SystemColors.WindowText;
+            dataGridViewCellStyle4.SelectionBackColor = SystemColors.Highlight;
+            dataGridViewCellStyle4.SelectionForeColor = SystemColors.HighlightText;
+            dataGridViewCellStyle4.WrapMode = DataGridViewTriState.True;
+            serverQsoAmountsDataGridView.ColumnHeadersDefaultCellStyle = dataGridViewCellStyle4;
             serverQsoAmountsDataGridView.ColumnHeadersHeight = 29;
             serverQsoAmountsDataGridView.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
             serverQsoAmountsDataGridView.Columns.AddRange(new DataGridViewColumn[] { qsoAmountMode, todayQsoAmount, totalQsoAmount, exportedQsoAmount, lastQsoTime, lastExportedQsoTime });
-            dataGridViewCellStyle2.Alignment = DataGridViewContentAlignment.MiddleCenter;
-            dataGridViewCellStyle2.BackColor = SystemColors.Window;
-            dataGridViewCellStyle2.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            dataGridViewCellStyle2.ForeColor = SystemColors.ControlText;
-            dataGridViewCellStyle2.SelectionBackColor = SystemColors.Highlight;
-            dataGridViewCellStyle2.SelectionForeColor = SystemColors.HighlightText;
-            dataGridViewCellStyle2.WrapMode = DataGridViewTriState.False;
-            serverQsoAmountsDataGridView.DefaultCellStyle = dataGridViewCellStyle2;
+            dataGridViewCellStyle5.Alignment = DataGridViewContentAlignment.MiddleCenter;
+            dataGridViewCellStyle5.BackColor = SystemColors.Window;
+            dataGridViewCellStyle5.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            dataGridViewCellStyle5.ForeColor = SystemColors.ControlText;
+            dataGridViewCellStyle5.SelectionBackColor = SystemColors.Highlight;
+            dataGridViewCellStyle5.SelectionForeColor = SystemColors.HighlightText;
+            dataGridViewCellStyle5.WrapMode = DataGridViewTriState.False;
+            serverQsoAmountsDataGridView.DefaultCellStyle = dataGridViewCellStyle5;
             serverQsoAmountsDataGridView.EditMode = DataGridViewEditMode.EditProgrammatically;
             serverQsoAmountsDataGridView.Location = new Point(3, 22);
             serverQsoAmountsDataGridView.Margin = new Padding(3, 2, 3, 2);
             serverQsoAmountsDataGridView.Name = "serverQsoAmountsDataGridView";
             serverQsoAmountsDataGridView.ReadOnly = true;
-            dataGridViewCellStyle3.Alignment = DataGridViewContentAlignment.MiddleCenter;
-            dataGridViewCellStyle3.BackColor = SystemColors.Control;
-            dataGridViewCellStyle3.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            dataGridViewCellStyle3.ForeColor = SystemColors.WindowText;
-            dataGridViewCellStyle3.SelectionBackColor = SystemColors.Highlight;
-            dataGridViewCellStyle3.SelectionForeColor = SystemColors.HighlightText;
-            dataGridViewCellStyle3.WrapMode = DataGridViewTriState.False;
-            serverQsoAmountsDataGridView.RowHeadersDefaultCellStyle = dataGridViewCellStyle3;
+            dataGridViewCellStyle6.Alignment = DataGridViewContentAlignment.MiddleCenter;
+            dataGridViewCellStyle6.BackColor = SystemColors.Control;
+            dataGridViewCellStyle6.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            dataGridViewCellStyle6.ForeColor = SystemColors.WindowText;
+            dataGridViewCellStyle6.SelectionBackColor = SystemColors.Highlight;
+            dataGridViewCellStyle6.SelectionForeColor = SystemColors.HighlightText;
+            dataGridViewCellStyle6.WrapMode = DataGridViewTriState.False;
+            serverQsoAmountsDataGridView.RowHeadersDefaultCellStyle = dataGridViewCellStyle6;
             serverQsoAmountsDataGridView.RowHeadersWidth = 51;
             serverQsoAmountsDataGridView.RowHeadersWidthSizeMode = DataGridViewRowHeadersWidthSizeMode.DisableResizing;
             serverQsoAmountsDataGridView.RowTemplate.ReadOnly = true;
@@ -720,14 +738,14 @@ namespace QSOCollector
             serverLogTextBox.Enabled = false;
             serverLogTextBox.Font = new Font("Consolas", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
             serverLogTextBox.ForeColor = SystemColors.WindowText;
-            serverLogTextBox.Location = new Point(5, 174);
+            serverLogTextBox.Location = new Point(3, 174);
             serverLogTextBox.Margin = new Padding(3, 2, 3, 2);
             serverLogTextBox.Multiline = true;
             serverLogTextBox.Name = "serverLogTextBox";
             serverLogTextBox.PlaceholderText = "Server logs will be here ...";
             serverLogTextBox.ReadOnly = true;
             serverLogTextBox.ScrollBars = ScrollBars.Vertical;
-            serverLogTextBox.Size = new Size(668, 205);
+            serverLogTextBox.Size = new Size(676, 204);
             serverLogTextBox.TabIndex = 6;
             // 
             // stopServerButton
@@ -737,7 +755,7 @@ namespace QSOCollector
             stopServerButton.Enabled = false;
             stopServerButton.FlatStyle = FlatStyle.Popup;
             stopServerButton.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            stopServerButton.Location = new Point(518, 10);
+            stopServerButton.Location = new Point(447, 10);
             stopServerButton.Margin = new Padding(3, 2, 3, 2);
             stopServerButton.Name = "stopServerButton";
             stopServerButton.Size = new Size(95, 25);
@@ -753,10 +771,10 @@ namespace QSOCollector
             qsoExportButton.FlatStyle = FlatStyle.System;
             qsoExportButton.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
             qsoExportButton.ForeColor = SystemColors.ControlText;
-            qsoExportButton.Location = new Point(270, 424);
+            qsoExportButton.Location = new Point(270, 420);
             qsoExportButton.Margin = new Padding(3, 2, 3, 2);
             qsoExportButton.Name = "qsoExportButton";
-            qsoExportButton.Size = new Size(96, 26);
+            qsoExportButton.Size = new Size(96, 30);
             qsoExportButton.TabIndex = 0;
             qsoExportButton.Text = "QSO Export";
             qsoExportButton.UseVisualStyleBackColor = false;
@@ -770,7 +788,7 @@ namespace QSOCollector
             startServerButton.FlatStyle = FlatStyle.Popup;
             startServerButton.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
             startServerButton.ForeColor = Color.Black;
-            startServerButton.Location = new Point(411, 10);
+            startServerButton.Location = new Point(340, 10);
             startServerButton.Margin = new Padding(3, 2, 3, 2);
             startServerButton.Name = "startServerButton";
             startServerButton.Size = new Size(94, 25);
@@ -783,7 +801,7 @@ namespace QSOCollector
             // 
             serverPortTextBox.Enabled = false;
             serverPortTextBox.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            serverPortTextBox.Location = new Point(305, 14);
+            serverPortTextBox.Location = new Point(249, 14);
             serverPortTextBox.Margin = new Padding(3, 2, 3, 2);
             serverPortTextBox.Name = "serverPortTextBox";
             serverPortTextBox.PlaceholderText = "(port number)";
@@ -796,7 +814,7 @@ namespace QSOCollector
             // 
             serverPortLabel.AutoSize = true;
             serverPortLabel.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            serverPortLabel.Location = new Point(152, 16);
+            serverPortLabel.Location = new Point(96, 16);
             serverPortLabel.Name = "serverPortLabel";
             serverPortLabel.Size = new Size(137, 15);
             serverPortLabel.TabIndex = 1;
@@ -975,5 +993,6 @@ namespace QSOCollector
         private DataGridViewTextBoxColumn exportedQsoAmount;
         private DataGridViewTextBoxColumn lastQsoTime;
         private DataGridViewTextBoxColumn lastExportedQsoTime;
+        private Button resetServerButton;
     }
 }

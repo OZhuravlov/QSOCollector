@@ -42,7 +42,7 @@ namespace QSOCollector
         {
             if (cleanTemporarelySavedQsoCheckBox.Checked)
             {
-                dbRepository.CleanTemporarelySavedQsos();
+                dbRepository.CleanClientQsos();
             }
 
             if (cleanUdpListenerConfigCheckBox.Checked)
