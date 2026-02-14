@@ -11,6 +11,7 @@ namespace QSOCollector.Parsers
         // Parses an ADIF message and returns a list of key-value maps for each QSO record
         public static List<Dictionary<string, string>> Map(
             QsoMessage qsoMessage,
+            string? externalId = null,
             string? sourceIpAddress = null,
             Func<string, Task>? progressUpdater = null
             )
@@ -30,6 +31,11 @@ namespace QSOCollector.Parsers
             if (sourceIpAddress != null)
             {
                 headerMap["SOURCE_IP_ADDRESS"] = sourceIpAddress;
+            }
+
+            if (externalId != null)
+            {
+                headerMap["EXTERNAL_ID"] = externalId;
             }
 
             string sourceKey = "SOURCE_NAME";

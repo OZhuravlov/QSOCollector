@@ -89,6 +89,7 @@ namespace QSOCollector
             ];
 
             int nameIndex = dataGridView1.Columns["name"].Index;
+            string currentColumnName = dataGridView1.Columns[currentColumnIndex].Name;
 
             // Check for uniqueness
             foreach (DataGridViewRow otherRow in dataGridView1.Rows)
@@ -96,18 +97,35 @@ namespace QSOCollector
                 // Skip empty rows
                 if (otherRow.IsNewRow) continue;
 
-                foreach (DataGridViewColumn column in dataGridView1.Columns)
+                foreach (DataGridViewColumn otherColumn in dataGridView1.Columns)
                 {
-                    DataGridViewCell otherCell = otherRow.Cells[column.Index];
+                    DataGridViewCell otherCell = otherRow.Cells[otherColumn.Index];
+
                     // Skip checking the current cell
                     if (otherCell == currentCell)
                         continue;
-                    // Skipp non-port columns
-                    if (!portColumns.Contains(column))
+
+                    // Skip non-port columns
+                    if (!portColumns.Contains(otherColumn))
                         continue;
+
                     string? otherPort = otherCell.FormattedValue?.ToString();
                     // Skip checking other cell if empty
                     if (string.IsNullOrEmpty(otherPort))
+                    {
+                        continue;
+                    }
+
+                    // Forward port can be non-unique
+                    if (currentColumnName == otherColumn.Name && currentColumnName == "forward_port")
+                        continue;
+
+                    // Acknowledge port could be the same as qso port but only within the same row
+                    if (otherRow.Index == currentRowIndex &&
+                        (currentColumnName == "qso_port" && currentColumnName == "acknowledge_port"
+                        || currentColumnName == "acknowledge_port" && currentColumnName == "qso_port"
+                        )
+                       )
                     {
                         continue;
                     }

@@ -156,7 +156,7 @@ namespace QSOCollector.Network
             {
                 qsoRecords = qsoMessage.OriginalFormat switch
                 {
-                    "ADIF" => AdifToTableFieldsMapper.Map(qsoMessage, clientIPAddress),
+                    "ADIF" => AdifToTableFieldsMapper.Map(qsoMessage, sourceIpAddress: clientIPAddress),
                     "N1MM" => N1mmContactInfoToTableFieldsMapper.Map(qsoMessage, clientIPAddress),
                     _ => throw new ArgumentException($"Unsupported message format: {qsoMessage.OriginalFormat}"),
                 };

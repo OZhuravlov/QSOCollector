@@ -8,6 +8,7 @@ using System.Collections.Concurrent;
 using System.Data;
 using System.Data.SQLite;
 using System.Globalization;
+using System.Net.Sockets;
 using System.Reflection;
 using System.Text;
 
@@ -442,11 +443,9 @@ namespace QSOCollector
             if (keepClientRunning) Task.Run(() => qsoMessageSender.Start());
 
             StartTemporarelySavedQsoHandler(qsoMessageQueue, qsoMessageSender, clientProgressUpdater);
+            Dictionary<int, UdpClient> forwardUdpClients = StartForwardUdpClients(listeners, clientProgressUpdater);
+            StartClientUdpListeners(listeners, forwardUdpClients, qsoMessageQueue, clientProgressUpdater);
 
-            foreach (var listenerConfig in listeners)
-            {
-                StartClientUdpListener(listenerConfig, qsoMessageQueue, clientProgressUpdater);
-            }
             enableClientCheckBox.Enabled = false;
             clientServerNameIpTextBox.Enabled = false;
             clientServerPortTextBox.Enabled = false;
@@ -459,6 +458,29 @@ namespace QSOCollector
             resetClientButton.Enabled = false;
         }
 
+        private static Dictionary<int, UdpClient> StartForwardUdpClients(List<ListenerConfig> listeners, ClientProgressUpdater clientProgressUpdater)
+        {
+            Dictionary<int, UdpClient> forwardUdpClients = [];
+            List<int> forwardPorts = [.. listeners.Where(l => l.ForwardPort != null).Select(l => l.ForwardPort.Value).Distinct()];
+            foreach (var port in forwardPorts)
+            {
+                UdpClient forwardUdpClient = new ();
+                forwardUdpClient.Connect("localhost", port);
+                forwardUdpClients[port] = forwardUdpClient;
+                clientProgressUpdater.UpdateLog($"UDP client to forward to port {port} started");
+            }
+            return forwardUdpClients;
+        }
+
+        private void StartClientUdpListeners(List<ListenerConfig> listeners, Dictionary<int, UdpClient> forwardUdpClients, BlockingCollection<QsoMessage> qsoMessageQueue, ClientProgressUpdater clientProgressUpdater)
+        {
+            foreach (var listenerConfig in listeners)
+            {
+                UdpClient? forwardUdpClient = listenerConfig.ForwardPort == null ? null : forwardUdpClients[listenerConfig.ForwardPort.Value];
+                StartClientUdpListener(listenerConfig, forwardUdpClient, qsoMessageQueue, clientProgressUpdater);
+            }
+        }
+
         private void StartTemporarelySavedQsoHandler(BlockingCollection<QsoMessage> qsoMessageQueue, QsoMessageSender qsoMessageHandler, ClientProgressUpdater progressUpdater)
         {
             CancellationTokenSource temporarelySavedQsoHandlerCancellationTokenSource = CreateLinkedClientCancellationTokenSource();
@@ -466,10 +488,10 @@ namespace QSOCollector
             Task.Run(() => handler.Start());
         }
 
-        private void StartClientUdpListener(ListenerConfig listenerConfig, BlockingCollection<QsoMessage> qsoMessageQueue, ClientProgressUpdater clientProgressUpdater)
+        private void StartClientUdpListener(ListenerConfig listenerConfig, UdpClient? forwardUdpClient, BlockingCollection<QsoMessage> qsoMessageQueue, ClientProgressUpdater clientProgressUpdater)
         {
             CancellationTokenSource clientUdpListenerCancellationTokenSource = CreateLinkedClientCancellationTokenSource();
-            var listener = new UdpClientListener(listenerConfig, qsoMessageQueue, clientProgressUpdater, clientUdpListenerCancellationTokenSource);
+            var listener = new UdpClientListener(listenerConfig, forwardUdpClient, qsoMessageQueue, clientProgressUpdater, clientUdpListenerCancellationTokenSource);
             Task.Run(() => listener.Start());
         }
 
@@ -716,6 +738,11 @@ namespace QSOCollector
         {
             new ServerCleanupForm(dbRepository).ShowDialog(this);
             HandleServerCheckBoxChanged(enableServerCheckBox);
+        }
+
+        private void serverClientsButton_Click(object sender, EventArgs e)
+        {
+
         }
     }
 }

@@ -16,8 +16,9 @@ namespace QSOCollector.Data
                     " VALUES (@Name, @QsoPort, @ForwardPort, @AcknowledgePort, @MessageFormat, @IsActive)";
         private const string getServerQsoAmountsSql = "SELECT q.mode QsoAmountMode, COUNT(CASE WHEN q.qso_time >= current_date THEN 1 END) TodayQsoAmount, count(*) TotalQsoAmount, COUNT(e.id) ExportedQsoAmount, MAX(q.qso_time) LastQsoTime, MAX(e.end_time) LastExportedQsoTime FROM qsodata q LEFT JOIN adif_export e ON q.export_id = e.id AND e.is_confirmed = true WHERE q.is_temporary = false GROUP BY q.mode UNION ALL SELECT 'Total', COUNT(CASE WHEN q.qso_time >= current_date THEN 1 END), COUNT(*), COUNT(e.id), MAX(q.qso_time), MAX(e.end_time) FROM qsodata q LEFT JOIN adif_export e ON q.export_id = e.id AND e.is_confirmed = true WHERE q.is_temporary = false";
         private const string getQsoAmountsForExportSql = "SELECT COALESCE(q.source_name, '<UNKNOWN>') SourceName, e.id IS NOT NULL IsExported, DATE(q.qso_time) QsoDate, q.mode_group ModeGroup, q.mode Mode, q.band Band, COALESCE(q.operator, '<UNKNOWN>') Operator, COALESCE(q.source_ip_address, '<UNKNOWN>') SourceIp, count(*) Count FROM qsodata q LEFT JOIN adif_export e ON q.export_id = e.id AND e.is_confirmed = true WHERE q.is_temporary = false GROUP BY COALESCE(q.source_name, '<UNKNOWN>'), e.id IS NOT NULL, DATE(q.qso_time), q.mode_group, q.mode, q.band, COALESCE(q.operator, '<UNKNOWN>'), COALESCE(q.source_ip_address, '<UNKNOWN>')";
-        private const string insertQsoSql = "INSERT INTO qsodata (is_temporary, source_name, source_ip_address, import_id, qso_time, programid, station_callsign, qso_date, qso_date_off, call, time_on, time_off, band, freq, freq_rx, mode, mode_group, contest_id, rst_sent, rst_rcvd, exch_sent, exch_rcvd, operator, my_gridsquare, gridsquare, distance, comment, pfx, dxcc_pref, cqz, ituz, cont, qslmsg, dxcc, orig_format, orig_qsodata, adif_qsodata)" +
-                    " VALUES (@is_temporary, @source_name, @source_ip_address, @import_id, @qso_time, @programid, @station_callsign, @qso_date, @qso_date_off, @call, @time_on, @time_off, @band, @freq, @freq_rx, @mode, @mode_group, @contest_id, @rst_sent, @rst_rcvd, @exch_sent, @exch_rcvd, @operator, @my_gridsquare, @gridsquare, @distance, @comment, @pfx, @dxcc_pref, @cqz, @ituz, @cont, @qslmsg, @dxcc, @orig_format, @orig_qsodata, @adif_qsodata)";
+        private const string insertRawQsoSql = "INSERT INTO raw_qsodata (source_name, orig_format, orig_qsodata) VALUES (@Source, @OriginalFormat, @OriginalQsoData)";
+        private const string insertQsoSql = "INSERT INTO qsodata (is_temporary, source_name, source_ip_address, external_id, import_id, qso_time, programid, station_callsign, qso_date, qso_date_off, call, time_on, time_off, band, freq, freq_rx, mode, mode_group, contest_id, rst_sent, rst_rcvd, exch_sent, exch_rcvd, operator, my_gridsquare, gridsquare, distance, comment, pfx, dxcc_pref, cqz, ituz, cont, qslmsg, dxcc, orig_format, orig_qsodata, adif_qsodata)" +
+                    " VALUES (@is_temporary, @source_name, @source_ip_address, @external_id, @import_id, @qso_time, @programid, @station_callsign, @qso_date, @qso_date_off, @call, @time_on, @time_off, @band, @freq, @freq_rx, @mode, @mode_group, @contest_id, @rst_sent, @rst_rcvd, @exch_sent, @exch_rcvd, @operator, @my_gridsquare, @gridsquare, @distance, @comment, @pfx, @dxcc_pref, @cqz, @ituz, @cont, @qslmsg, @dxcc, @orig_format, @orig_qsodata, @adif_qsodata)";
         private const string getTemporaryQsoSql = "SELECT id, source_name, orig_format, orig_qsodata, adif_qsodata " +
             "  FROM qsodata " +
             " WHERE is_temporary = 1 AND orig_format IS NOT NULL AND orig_qsodata IS NOT NULL " +
@@ -127,6 +128,17 @@ namespace QSOCollector.Data
             using var transaction = connection.BeginTransaction();
             using var command = connection.CreateCommand();
             command.CommandText = "DELETE FROM qsodata WHERE is_temporary = 0";
+            command.ExecuteNonQuery();
+            transaction.Commit();
+        }
+
+        public void CleanRawQsoData()
+        {
+            using var connection = new SqliteConnection(connectionString);
+            connection.Open();
+            using var transaction = connection.BeginTransaction();
+            using var command = connection.CreateCommand();
+            command.CommandText = "DELETE FROM raw_qsodata";
             command.ExecuteNonQuery();
             transaction.Commit();
         }
@@ -359,6 +371,18 @@ namespace QSOCollector.Data
             return dups;
         }
 
+        internal void SaveRawQso(QsoMessage qsoMessage)
+        {
+            using var connection = new SqliteConnection(connectionString);
+            connection.Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = insertRawQsoSql;
+            AddSqlParameter(command, "Source", qsoMessage.Source);
+            AddSqlParameter(command, "OriginalFormat", qsoMessage.OriginalFormat);
+            AddSqlParameter(command, "OriginalQsoData", qsoMessage.OriginalQsoData);
+            command.ExecuteNonQuery();
+        }
+
         public Dictionary<int, QsoMessage> GetTemporaryQsoMessages()
         {
             var qsoMessages = new Dictionary<int, QsoMessage>();
@@ -562,12 +586,12 @@ namespace QSOCollector.Data
             {
                 if (exportFilters.SourceIp == "UNKNOWN")
                 {
-                    sb.Append(" AND q.sourceIp IS NULL");
+                    sb.Append(" AND q.source_ip_address IS NULL");
                 }
                 else
                 {
-                    sb.Append(" AND q.sourceIp = @sourceIp");
-                    AddSqlParameter(command, "sourceIp", exportFilters.SourceIp);
+                    sb.Append(" AND q.source_ip_address = @source_ip_address");
+                    AddSqlParameter(command, "source_ip_address", exportFilters.SourceIp);
                 }
             }
             sb.Append(" ORDER BY q.qso_time");

@@ -8,15 +8,16 @@ namespace QSOCollector.Parsers
         // Parses an N1MM contact info and returns a list of key-value maps for each QSO record
         public static List<Dictionary<string, string>> Map(QsoMessage qsoMessage, string sourceIpAddress)
         {
+            string? contactInfoId = null;
             if (string.IsNullOrEmpty(qsoMessage.AdifQsoData))
             {
-                qsoMessage.AdifQsoData = DeserializeN1mmContactInfoAndMapToAdif(qsoMessage);
+                qsoMessage.AdifQsoData = DeserializeN1mmContactInfoAndMapToAdif(qsoMessage, out contactInfoId);
             }
 
-            return AdifToTableFieldsMapper.Map(qsoMessage, sourceIpAddress: sourceIpAddress);
+            return AdifToTableFieldsMapper.Map(qsoMessage, externalId: contactInfoId, sourceIpAddress: sourceIpAddress);
         }
 
-        private static string DeserializeN1mmContactInfoAndMapToAdif(QsoMessage qsoMessage)
+        private static string DeserializeN1mmContactInfoAndMapToAdif(QsoMessage qsoMessage, out string? id)
         {
             var serializer = new XmlSerializer(typeof(N1mmContactInfo));
             N1mmContactInfo contactInfo;
@@ -25,6 +26,7 @@ namespace QSOCollector.Parsers
                 contactInfo = (N1mmContactInfo)serializer.Deserialize(reader)!;
 
             }
+            id = contactInfo.Id;
             return N1mmContactInfoToAdifQsoMessageMapper.Map(contactInfo);
         }
     }

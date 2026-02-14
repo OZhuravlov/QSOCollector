@@ -84,6 +84,7 @@ namespace QSOCollector.Network
                     }
                     else
                     {
+                        dbRepository.SaveRawQso(qsoMessage);
                         await SendToServer(qsoMessage);
                     }
                 }

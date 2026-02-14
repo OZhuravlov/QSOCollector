@@ -8,19 +8,19 @@ namespace QSOCollector.Network
 {
     public class UdpClientListener
     {
-
-        private ListenerConfig listenerConfig;
-        private BlockingCollection<QsoMessage> qsoMessageQueue;
-        private ClientProgressUpdater progressUpdater;
-        private CancellationTokenSource cancellationTokenSource;
+        private readonly ListenerConfig listenerConfig;
+        private readonly UdpClient? forwardUdpClient;
+        private readonly BlockingCollection<QsoMessage> qsoMessageQueue;
+        private readonly ClientProgressUpdater progressUpdater;
+        private readonly CancellationTokenSource cancellationTokenSource;
         private UdpClient qsoUdpClient;
-        private UdpClient forwardUdpClient;
         private UdpClient acknowledgeUdpClient;
 
-        public UdpClientListener(ListenerConfig listenerConfig, BlockingCollection<QsoMessage> qsoMessageQueue,
+        public UdpClientListener(ListenerConfig listenerConfig, UdpClient? forwardUdpClient, BlockingCollection<QsoMessage> qsoMessageQueue,
                                  ClientProgressUpdater progressUpdater, CancellationTokenSource cancellationTokenSource)
         {
             this.listenerConfig = listenerConfig;
+            this.forwardUdpClient = forwardUdpClient;
             this.qsoMessageQueue = qsoMessageQueue;
             this.progressUpdater = progressUpdater;
             this.cancellationTokenSource = cancellationTokenSource;
@@ -36,13 +36,6 @@ namespace QSOCollector.Network
             progressUpdater.UpdateLog($"UDP Port {qsoPort} ({listenerConfig.Name}) QSO Listener started");
             CancellationToken cancellationToken = cancellationTokenSource.Token;
 
-            if (listenerConfig.ForwardPort != null)
-            {
-                forwardUdpClient = new UdpClient();
-                forwardUdpClient.Connect("localhost", listenerConfig.ForwardPort.Value);
-                progressUpdater.UpdateLog($"UDP Port {qsoPort} ({listenerConfig.Name}) Forwarding to port {listenerConfig.ForwardPort.Value}");
-            }
-
             while (!cancellationToken.IsCancellationRequested)
             {
                 try
@@ -52,6 +45,7 @@ namespace QSOCollector.Network
                     if (forwardUdpClient != null)
                     {
                         await forwardUdpClient.SendAsync(receivedBytes, receivedBytes.Length);
+                        progressUpdater.UpdateLog($"QSO info from {listenerConfig.Name} forwarded to port {listenerConfig.ForwardPort.Value}");
                     }
                     string receivedData = Encoding.UTF8.GetString(receivedBytes);
 
@@ -68,6 +62,10 @@ namespace QSOCollector.Network
                 {
                     qsoUdpClient.Close();
                     qsoUdpClient.Dispose();
+                    if (forwardUdpClient != null) {
+                        forwardUdpClient.Close();
+                        forwardUdpClient.Dispose();
+                    }
                     cancellationTokenSource.Dispose();
                     string message = ex is OperationCanceledException
                         ? $"UDP Port {qsoPort} ({listenerConfig.Name}) QSO Listener was stopped"

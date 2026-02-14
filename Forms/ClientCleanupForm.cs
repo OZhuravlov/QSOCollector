@@ -26,11 +26,17 @@ namespace QSOCollector
             HandleCheckBoxChanged(sender, e);
         }
 
+        private void understandCheckBox_CheckedChanged(object sender, EventArgs e)
+        {
+            HandleCheckBoxChanged(sender, e);
+        }
+
         private void HandleCheckBoxChanged(object sender, EventArgs e)
         {
-            confirmCleanupButton.Enabled = cleanTemporarelySavedQsoCheckBox.Checked ||
+            confirmCleanupButton.Enabled = (cleanTemporarelySavedQsoCheckBox.Checked ||
                                                 cleanUdpListenerConfigCheckBox.Checked ||
-                                                cleanServerIpAndPortConfigCheckBox.Checked;
+                                                cleanServerIpAndPortConfigCheckBox.Checked)
+                                                && understandCheckBox.Checked;
         }
 
         private void cancelButton_Click(object sender, EventArgs e)
@@ -43,6 +49,7 @@ namespace QSOCollector
             if (cleanTemporarelySavedQsoCheckBox.Checked)
             {
                 dbRepository.CleanClientQsos();
+                dbRepository.CleanRawQsoData();
             }
 
             if (cleanUdpListenerConfigCheckBox.Checked)
