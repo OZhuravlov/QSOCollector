@@ -1,6 +1,6 @@
 using QSOCollector.Data;
 using QSOCollector.Models;
-using QSOCollector.Network;
+using QSOCollector.Network.Client;
 using System.Collections.Concurrent;
 
 namespace QSOCollector.Helpers
@@ -19,7 +19,8 @@ namespace QSOCollector.Helpers
                 try
                 {
                     tryNumber++;
-                    if (qsoMessageSender.IsConnected() || tryNumber >= 5)
+                    bool isConnected = await qsoMessageSender.EnsureConnectedAsync();
+                    if (isConnected || tryNumber >= 5)
                     {
                         tryNumber = 0;
                         var tempQsoMessages = dbRepository.GetTemporaryQsoMessages();

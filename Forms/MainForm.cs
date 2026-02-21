@@ -3,7 +3,8 @@ using QSOCollector.Data;
 using QSOCollector.Forms;
 using QSOCollector.Helpers;
 using QSOCollector.Models;
-using QSOCollector.Network;
+using QSOCollector.Network.Client;
+using QSOCollector.Network.Server;
 using System.Collections.Concurrent;
 using System.Data;
 using System.Data.SQLite;
@@ -19,15 +20,16 @@ namespace QSOCollector
         private readonly string connectionString;
         private readonly DbRepository dbRepository;
         private readonly StartupParams startupParams;
+        private readonly IQsoMessageSenderFactory qsoMessageSenderFactory;
+        private readonly DataTable serverQsoAmountDataTable;
         private CancellationTokenSource? clientCancellationTokenSource = new();
         private ClientProgressUpdater? clientProgressUpdater;
         private ServerProgressUpdater? serverProgressUpdater;
-        private DataTable serverQsoAmountDataTable;
         private TcpServer? tcpServer = null;
         private bool isLocalClientRunning = false;
         private bool isLocalServerRunning = false;
 
-        public QsoCollectorForm(string connectionString, StartupParams startupParams)
+        public QsoCollectorForm(string connectionString, StartupParams startupParams, IQsoMessageSenderFactory qsoMessageSenderFactory)
         {
             this.connectionString = connectionString;
             dbRepository = new DbRepository(connectionString);
@@ -37,6 +39,7 @@ namespace QSOCollector
             };
 
             this.startupParams = startupParams;
+            this.qsoMessageSenderFactory = qsoMessageSenderFactory;
 
             InitializeComponent();
             this.Text += $"        v.{Assembly.GetExecutingAssembly().GetName().Version}";
@@ -386,10 +389,20 @@ namespace QSOCollector
 
         private void StartClientButton_Click(object sender, EventArgs e)
         {
+            _ = StartClientAsync(); // fire-and-forget but capture/log exceptions inside StartClientAsync
+        }
+
+        private async Task StartClientAsync()
+        {
             List<ListenerConfig>? listeners = dbRepository.GetListenerConfigs();
             if (listeners == null || listeners.Count == 0)
             {
-                MessageBox.Show("No active listener configurations found. Please configure at least one active listener.", "No Active Listeners", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(
+                    "No active listener configurations found. Please configure at least one active listener.", 
+                    "No Active Listeners", 
+                    MessageBoxButtons.OK, 
+                    MessageBoxIcon.Warning
+                );
                 return;
             }
 
@@ -413,14 +426,22 @@ namespace QSOCollector
             };
 
             CancellationTokenSource qsoMessageSenderCancellationTokenSource = CreateLinkedClientCancellationTokenSource();
-            QsoMessageSender qsoMessageSender = new(serverIp, serverPort, qsoMessageQueue, dbRepository, clientProgressUpdater, qsoMessageSenderCancellationTokenSource);
 
-            bool keepClientRunning;
-            if (qsoMessageSender.IsConnected())
+            startClientButton.Enabled = false;
+            QsoMessageSender qsoMessageSender = qsoMessageSenderFactory.Create(
+                    serverIp, serverPort, qsoMessageQueue, dbRepository, clientProgressUpdater, qsoMessageSenderCancellationTokenSource
+            );
+            bool keepClientRunning = true;
+
+            try
             {
-                keepClientRunning = true;
+                bool isConnected = await qsoMessageSender.EnsureConnectedAsync();
+                if (!isConnected)
+                {
+                    throw new Exception("Server is not available");
+                }
             }
-            else
+            catch (Exception)
             {
                 string message = $"Looks like server is not avalable by address {serverIp}:{serverPort}";
                 keepClientRunning = false;
@@ -434,14 +455,18 @@ namespace QSOCollector
                     DialogResult result = MessageBox.Show(message + ". Would you like Client to start and wait for Server connection?", "Server not available", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
                     keepClientRunning = result == DialogResult.Yes;
                 }
-                if (!keepClientRunning)
-                {
-                    return;
-                }
+            }
+            finally
+            {
+                startClientButton.Enabled = true;
+            }
+
+            if (!keepClientRunning)
+            {
+                return;
             }
 
             if (keepClientRunning) Task.Run(() => qsoMessageSender.Start());
-
             StartTemporarelySavedQsoHandler(qsoMessageQueue, qsoMessageSender, clientProgressUpdater);
             Dictionary<int, UdpClient> forwardUdpClients = StartForwardUdpClients(listeners, clientProgressUpdater);
             StartClientUdpListeners(listeners, forwardUdpClients, qsoMessageQueue, clientProgressUpdater);
@@ -464,7 +489,7 @@ namespace QSOCollector
             List<int> forwardPorts = [.. listeners.Where(l => l.ForwardPort != null).Select(l => l.ForwardPort.Value).Distinct()];
             foreach (var port in forwardPorts)
             {
-                UdpClient forwardUdpClient = new ();
+                UdpClient forwardUdpClient = new();
                 forwardUdpClient.Connect("localhost", port);
                 forwardUdpClients[port] = forwardUdpClient;
                 clientProgressUpdater.UpdateLog($"UDP client to forward to port {port} started");

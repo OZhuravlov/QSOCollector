@@ -11,7 +11,7 @@ namespace QSOCollector.Helpers
         private readonly TextBox serverLog = serverLog;
         private DateOnly today = DateOnly.FromDateTime(DateTime.UtcNow);
 
-        public void UpdateProgress(DateTime qsoDateTime, string mode, string logMessage)
+        public void UpdateProgress(DateTime qsoDateTime, string mode, string? logMessage)
         {
             lock (GridLock)
             {
@@ -36,7 +36,7 @@ namespace QSOCollector.Helpers
             {
                 serverLog.BeginInvoke((MethodInvoker)delegate
                 {
-                    serverLog.AppendText($"{message}\r\n");
+                    serverLog.AppendText($"{DateTime.UtcNow:dd-MMM hh:mm:ss}Z {message}\r\n");
                 });
             }
             ;

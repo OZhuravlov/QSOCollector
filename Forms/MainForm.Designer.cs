@@ -561,7 +561,7 @@ namespace QSOCollector
             serverClientsButton.Name = "serverClientsButton";
             serverClientsButton.Size = new Size(96, 30);
             serverClientsButton.TabIndex = 13;
-            serverClientsButton.Text = "Clients";
+            serverClientsButton.Text = "Monitoring";
             serverClientsButton.UseVisualStyleBackColor = false;
             serverClientsButton.Visible = false;
             serverClientsButton.Click += serverClientsButton_Click;
@@ -618,10 +618,10 @@ namespace QSOCollector
             serverProcessingGroupBox.Margin = new Padding(3, 2, 3, 2);
             serverProcessingGroupBox.Name = "serverProcessingGroupBox";
             serverProcessingGroupBox.Padding = new Padding(3, 2, 3, 2);
-            serverProcessingGroupBox.Size = new Size(678, 382);
+            serverProcessingGroupBox.Size = new Size(678, 378);
             serverProcessingGroupBox.TabIndex = 7;
             serverProcessingGroupBox.TabStop = false;
-            serverProcessingGroupBox.Text = "Processing";
+            serverProcessingGroupBox.Text = "Statistics";
             // 
             // serverQsoAmountsDataGridView
             // 
@@ -907,7 +907,7 @@ namespace QSOCollector
             // 
             enableDebugWhenAutoStartCheckbox.AutoSize = true;
             enableDebugWhenAutoStartCheckbox.Font = new Font("Segoe UI Semibold", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            enableDebugWhenAutoStartCheckbox.Location = new Point(576, 4);
+            enableDebugWhenAutoStartCheckbox.Location = new Point(571, 4);
             enableDebugWhenAutoStartCheckbox.Margin = new Padding(3, 2, 3, 2);
             enableDebugWhenAutoStartCheckbox.Name = "enableDebugWhenAutoStartCheckbox";
             enableDebugWhenAutoStartCheckbox.Size = new Size(107, 19);
