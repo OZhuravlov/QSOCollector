@@ -8,14 +8,14 @@ using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
 
-namespace QSOCollector.Network
+namespace QSOCollector.Network.Server
 {
     internal class TcpServer
     {
         private readonly IPEndPoint ipEndPoint;
         private TcpListener? listener;
         private bool running;
-        private readonly List<Client> clients = [];
+        private readonly List<AcceptedClient> clients = [];
         private readonly CancellationTokenSource cts;
         private readonly ServerProgressUpdater serverProgressUpdater;
 
@@ -50,7 +50,7 @@ namespace QSOCollector.Network
                 {
                     serverProgressUpdater.UpdateLog("Waiting for incoming TCP client connection...");
                     TcpClient tcpClient = await listener.AcceptTcpClientAsync(cts.Token);
-                    Client client = new(tcpClient, clientCancellationTokenSource, serverProgressUpdater);
+                    AcceptedClient client = new(tcpClient, clientCancellationTokenSource, serverProgressUpdater);
                     IPEndPoint? remoteIpEndPoint = tcpClient.Client.RemoteEndPoint as IPEndPoint;
                     serverProgressUpdater.UpdateLog($"New client with IP {remoteIpEndPoint?.Address} connected");
                     clients.Add(client);
@@ -74,7 +74,7 @@ namespace QSOCollector.Network
         }
     }
 
-    internal class Client(TcpClient client, CancellationTokenSource clientCancellationTokenSource, ServerProgressUpdater serverProgressUpdater)
+    internal class AcceptedClient(TcpClient client, CancellationTokenSource clientCancellationTokenSource, ServerProgressUpdater serverProgressUpdater)
     {
         private readonly NetworkStream stream = client.GetStream();
         private readonly string clientIPAddress = ((IPEndPoint)client.Client.RemoteEndPoint).Address.ToString();
@@ -166,7 +166,7 @@ namespace QSOCollector.Network
                     // Log parsed records
                     foreach (var record in qsoRecords)
                     {
-                        StringBuilder logMessage = new StringBuilder();
+                        StringBuilder logMessage = new();
                         foreach (var kv in record)
                         {
                             logMessage.AppendLine(kv.Key + ": " + kv.Value);

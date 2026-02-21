@@ -1,6 +1,6 @@
 using QSOCollector.Data;
 using QSOCollector.Models;
-using QSOCollector.Network;
+using QSOCollector.Network.Client;
 using System.Collections.Concurrent;
 
 namespace QSOCollector.Helpers

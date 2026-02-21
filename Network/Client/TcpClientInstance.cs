@@ -3,7 +3,7 @@ using QSOCollector.Models;
 using System.Net.Sockets;
 using System.Text.Json;
 
-namespace QSOCollector.Network
+namespace QSOCollector.Network.Client
 {
     internal class TcpClientInstance
     {

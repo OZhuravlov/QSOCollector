@@ -3,7 +3,8 @@ using QSOCollector.Data;
 using QSOCollector.Forms;
 using QSOCollector.Helpers;
 using QSOCollector.Models;
-using QSOCollector.Network;
+using QSOCollector.Network.Client;
+using QSOCollector.Network.Server;
 using System.Collections.Concurrent;
 using System.Data;
 using System.Data.SQLite;
@@ -19,10 +20,10 @@ namespace QSOCollector
         private readonly string connectionString;
         private readonly DbRepository dbRepository;
         private readonly StartupParams startupParams;
+        private readonly DataTable serverQsoAmountDataTable;
         private CancellationTokenSource? clientCancellationTokenSource = new();
         private ClientProgressUpdater? clientProgressUpdater;
         private ServerProgressUpdater? serverProgressUpdater;
-        private DataTable serverQsoAmountDataTable;
         private TcpServer? tcpServer = null;
         private bool isLocalClientRunning = false;
         private bool isLocalServerRunning = false;
@@ -389,7 +390,12 @@ namespace QSOCollector
             List<ListenerConfig>? listeners = dbRepository.GetListenerConfigs();
             if (listeners == null || listeners.Count == 0)
             {
-                MessageBox.Show("No active listener configurations found. Please configure at least one active listener.", "No Active Listeners", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(
+                    "No active listener configurations found. Please configure at least one active listener.",
+                    "No Active Listeners",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning
+                );
                 return;
             }
 
@@ -464,7 +470,7 @@ namespace QSOCollector
             List<int> forwardPorts = [.. listeners.Where(l => l.ForwardPort != null).Select(l => l.ForwardPort.Value).Distinct()];
             foreach (var port in forwardPorts)
             {
-                UdpClient forwardUdpClient = new ();
+                UdpClient forwardUdpClient = new();
                 forwardUdpClient.Connect("localhost", port);
                 forwardUdpClients[port] = forwardUdpClient;
                 clientProgressUpdater.UpdateLog($"UDP client to forward to port {port} started");
@@ -738,11 +744,6 @@ namespace QSOCollector
         {
             new ServerCleanupForm(dbRepository).ShowDialog(this);
             HandleServerCheckBoxChanged(enableServerCheckBox);
-        }
-
-        private void serverClientsButton_Click(object sender, EventArgs e)
-        {
-
         }
     }
 }

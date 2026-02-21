@@ -18,7 +18,7 @@ namespace QSOCollector.Parsers
             AddToAdif(adif, "QSO_DATE", contactInfo.Timestamp.ToString("yyyyMMdd"));
             AddToAdif(adif, "TIME_ON", contactInfo.Timestamp.ToString("HHmmss"));
             AddToAdif(adif, "TIME_OFF", contactInfo.Timestamp.ToString("HHmmss"));
-            string band = contactInfo.Band.Trim();
+            string band = contactInfo.Band.Trim().Replace(",", ".");
             AddToAdif(adif, "BAND", MapToAdifBand(band));
             if (contactInfo.TxFreq != null && contactInfo.TxFreq > 0)
             {
@@ -67,7 +67,6 @@ namespace QSOCollector.Parsers
 
         private static string MapToAdifBand(string origBand)
         {
-            origBand = origBand.Replace(",", ".");
             return origBand switch
             {
                 "0.136" => "2190M",

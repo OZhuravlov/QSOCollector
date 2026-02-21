@@ -4,7 +4,7 @@ using System.Collections.Concurrent;
 using System.Net.Sockets;
 using System.Text;
 
-namespace QSOCollector.Network
+namespace QSOCollector.Network.Client
 {
     public class UdpClientListener
     {

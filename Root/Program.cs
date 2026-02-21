@@ -1,6 +1,11 @@
 using DbUp;
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using QSOCollector.Models;
+using Serilog;
+using Serilog.Filters;
 using SQLitePCL;
 using System.Reflection;
 
@@ -29,6 +34,7 @@ namespace QSOCollector.Root
                 return;
             }
 
+            Log.Logger = CreateLogger();
             StartupParams startupParams = GetStartupParams();
 
             Batteries.Init();
@@ -41,8 +47,49 @@ namespace QSOCollector.Root
             string connectionString = InitializeDatabase(dbFileName);
             RunMigrations(connectionString);
             InitializeAdditionalFolders();
-            Application.Run(new QsoCollectorForm(connectionString, startupParams));
+
+            try
+            {
+                // 2. Resolve the form from the DI container to get ILogger<T> injected
+                Application.SetCompatibleTextRenderingDefault(false);
+                Application.EnableVisualStyles();
+
+                IHost host = ConfigureServices();
+
+                var mainForm = ActivatorUtilities.CreateInstance<QsoCollectorForm>(host.Services, connectionString, startupParams);
+
+                Application.Run(mainForm);
+            }
+            finally
+            {
+                Log.CloseAndFlush(); // Ensure logs are saved before exit
+            }
         }
+
+        private static Serilog.Core.Logger CreateLogger() => new LoggerConfiguration()
+            .MinimumLevel.Debug()
+
+            // Branch 1: The Client Log
+            .WriteTo.Logger(lc => lc
+                .Filter.ByIncludingOnly(Matching.FromSource("QSOCollector.Network.Client"))
+                .WriteTo.File(appDataFolder + "\\logs\\client.log",
+                rollingInterval: RollingInterval.Day, // New file every day
+                retainedFileCountLimit: 30))          // Keep 30 days of logs
+
+            // Branch 2: The Server Log
+            .WriteTo.Logger(lc => lc
+                .Filter.ByIncludingOnly(Matching.FromSource("QSOCollector.Network.Server"))
+                .WriteTo.File(appDataFolder + "\\logs\\server.log",
+                rollingInterval: RollingInterval.Day,
+                retainedFileCountLimit: 30
+                ))
+
+            // 3. General/Catch-all (Optional)
+            .WriteTo.File(appDataFolder + "\\logs\\all-eventss.log",
+                rollingInterval: RollingInterval.Day,
+                retainedFileCountLimit: 30)
+
+            .CreateLogger();
 
         private static void InitializeAdditionalFolders()
         {
@@ -134,6 +181,21 @@ namespace QSOCollector.Root
                 }
             }
             return startupParams;
+        }
+
+        private static IHost ConfigureServices()
+        {
+            return Host.CreateDefaultBuilder()
+                        .ConfigureLogging(logging =>
+                        {
+                            logging.ClearProviders(); // Removes default Console/Debug loggers
+                            logging.AddSerilog();     // Adds Serilog to ILoggingBuilder
+                        })
+                        .ConfigureServices((context, services) =>
+                        {
+                            services.AddTransient<QsoCollectorForm>(); // Register your main form for DI
+                        })
+                        .Build();
         }
     }
 }

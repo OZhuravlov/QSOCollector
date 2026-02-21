@@ -7,7 +7,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text.Json;
 
-namespace QSOCollector.Network
+namespace QSOCollector.Network.Client
 {
     public class QsoMessageSender
     {
