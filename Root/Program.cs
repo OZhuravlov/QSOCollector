@@ -6,6 +6,8 @@ using Microsoft.Extensions.Logging;
 using QSOCollector.Models;
 using Serilog;
 using Serilog.Filters;
+using QSOCollector.Network.Client;
+using Microsoft.Extensions.Options;
 using SQLitePCL;
 using System.Reflection;
 
@@ -41,7 +43,7 @@ namespace QSOCollector.Root
             // To customize application configuration such as set high DPI settings or default font,
             // see https://aka.ms/applicationconfiguration.
             ApplicationConfiguration.Initialize();
-
+            
             // Check and initialize the database
             string dbFileName = "qsoCollector.s3db";
             string connectionString = InitializeDatabase(dbFileName);
@@ -66,7 +68,9 @@ namespace QSOCollector.Root
             }
         }
 
-        private static Serilog.Core.Logger CreateLogger() => new LoggerConfiguration()
+        private static Serilog.ILogger CreateLogger()
+        {
+            return new LoggerConfiguration()
             .MinimumLevel.Debug()
 
             // Branch 1: The Client Log
@@ -85,11 +89,12 @@ namespace QSOCollector.Root
                 ))
 
             // 3. General/Catch-all (Optional)
-            .WriteTo.File(appDataFolder + "\\logs\\all-eventss.log",
+            .WriteTo.File(appDataFolder + "\\logs\\all-eventss.log", 
                 rollingInterval: RollingInterval.Day,
                 retainedFileCountLimit: 30)
 
             .CreateLogger();
+        }
 
         private static void InitializeAdditionalFolders()
         {
@@ -183,8 +188,7 @@ namespace QSOCollector.Root
             return startupParams;
         }
 
-        private static IHost ConfigureServices()
-        {
+        private static IHost ConfigureServices() {
             return Host.CreateDefaultBuilder()
                         .ConfigureLogging(logging =>
                         {
@@ -193,6 +197,15 @@ namespace QSOCollector.Root
                         })
                         .ConfigureServices((context, services) =>
                         {
+                            // bind TimeoutOptions from configuration (appsettings.json, env, etc.)
+                            services.Configure<TimeoutOptions>(context.Configuration.GetSection("Timeouts"));
+                            services.AddOptions<TimeoutOptions>().Bind(context.Configuration.GetSection("Timeouts"));
+
+                            // Register typed factory for QsoMessageSender
+                            services.AddSingleton<IQsoMessageSenderFactory, QsoMessageSenderFactory>();
+                            // optionally register TimeoutOptions instance for direct injection
+                            services.AddSingleton(sp => sp.GetRequiredService<IOptions<TimeoutOptions>>().Value);
+
                             services.AddTransient<QsoCollectorForm>(); // Register your main form for DI
                         })
                         .Build();

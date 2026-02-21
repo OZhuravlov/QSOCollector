@@ -11,7 +11,7 @@ namespace QSOCollector.Network.Client
 {
     public class QsoMessageSender
     {
-        private const int responseTimeoutMs = 5000;
+        // timeouts are configurable via environment variables (see TimeoutSettings)
 
         private readonly string serverIp;
         private readonly int serverPort;
@@ -19,10 +19,11 @@ namespace QSOCollector.Network.Client
         private readonly DbRepository dbRepository;
         private readonly ClientProgressUpdater progressUpdater;
         private readonly CancellationTokenSource cancellationTokenSource;
-        private TcpClientInstance? tcpClient;
+        private TcpClientInstance? tcpClient = null;
+        private readonly TimeoutOptions timeoutOptions;
 
         public QsoMessageSender(string serverIp, int serverPort, BlockingCollection<QsoMessage> qsoMessageQueue,
-            DbRepository dbRepository, ClientProgressUpdater progressUpdater, CancellationTokenSource cancellationTokenSource)
+            DbRepository dbRepository, ClientProgressUpdater progressUpdater, CancellationTokenSource cancellationTokenSource, TimeoutOptions timeoutOptions)
         {
             this.serverIp = serverIp;
             this.serverPort = serverPort;
@@ -30,26 +31,31 @@ namespace QSOCollector.Network.Client
             this.dbRepository = dbRepository;
             this.progressUpdater = progressUpdater;
             this.cancellationTokenSource = cancellationTokenSource;
-            try
-            {
-                tcpClient = new TcpClientInstance(serverIp, serverPort, progressUpdater);
-                progressUpdater.UpdateServerStatus("Active", null);
-            }
-            catch (SocketException ex)
-            {
-                tcpClient = null;
-                progressUpdater.UpdateServerStatus("Unavailable", $"Unexpected error while creating QSO sender: {ex.Message}");
-            }
+            this.timeoutOptions = timeoutOptions ?? new TimeoutOptions();
         }
 
-        public bool IsConnected()
+        /// <summary>
+        /// Ensure there's an active connection to the server. Attempts to connect if not already connected.
+        /// Returns true when connected, false otherwise.
+        /// </summary>
+        public async Task<bool> EnsureConnectedAsync()
         {
-            bool isConnected = tcpClient != null && tcpClient.IsConnected();
-            if (!isConnected)
+            try
             {
-                progressUpdater.UpdateServerStatus("Unavailable", "Not connected to server");
+                if (tcpClient == null || !tcpClient.IsConnected()) {
+                    tcpClient = await TcpClientInstance.CreateAsync(serverIp, serverPort, progressUpdater, timeoutOptions.ConnectTimeoutMs);
+                }
+                progressUpdater.UpdateServerStatus("Active", null);
+                return true;
             }
-            return isConnected;
+            catch (Exception ex)
+            {
+                try { tcpClient?.Terminate(); } catch { }
+                tcpClient = null;
+                progressUpdater.UpdateServerStatus("Unavailable", $"Cannot connect to server: {ex.Message}");
+                await Task.Delay(TimeSpan.FromSeconds(1));
+                return false;
+            }
         }
 
         public async Task Start()
@@ -61,12 +67,7 @@ namespace QSOCollector.Network.Client
                 {
                     if (!qsoMessageQueue.TryTake(out qsoMessage, 5000))
                     {
-                        if (cancellationTokenSource.IsCancellationRequested)
-                        {
-                            progressUpdater.UpdateLog("Qso Message handler has been stopped");
-                            return;
-                        }
-                        await SendToServer(new() { Source = "TEST" });
+                        await SendHeartBeat();
                         continue;
                     }
                 }
@@ -78,6 +79,7 @@ namespace QSOCollector.Network.Client
 
                 try
                 {
+                    dbRepository.SaveRawQso(qsoMessage);
                     if (cancellationTokenSource.IsCancellationRequested)
                     {
                         HandleServerConnectionError(qsoMessage, "Client to be stopped requested");
@@ -97,6 +99,16 @@ namespace QSOCollector.Network.Client
             }
         }
 
+        private async Task SendHeartBeat()
+        {
+            if (cancellationTokenSource.IsCancellationRequested)
+            {
+                progressUpdater.UpdateLog("Qso Message handler has been stopped");
+                return;
+            }
+            await SendToServer(new() { Source = "TEST" });
+        }
+
         private async Task SendToServer(QsoMessage qsoMessage)
         {
             string qsoMessageJson = JsonSerializer.Serialize(qsoMessage);
@@ -108,7 +120,9 @@ namespace QSOCollector.Network.Client
                 {
                     try
                     {
-                        await tcpClient.SendMessage(qsoMessageJson, responseTimeoutMs, qsoMessage.Source, qsoMessage.IsTest);
+                        bool isConnected = await EnsureConnectedAsync();
+                        if (!isConnected) throw new Exception("Server is not available");
+                        await tcpClient.SendMessage(qsoMessageJson, timeoutOptions.WriteTimeoutMs, timeoutOptions.ResponseTimeoutMs, qsoMessage.Source, qsoMessage.IsTest);
                         retry = false;
                     }
                     catch (Exception)
@@ -116,7 +130,7 @@ namespace QSOCollector.Network.Client
                         if (i-- > 0)
                         {
                             retry = true;
-                            tcpClient = new(serverIp, serverPort, progressUpdater);
+                            tcpClient = new(progressUpdater);
                             await Task.Delay(TimeSpan.FromSeconds(1));
                             continue;
                         }

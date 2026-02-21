@@ -12,6 +12,8 @@ namespace QSOCollector.Network.Server
 {
     internal class TcpServer
     {
+        public const int AcceptedTcpClientReadTimeoutSeconds = 30;
+
         private readonly IPEndPoint ipEndPoint;
         private TcpListener? listener;
         private bool running;
@@ -50,6 +52,7 @@ namespace QSOCollector.Network.Server
                 {
                     serverProgressUpdater.UpdateLog("Waiting for incoming TCP client connection...");
                     TcpClient tcpClient = await listener.AcceptTcpClientAsync(cts.Token);
+                    tcpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
                     AcceptedClient client = new(tcpClient, clientCancellationTokenSource, serverProgressUpdater);
                     IPEndPoint? remoteIpEndPoint = tcpClient.Client.RemoteEndPoint as IPEndPoint;
                     serverProgressUpdater.UpdateLog($"New client with IP {remoteIpEndPoint?.Address} connected");
@@ -88,64 +91,80 @@ namespace QSOCollector.Network.Server
                 AutoFlush = true
             };
 
-            while (true)
+            try
             {
-                string? qsoMessageJson = await r.ReadLineAsync(clientCancellationTokenSource.Token);
-                if (qsoMessageJson == null) continue;
-                QsoMessage? qsoMessage = JsonSerializer.Deserialize<QsoMessage>(qsoMessageJson);
-                if (qsoMessage == null) continue;
-
-                ServerResponse response;
-                List<Dictionary<string, string>> qsoRecords = [];
-                try
+                while (!clientCancellationTokenSource.Token.IsCancellationRequested)
                 {
-                    if (!qsoMessage.IsTest)
-                    {
-                        qsoRecords = ParseQsoMessage(qsoMessage);
-                        if (qsoRecords.Count == 0)
-                        {
-                            throw new ArgumentException("No valid QSO records found in ADIF data");
-                        }
+                    // Wait for a line from the client with both a timeout and the ability to cancel
+                    // using the linked client cancellation token. WaitAsync will throw a TimeoutException
+                    // on timeout or OperationCanceledException when the token is cancelled.
+                    string? qsoMessageJson = await r.ReadLineAsync()
+                        .WaitAsync(TimeSpan.FromSeconds(TcpServer.AcceptedTcpClientReadTimeoutSeconds), clientCancellationTokenSource.Token);
+                    if (qsoMessageJson == null) break;
 
-                        dbRepository.SaveQsoRecords(qsoRecords, isTemporary: false);
-                        serverProgressUpdater.UpdateLog($"{qsoMessage}", true);
-                        foreach (var item in qsoRecords)
+                    QsoMessage? qsoMessage = JsonSerializer.Deserialize<QsoMessage>(qsoMessageJson);
+                    if (qsoMessage == null) continue;
+
+                    ServerResponse response;
+                    List<Dictionary<string, string>> qsoRecords = [];
+                    try
+                    {
+                        if (!qsoMessage.IsTest)
                         {
-                            serverProgressUpdater.UpdateProgress(ServerProgressUpdater.ParseDateTime(item["QSO_TIME"]), item["MODE"], null);
+                            qsoRecords = ParseQsoMessage(qsoMessage);
+                            if (qsoRecords.Count == 0)
+                            {
+                                throw new ArgumentException("No valid QSO records found in ADIF data");
+                            }
+
+                            dbRepository.SaveQsoRecords(qsoRecords, isTemporary: false);
+                            serverProgressUpdater.UpdateLog($"{qsoMessage}", true);
+                            foreach (var item in qsoRecords)
+                            {
+                                serverProgressUpdater.UpdateProgress(ServerProgressUpdater.ParseDateTime(item["QSO_TIME"]), item["MODE"], null);
+                            }
+                        }
+                        response = new ServerResponse(ServerResponseStatus.Ok);
+                    }
+                    catch (SqliteException ex)
+                    {
+                        response = new ServerResponse(ServerResponseStatus.SqliteError, ex.Message);
+                    }
+                    catch (ArgumentException ex)
+                    {
+                        response = new ServerResponse(ServerResponseStatus.ArgumentError, ex.Message);
+                    }
+                    catch (Exception ex)
+                    {
+                        response = new ServerResponse(ServerResponseStatus.UnknownError, ex.Message);
+                    }
+
+                    if (qsoMessage.IsTest)
+                    {
+                        string message = $"Got server status request from {clientIPAddress}. Status: {response.Status}";
+                        serverProgressUpdater.UpdateLog(message, true);
+                    }
+                    else
+                    {
+                        foreach (var rec in qsoRecords)
+                        {
+                            string message = $"{rec["SOURCE_IP_ADDRESS"]} {rec["SOURCE_NAME"]} {rec["QSO_TIME"]} {rec["BAND"]} {rec["FREQ"]} {rec["MODE"]} {rec["CALL"]}";
+                            serverProgressUpdater.UpdateLog(message);
                         }
                     }
-                    response = new ServerResponse(ServerResponseStatus.Ok);
+                    await w.WriteLineAsync(JsonSerializer.Serialize(response));
+                    await w.FlushAsync();
                 }
-                catch (SqliteException ex)
-                {
-                    response = new ServerResponse(ServerResponseStatus.SqliteError, ex.Message);
-                }
-                catch (ArgumentException ex)
-                {
-                    response = new ServerResponse(ServerResponseStatus.ArgumentError, ex.Message);
-                }
-                catch (OperationCanceledException)
-                {
-                    clientCancellationTokenSource.Dispose();
-                    throw;
-                }
-                catch (Exception ex)
-                {
-                    response = new ServerResponse(ServerResponseStatus.UnknownError, ex.Message);
-                }
-
-                if (qsoMessage.IsTest)
-                {
-                    string message = $"Got server status request from {clientIPAddress}. Status: {response.Status}";
-                    serverProgressUpdater.UpdateLog(message, true);
-                }
-                else
-                {
-                    var rec = qsoRecords[qsoRecords.Count - 1];
-                    string message = $"{rec["QSO_TIME"]} {rec["SOURCE_IP_ADDRESS"]} {rec["SOURCE_NAME"]} {rec["MODE"]} {qsoRecords.Count} QSO added";
-                    serverProgressUpdater.UpdateLog(message);
-                }
-                await w.WriteLineAsync(JsonSerializer.Serialize(response));
+            }
+            catch (TimeoutException)
+            {
+                serverProgressUpdater.UpdateLog($"Client {clientIPAddress} disconnected by timeout");
+                client.Close();
+            }
+            catch (OperationCanceledException)
+            {
+                clientCancellationTokenSource.Dispose();
+                throw;
             }
         }
 
