@@ -398,9 +398,9 @@ namespace QSOCollector
             if (listeners == null || listeners.Count == 0)
             {
                 MessageBox.Show(
-                    "No active listener configurations found. Please configure at least one active listener.", 
-                    "No Active Listeners", 
-                    MessageBoxButtons.OK, 
+                    "No active listener configurations found. Please configure at least one active listener.",
+                    "No Active Listeners",
+                    MessageBoxButtons.OK,
                     MessageBoxIcon.Warning
                 );
                 return;
@@ -763,11 +763,6 @@ namespace QSOCollector
         {
             new ServerCleanupForm(dbRepository).ShowDialog(this);
             HandleServerCheckBoxChanged(enableServerCheckBox);
-        }
-
-        private void serverClientsButton_Click(object sender, EventArgs e)
-        {
-
         }
     }
 }

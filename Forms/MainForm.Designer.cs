@@ -68,7 +68,7 @@ namespace QSOCollector
             startClientButton = new Button();
             enableClientCheckBox = new CheckBox();
             serverTab = new TabPage();
-            serverClientsButton = new Button();
+            serverClientMonitoringButton = new Button();
             resetServerButton = new Button();
             serverShowLogDetailsCheckBox = new CheckBox();
             qsoImportButton = new Button();
@@ -529,7 +529,7 @@ namespace QSOCollector
             // 
             // serverTab
             // 
-            serverTab.Controls.Add(serverClientsButton);
+            serverTab.Controls.Add(serverClientMonitoringButton);
             serverTab.Controls.Add(resetServerButton);
             serverTab.Controls.Add(serverShowLogDetailsCheckBox);
             serverTab.Controls.Add(qsoImportButton);
@@ -549,22 +549,21 @@ namespace QSOCollector
             serverTab.Text = "Server";
             serverTab.UseVisualStyleBackColor = true;
             // 
-            // serverClientsButton
+            // serverClientMonitoringButton
             // 
-            serverClientsButton.BackColor = Color.Transparent;
-            serverClientsButton.Enabled = false;
-            serverClientsButton.FlatStyle = FlatStyle.System;
-            serverClientsButton.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            serverClientsButton.ForeColor = SystemColors.ControlText;
-            serverClientsButton.Location = new Point(180, 420);
-            serverClientsButton.Margin = new Padding(3, 2, 3, 2);
-            serverClientsButton.Name = "serverClientsButton";
-            serverClientsButton.Size = new Size(96, 30);
-            serverClientsButton.TabIndex = 13;
-            serverClientsButton.Text = "Monitoring";
-            serverClientsButton.UseVisualStyleBackColor = false;
-            serverClientsButton.Visible = false;
-            serverClientsButton.Click += serverClientsButton_Click;
+            serverClientMonitoringButton.BackColor = Color.Transparent;
+            serverClientMonitoringButton.Enabled = false;
+            serverClientMonitoringButton.FlatStyle = FlatStyle.System;
+            serverClientMonitoringButton.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            serverClientMonitoringButton.ForeColor = SystemColors.ControlText;
+            serverClientMonitoringButton.Location = new Point(180, 420);
+            serverClientMonitoringButton.Margin = new Padding(3, 2, 3, 2);
+            serverClientMonitoringButton.Name = "serverClientMonitoringButton";
+            serverClientMonitoringButton.Size = new Size(96, 30);
+            serverClientMonitoringButton.TabIndex = 13;
+            serverClientMonitoringButton.Text = "Monitoring";
+            serverClientMonitoringButton.UseVisualStyleBackColor = false;
+            serverClientMonitoringButton.Visible = false;
             // 
             // resetServerButton
             // 
@@ -1013,6 +1012,6 @@ namespace QSOCollector
         private DataGridViewTextBoxColumn lastQsoTime;
         private DataGridViewTextBoxColumn lastExportedQsoTime;
         private Button resetServerButton;
-        private Button serverClientsButton;
+        private Button serverClientMonitoringButton;
     }
 }

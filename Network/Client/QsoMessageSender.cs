@@ -86,6 +86,7 @@ namespace QSOCollector.Network.Client
                     }
                     else
                     {
+                        dbRepository.SaveRawQso(qsoMessage);
                         await SendToServer(qsoMessage);
                     }
                 }
@@ -129,6 +130,8 @@ namespace QSOCollector.Network.Client
                         if (i-- > 0)
                         {
                             retry = true;
+                            tcpClient = new(progressUpdater);
+                            await Task.Delay(TimeSpan.FromSeconds(1));
                             continue;
                         }
                         throw;

@@ -185,7 +185,7 @@ namespace QSOCollector.Network.Server
                     // Log parsed records
                     foreach (var record in qsoRecords)
                     {
-                        StringBuilder logMessage = new StringBuilder();
+                        StringBuilder logMessage = new();
                         foreach (var kv in record)
                         {
                             logMessage.AppendLine(kv.Key + ": " + kv.Value);

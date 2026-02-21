@@ -121,7 +121,7 @@ namespace QSOCollector.Network.Client
                 // when other checks (Poll/Available) are inconclusive.
                 socket.Send(Array.Empty<byte>());
                 return true;
-            }
+        }
             catch (SocketException)
             {
                 return false;
@@ -163,13 +163,14 @@ namespace QSOCollector.Network.Client
                 return;
             }
             catch (Exception ex)
-            {
+                {
                 progressUpdater.UpdateLog($"Error sending message to server: {ex.Message}");
                 throw;
             }
 
             if (!isTest)
             {
+                w.WriteLine(qsoMessage);
                 progressUpdater.UpdateProgress(false, true, false, false, $"QSO from {source} sent to server");
             }
             else
@@ -253,9 +254,9 @@ namespace QSOCollector.Network.Client
                 catch { }
                 try
                 {
-                    client.Close();
-                    client.Dispose();
-                }
+                client.Close();
+                client.Dispose();
+            }
                 catch { }
             }
         }
