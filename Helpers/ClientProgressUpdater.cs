@@ -57,7 +57,7 @@ namespace QSOCollector.Helpers
                 {
                     clientLog.BeginInvoke((MethodInvoker)delegate
                     {
-                        clientLog.AppendText($"{DateTime.UtcNow:dd-MMM hh:mm:ss}Z {message}\r\n");
+                        clientLog.AppendText($"{DateTime.UtcNow:dd-MMM HH:mm:ss}Z {message}\r\n");
                     });
                 }
             }
@@ -135,7 +135,7 @@ namespace QSOCollector.Helpers
                         serverStatusLabel.ForeColor = Color.Green;
                         if (serverStatusLabel.Text != "Active")
                         {
-                            clientLog.AppendText($"{DateTime.UtcNow:dd-MMM hh:mm:ss}Z Server is available now\r\n");
+                            clientLog.AppendText($"{DateTime.UtcNow:dd-MMM HH:mm:ss}Z Server is available now\r\n");
                         }
                     }
                     else if (status == "Unavailable")

@@ -36,7 +36,7 @@ namespace QSOCollector.Helpers
             {
                 serverLog.BeginInvoke((MethodInvoker)delegate
                 {
-                    serverLog.AppendText($"{DateTime.UtcNow:dd-MMM hh:mm:ss}Z {message}\r\n");
+                    serverLog.AppendText($"{DateTime.UtcNow:dd-MMM HH:mm:ss}Z {message}\r\n");
                 });
             }
             ;
