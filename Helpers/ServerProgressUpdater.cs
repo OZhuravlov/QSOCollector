@@ -39,7 +39,6 @@ namespace QSOCollector.Helpers
                     serverLog.AppendText($"{DateTime.UtcNow:dd-MMM HH:mm:ss}Z {message}\r\n");
                 });
             }
-            ;
         }
 
         public static DateTime ParseDateTime(string dateTimeString, string format = "yyyy-MM-dd HH:mm:ss")

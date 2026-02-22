@@ -50,6 +50,19 @@ namespace QSOCollector.Network.Server
                 {
                     serverProgressUpdater.UpdateLog("Waiting for incoming TCP client connection...");
                     TcpClient tcpClient = await listener.AcceptTcpClientAsync(cts.Token);
+                    Socket socket = tcpClient.Client;
+                    /*
+                    uint on = 1;
+                    uint keepAliveTime = 30000; // 30 seconds
+                    uint keepAliveInterval = 1000; // 1 second
+                    byte[] inValue = new byte[12];
+                    BitConverter.GetBytes(on).CopyTo(inValue, 0);
+                    BitConverter.GetBytes(keepAliveTime).CopyTo(inValue, 4);
+                    BitConverter.GetBytes(keepAliveInterval).CopyTo(inValue, 8);
+                    */
+                    // 30 seconds idle time and 1 second interval
+                    socket.IOControl(IOControlCode.KeepAliveValues, [1, 0, 0, 0, 0xE8, 0x03, 0x00, 0x00, 0xE8, 0x03, 0x00, 0x00], null);
+
                     AcceptedClient client = new(tcpClient, clientCancellationTokenSource, serverProgressUpdater);
                     IPEndPoint? remoteIpEndPoint = tcpClient.Client.RemoteEndPoint as IPEndPoint;
                     serverProgressUpdater.UpdateLog($"New client with IP {remoteIpEndPoint?.Address} connected");
@@ -142,10 +155,11 @@ namespace QSOCollector.Network.Server
                 else
                 {
                     var rec = qsoRecords[qsoRecords.Count - 1];
-                    string message = $"{rec["QSO_TIME"]} {rec["SOURCE_IP_ADDRESS"]} {rec["SOURCE_NAME"]} {rec["MODE"]} {qsoRecords.Count} QSO added";
+                    string message = $"{rec["SOURCE_IP_ADDRESS"]} {rec["SOURCE_NAME"]} {rec["QSO_TIME"]} {rec["BAND"]} {rec["FREQ"]} {rec["MODE"]} {rec["CALL"]}";
                     serverProgressUpdater.UpdateLog(message);
                 }
                 await w.WriteLineAsync(JsonSerializer.Serialize(response));
+                await w.FlushAsync();
             }
         }
 

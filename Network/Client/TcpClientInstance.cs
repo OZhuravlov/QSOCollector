@@ -19,6 +19,18 @@ namespace QSOCollector.Network.Client
             client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseUnicastPort, true);
             client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
             client.Connect(ipAddress, port);
+            Socket socket = client.Client;
+            /*
+            uint on = 1;
+            uint keepAliveTime = 30000; // 30 seconds
+            uint keepAliveInterval = 1000; // 1 second
+            byte[] inValue = new byte[12];
+            BitConverter.GetBytes(on).CopyTo(inValue, 0);
+            BitConverter.GetBytes(keepAliveTime).CopyTo(inValue, 4);
+            BitConverter.GetBytes(keepAliveInterval).CopyTo(inValue, 8);
+            */
+            // 30 seconds idle time and 1 second interval
+            socket.IOControl(IOControlCode.KeepAliveValues, [1, 0, 0, 0, 0xE8, 0x03, 0x00, 0x00, 0xE8, 0x03, 0x00, 0x00], null);
             this.progressUpdater = progressUpdater;
         }
 
