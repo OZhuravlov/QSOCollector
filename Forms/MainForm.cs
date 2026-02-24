@@ -5,6 +5,7 @@ using QSOCollector.Helpers;
 using QSOCollector.Models;
 using QSOCollector.Network.Client;
 using QSOCollector.Network.Server;
+using Serilog;
 using System.Collections.Concurrent;
 using System.Data;
 using System.Data.SQLite;
@@ -12,11 +13,14 @@ using System.Globalization;
 using System.Net.Sockets;
 using System.Reflection;
 using System.Text;
+using System.Text.Json;
 
 namespace QSOCollector
 {
     public partial class QsoCollectorForm : Form
     {
+        private readonly ILogger log = Log.ForContext<QsoCollectorForm>();
+
         private readonly string connectionString;
         private readonly DbRepository dbRepository;
         private readonly StartupParams startupParams;
@@ -76,26 +80,39 @@ namespace QSOCollector
 
         private void HandleStartupParams(StartupParams startupParams)
         {
+            if (log.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                string startupParamsJson = JsonSerializer.Serialize(startupParams);
+                log.Information("Handling application startup parameters: {startupParams}", startupParamsJson);
+            }
+            
             enableDebugWhenAutoStartCheckbox.Checked = startupParams.Debug;
             if (startupParams.StartServer)
             {
+                string logMessage = "Auto-starting server requested";
                 if (startupParams.Debug)
                 {
+                    log.Information("{message} with Log Details enabled", logMessage);
                     serverShowLogDetailsCheckBox.Checked = true;
+                }
+                else { 
+                    log.Information(logMessage);
                 }
 
                 Thread.Sleep(2000);
                 AutoStartServer();
                 if (!isLocalServerRunning)
                 {
+                    log.Warning("Server hasn't been auto-started");
                     startupParams.IsQuiet = false;
                 }
             }
 
             if (startupParams.StartClient)
             {
+                string logMessage = "Auto-starting client requested";
                 if (startupParams.Debug)
                 {
+                    log.Information("{message} with Log Details enabled", logMessage);
                     clientLogDetailsCheckBox.Checked = true;
                 }
 
@@ -103,6 +120,7 @@ namespace QSOCollector
                 AutoStartClient();
                 if (!isLocalClientRunning)
                 {
+                    log.Warning("Client hasn't been auto-started");
                     startupParams.IsQuiet = false;
                 }
             }
@@ -123,12 +141,23 @@ namespace QSOCollector
             if (startClientButton.Enabled)
             {
                 mainTabControl.SelectedTab = clientTab;
-                StartClientButton_Click(startClientButton, EventArgs.Empty);
+
+                try
+                {
+                    StartClientButton_Click(startClientButton, EventArgs.Empty);
+                }
+                catch (Exception ex) { 
+                    log.Error(ex, "Error while auto-starting Client");
+                    throw;
+                }
+                
                 clientTab.Refresh();
             }
             else
             {
-                MessageBox.Show("Cannot start client automatically because Client is not enabled", "Cannot Start Client", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                string message = "Cannot start client automatically because Client is not enabled";
+                log.Error(message);
+                MessageBox.Show(message, "Cannot Start Client", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
 
@@ -139,38 +168,57 @@ namespace QSOCollector
             ServerPortTextBox_TextChanged(serverPortTextBox, EventArgs.Empty);
             if (startServerButton.Enabled)
             {
-                serverLogTextBox.AppendText("Auto-starting server...\r\n");
+                string logMessage = "Auto-starting server...";
+                log.Information(logMessage);
+                serverLogTextBox.AppendText($"{logMessage}\r\n");
                 mainTabControl.SelectedTab = serverTab;
-                StartServerButton_Click(startServerButton, EventArgs.Empty);
+
+                try {
+                    StartServerButton_Click(startServerButton, EventArgs.Empty);
+                } catch (Exception ex) {
+                    log.Error(ex, "Error while auto-staring Server");
+                    throw;
+                }
+                
                 serverTab.Refresh();
             }
             else
             {
-                MessageBox.Show("Cannot start server automatically because Server is not enabled", "Cannot Start Server", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                string message = "Cannot start server automatically because Server is not enabled";
+                log.Error(message);
+                MessageBox.Show(message, "Cannot Start Server", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
 
         private void QsoCollectorForm_FormClosing(object sender, FormClosingEventArgs e)
         {
+            log.Information("Main form closing, checking if client or server are still running");
             if (isLocalClientRunning)
             {
-                DialogResult result = MessageBox.Show("The client is still running. Are you sure you want to exit?", "Confirm Exit", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+                string logMessage = "The client is still running.";
+                DialogResult result = MessageBox.Show($"{logMessage} Are you sure you want to exit?", "Confirm Exit", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
                 if (result != DialogResult.Yes)
                 {
                     e.Cancel = true;
+                } else { 
+                    log.Warning("User confirmed to exit. Client will be stopped");
                 }
             }
 
             if (!e.Cancel && isLocalServerRunning)
             {
-                DialogResult result = MessageBox.Show("The server is still running. Are you sure you want to exit?", "Confirm Exit", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+                string logMessage = "The server is still running.";
+                DialogResult result = MessageBox.Show($"{logMessage} Are you sure you want to exit?", "Confirm Exit", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
                 if (result != DialogResult.Yes)
                 {
                     e.Cancel = true;
+                } else { 
+                    log.Warning("User confirmed to exit. Server will be stopped");
                 }
             }
             if (!e.Cancel)
             {
+                log.Information("Saving form values to DB before exit");
                 SaveFormValuesToDB();
             }
         }
@@ -184,23 +232,27 @@ namespace QSOCollector
         {
             if (serverCheckBox == null)
             {
+                log.Warning("HandleServerCheckBoxChanged was called with null CheckBox");
                 return;
             }
             HandleCheckBoxChanged(serverCheckBox);
             if (serverCheckBox.Checked)
             {
+                log.Verbose("Server enabled, populating QSO Amount DataGridView");
                 StopServer();
                 serverQsoAmountsDataGridView.DataSource = serverQsoAmountsBindingSource;
                 PopulateServerQsoAmountDataGridView();
             }
             else
             {
+                log.Verbose("Server disabled, clearing log textbox and QSO Amount DataGridView");
                 serverLogTextBox.Clear();
                 ClearDataForServerQsoAmountDataGridView();
             }
 
             if (serverCheckBox.Checked && string.IsNullOrEmpty(serverPortTextBox.Text))
             {
+                log.Debug("Server enabled but port is not set");
                 ButtonStyleHandler.Update(startServerButton, false);
                 serverPortTextBox.Focus();
             }
@@ -241,15 +293,14 @@ namespace QSOCollector
             {
                 return;
             }
+            log.Information("Stopping Server with UI button");
             StopServer();
         }
+
         private void StopServer()
         {
-            if (tcpServer != null)
-            {
-                tcpServer.Stop();
-                tcpServer = null;
-            }
+            tcpServer?.Stop();
+            tcpServer = null;
             enableServerCheckBox.Enabled = true;
             serverPortTextBox.Enabled = true;
             startServerButton.Text = "Start Server";
@@ -262,6 +313,7 @@ namespace QSOCollector
 
         private void StartServerButton_Click(object sender, EventArgs e)
         {
+            log.Information("Starting Server ...");
             int port = Int32.Parse(serverPortTextBox.Text);
             StartServer(port);
             enableServerCheckBox.Enabled = false;
@@ -271,7 +323,9 @@ namespace QSOCollector
             ButtonStyleHandler.Update(startServerButton, false, Color.Lavender);
             ButtonStyleHandler.Update(stopServerButton, true, Color.RosyBrown);
             ButtonStyleHandler.Update(resetServerButton, false, Color.Lavender);
-            serverLogTextBox.AppendText("Server started...\r\n");
+            string logMessage = $"Server started on port {port}";
+            log.Information(logMessage);
+            serverLogTextBox.AppendText($"{logMessage}\r\n");
         }
 
         private async void StartServer(int port)
@@ -288,7 +342,9 @@ namespace QSOCollector
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Cannot start server on port {port}: {ex.Message}", "Cannot Start Server", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                string message = $"Cannot start server on port {port}";
+                log.Error(ex, message);
+                MessageBox.Show($"{message}: {ex.Message}", "Cannot Start Server", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 StopServer();
                 throw;
             }
@@ -312,6 +368,7 @@ namespace QSOCollector
             string selectCommand = "SELECT q.mode QsoAmountMode, COUNT(CASE WHEN q.qso_time >= current_date THEN 1 END) TodayQsoAmount, COUNT(*) TotalQsoAmount, COUNT(e.id) ExportedQsoAmount, MAX(q.qso_time) LastQsoTime, MAX(CASE WHEN e.id IS NOT NULL THEN q.qso_time END) LastExportedQsoTime FROM qsodata q LEFT JOIN adif_export e ON q.export_id = e.id AND e.is_confirmed = true WHERE q.is_temporary = false GROUP BY q.mode UNION ALL SELECT 'Total', COUNT(CASE WHEN q.qso_time >= current_date THEN 1 END), COUNT(*), COUNT(e.id), MAX(q.qso_time), MAX(e.end_time) FROM qsodata q LEFT JOIN adif_export e ON q.export_id = e.id AND e.is_confirmed = true WHERE q.is_temporary = false";
             try
             {
+                log.Debug("Populate QSO Amount table");
                 serverQsoAmountsDataAdapter = new SQLiteDataAdapter(selectCommand, connectionString);
                 SQLiteCommandBuilder commandBuilder = new(serverQsoAmountsDataAdapter);
                 ClearDataForServerQsoAmountDataGridView();
@@ -321,12 +378,15 @@ namespace QSOCollector
             }
             catch (SQLiteException ex)
             {
-                MessageBox.Show($"Can't retrieve data from DB: {ex.Message}");
+                string message = "Can't retrieve data from DB";
+                log.Error(ex, message);
+                MessageBox.Show($"{message}: {ex.Message}");
             }
         }
 
         private void ClearDataForServerQsoAmountDataGridView()
         {
+            log.Verbose("Clearing QSO Amount table data");
             serverQsoAmountDataTable?.Rows.Clear();
         }
 
@@ -363,6 +423,7 @@ namespace QSOCollector
         {
             if (clientCheckBox == null)
             {
+                log.Warning("HandleClientCheckBoxChanged was called with null CheckBox");
                 return;
             }
             HandleCheckBoxChanged(clientCheckBox);
@@ -373,6 +434,7 @@ namespace QSOCollector
             }
             else
             {
+                log.Verbose("Client disabled, clearing log textbox");
                 clientLogTextBox.Clear();
             }
 
@@ -565,6 +627,11 @@ namespace QSOCollector
         private void RestoreSavedFormValuesFromDB()
         {
             Dictionary<string, string?> settings = dbRepository.LoadSettings();
+            if (log.IsEnabled(Serilog.Events.LogEventLevel.Information)) { 
+                string settingsJson = JsonSerializer.Serialize(settings);
+                log.Information("Restoring Main Form setting from DB: {settings}", settingsJson);
+            }
+            
             if (settings.TryGetValue("ServerEnabled", out var serverEnabled))
                 enableServerCheckBox.Checked = Convert.ToBoolean(serverEnabled);
             if (settings.TryGetValue("ServerPort", out var serverPort))
@@ -587,6 +654,10 @@ namespace QSOCollector
             dbRepository.SaveSetting("ClientServerNameIp", clientServerNameIpTextBox.Text);
             dbRepository.SaveSetting("ClientServerPort", clientServerPortTextBox.Text);
             dbRepository.SaveSetting("AutoStart", autoStartCheckbox.Checked.ToString());
+            if (log.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                string settingsJson = JsonSerializer.Serialize(dbRepository.LoadSettings());
+                log.Information("Saved Main Form setting to DB: {Settings}", settingsJson);
+            }
         }
 
         private void ListenersConfigButton_Click(object sender, EventArgs e)
@@ -693,13 +764,22 @@ namespace QSOCollector
             RegistryKey? rk = Registry.CurrentUser.OpenSubKey("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", true);
             enableDebugWhenAutoStartCheckbox.Enabled = autoStartCheckbox.Checked;
             string? applicationName = Assembly.GetExecutingAssembly().GetName().Name;
+
+            if (string.IsNullOrEmpty(applicationName)) { 
+                log.Error("Application name is null or empty, cannot set auto-start registry key");
+                return;
+            }
+
             if (autoStartCheckbox.Checked)
             {
+                log.Information("Enabling auto-start with Windows");
                 string startupCommand = GetAppStartupCmd();
+                log.Debug("Auto-start command: {startupCommand}", startupCommand);
                 rk.SetValue(applicationName, startupCommand);
             }
             else
             {
+                log.Information("Disabling auto-start with Windows if exists");
                 rk.DeleteValue(applicationName, false);
             }
         }
@@ -729,6 +809,7 @@ namespace QSOCollector
 
         private void resetClientButton_Click(object sender, EventArgs e)
         {
+            log.Debug("Resetting Client Form called");
             SaveFormValuesToDB();
             new ClientCleanupForm(dbRepository).ShowDialog(this);
             RestoreSavedFormValuesFromDB();
@@ -742,6 +823,7 @@ namespace QSOCollector
 
         private void resetServerButton_Click(object sender, EventArgs e)
         {
+            log.Debug("Resetting Server Form called");
             new ServerCleanupForm(dbRepository).ShowDialog(this);
             HandleServerCheckBoxChanged(enableServerCheckBox);
         }

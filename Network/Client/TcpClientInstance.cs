@@ -1,5 +1,6 @@
 ﻿using QSOCollector.Helpers;
 using QSOCollector.Models;
+using Serilog;
 using System.Net.Sockets;
 using System.Text.Json;
 
@@ -7,10 +8,12 @@ namespace QSOCollector.Network.Client
 {
     internal class TcpClientInstance
     {
+        private readonly ILogger log = Log.ForContext<TcpClientInstance>();
+
         private readonly TcpClient? client;
         private NetworkStream? stream;
-        private StreamReader? r;
-        private StreamWriter? w;
+        private StreamReader? reader;
+        private StreamWriter? writer;
         private readonly ClientProgressUpdater progressUpdater;
 
         public TcpClientInstance(string ipAddress, int port, ClientProgressUpdater progressUpdater)
@@ -39,10 +42,11 @@ namespace QSOCollector.Network.Client
             return client != null && client.Connected;
         }
 
-        public async Task SendMessage(string qsoMessage, int responseDelay, string source, bool isTest)
+        public async Task SendMessage(QsoMessage qsoMessage, int responseDelay)
         {
-            qsoMessage = qsoMessage.Replace("\r\n", string.Empty).Replace("\n", string.Empty).Trim();
-            if (string.IsNullOrEmpty(qsoMessage)) return;
+            string qsoMessageJson = JsonSerializer.Serialize(qsoMessage);
+            qsoMessageJson = qsoMessageJson.Replace("\r\n", string.Empty).Replace("\n", string.Empty).Trim();
+            if (string.IsNullOrEmpty(qsoMessageJson)) return;
 
             if (!IsConnected())
             {
@@ -52,38 +56,48 @@ namespace QSOCollector.Network.Client
             if (stream == null)
             {
                 stream = client.GetStream();
-                r = new StreamReader(stream);
-                w = new StreamWriter(stream)
+                reader = new StreamReader(stream);
+                writer = new StreamWriter(stream)
                 {
                     AutoFlush = true
                 };
             }
 
-            w.WriteLine(qsoMessage);
-            if (!isTest)
+            writer.WriteLine(qsoMessageJson);
+            if (!qsoMessage.IsTest)
             {
-                progressUpdater.UpdateProgress(false, true, false, false, $"QSO from {source} sent to server");
+                string logMessage = $"QSO from {qsoMessage.Source} sent to server";
+                log.Information(logMessage);
+                log.Debug("Sent message: {qsoMessage}", qsoMessage.OriginalQsoData);
+                progressUpdater.UpdateProgress(false, true, false, false, logMessage);
             }
             else
             {
-                progressUpdater.UpdateLog("Server status requested", true);
+                string logMessage = "Server status requested";
+                log.Debug(logMessage);
+                progressUpdater.UpdateLog(logMessage, true);
             }
 
-            string? responseMessage = await r.ReadLineAsync(new CancellationTokenSource(responseDelay).Token);
+            string? responseMessage = await reader.ReadLineAsync(new CancellationTokenSource(responseDelay).Token);
             ServerResponse serverResponse = JsonSerializer.Deserialize<ServerResponse>(responseMessage);
             if (serverResponse == null)
             {
-                progressUpdater.UpdateLog($"Server response timeout");
+                string logMessage = "Server response timeout";
+                log.Warning(logMessage);
+                progressUpdater.UpdateLog(logMessage);
                 return;
             }
 
             if (serverResponse.Status != ServerResponseStatus.Ok)
             {
-                progressUpdater.UpdateLog($"Server returned an error: {responseMessage}");
+                string logMessage = $"Server returned an error: {responseMessage}";
+                log.Error(logMessage);
+                progressUpdater.UpdateLog(logMessage);
                 return;
             }
 
-            string responseDetailedMessage = isTest ? $"Server status: {serverResponse.Status}" : $"QSO from {source} processed by server";
+            string responseDetailedMessage = qsoMessage.IsTest ? $"Server status: {serverResponse.Status}" : $"QSO from {qsoMessage.Source} processed by server";
+            log.Debug(responseDetailedMessage);
             progressUpdater.UpdateLog(responseDetailedMessage, true);
             progressUpdater.UpdateServerStatus("Active", null);
         }
@@ -92,6 +106,7 @@ namespace QSOCollector.Network.Client
         {
             if (client != null)
             {
+                log.Information("Terminating TCP client connection");
                 client.Close();
                 client.Dispose();
             }

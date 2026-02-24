@@ -3,6 +3,7 @@ using QSOCollector.Data;
 using QSOCollector.Helpers;
 using QSOCollector.Models;
 using QSOCollector.Parsers;
+using Serilog;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -12,6 +13,8 @@ namespace QSOCollector.Network.Server
 {
     internal class TcpServer
     {
+        private readonly ILogger log = Log.ForContext<TcpServer>();
+
         private readonly IPEndPoint ipEndPoint;
         private TcpListener? listener;
         private bool running;
@@ -24,7 +27,9 @@ namespace QSOCollector.Network.Server
             ipEndPoint = new(IPAddress.Any, port);
             cts = new CancellationTokenSource();
             this.serverProgressUpdater = serverProgressUpdater;
-            this.serverProgressUpdater.UpdateLog($"TCP Server initialized on port {port}");
+            string logMessage = $"TCP Server initialized on port {port}";
+            log.Information(logMessage);
+            this.serverProgressUpdater.UpdateLog(logMessage);
         }
 
         public void Stop()
@@ -65,20 +70,25 @@ namespace QSOCollector.Network.Server
 
                     AcceptedClient client = new(tcpClient, clientCancellationTokenSource, serverProgressUpdater);
                     IPEndPoint? remoteIpEndPoint = tcpClient.Client.RemoteEndPoint as IPEndPoint;
-                    serverProgressUpdater.UpdateLog($"New client with IP {remoteIpEndPoint?.Address} connected");
+                    string logMessage = $"New client with IP {remoteIpEndPoint?.Address} connected";
+                    log.Information(logMessage);
+                    serverProgressUpdater.UpdateLog(logMessage);
                     clients.Add(client);
                     Task clientTask = client.Run(connectionString); //don't await
                     clientTask.ContinueWith(t => clients.Remove(client));
                 }
                 catch (OperationCanceledException)
                 {
+                    log.Information("Stopping of TCP server requested");
                     listener.Stop();
                     listener.Dispose();
                     break;
                 }
-                catch (Exception e)
+                catch (Exception ex)
                 {
-                    serverProgressUpdater.UpdateLog($"Error accepting TCP client: {e.Message}", true);
+                    string logMessage = $"Error accepting TCP client";
+                    log.Error(ex, logMessage);
+                    serverProgressUpdater.UpdateLog($"{logMessage}: {ex.Message}", true);
                     listener.Stop();
                     listener.Dispose();
                     throw;
@@ -89,6 +99,8 @@ namespace QSOCollector.Network.Server
 
     internal class AcceptedClient(TcpClient client, CancellationTokenSource clientCancellationTokenSource, ServerProgressUpdater serverProgressUpdater)
     {
+        private readonly ILogger log = Log.ForContext<AcceptedClient>();
+
         private readonly NetworkStream stream = client.GetStream();
         private readonly string clientIPAddress = ((IPEndPoint)client.Client.RemoteEndPoint).Address.ToString();
 
@@ -117,47 +129,56 @@ namespace QSOCollector.Network.Server
                         qsoRecords = ParseQsoMessage(qsoMessage);
                         if (qsoRecords.Count == 0)
                         {
+                            log.Warning("No valid QSO records found in the message from client {ClientIP}, source {Source}, format {Format}, data {Data}", 
+                                clientIPAddress, 
+                                qsoMessage.Source,
+                                qsoMessage.OriginalFormat,
+                                qsoMessage.OriginalQsoData
+                                );
                             throw new ArgumentException("No valid QSO records found in ADIF data");
                         }
 
                         dbRepository.SaveQsoRecords(qsoRecords, isTemporary: false);
                         serverProgressUpdater.UpdateLog($"{qsoMessage}", true);
-                        foreach (var item in qsoRecords)
+                        foreach (var rec in qsoRecords)
                         {
-                            serverProgressUpdater.UpdateProgress(ServerProgressUpdater.ParseDateTime(item["QSO_TIME"]), item["MODE"], null);
+                            string qsoInfo = $"{rec["SOURCE_IP_ADDRESS"]} {rec["SOURCE_NAME"]} {rec["QSO_TIME"]} {rec["BAND"]} {rec["FREQ"]} {rec["MODE"]} {rec["CALL"]}";
+                            log.Information("Saved QSO: {qsoInfo}", qsoInfo);
+                            serverProgressUpdater.UpdateLog(qsoInfo);
+                            serverProgressUpdater.UpdateProgress(ServerProgressUpdater.ParseDateTime(rec["QSO_TIME"]), rec["MODE"], null);
                         }
                     }
                     response = new ServerResponse(ServerResponseStatus.Ok);
                 }
                 catch (SqliteException ex)
                 {
+                    log.Error("SQLite error while processing message from client {ClientIP}: {ErrorMessage}", clientIPAddress, ex.Message);
                     response = new ServerResponse(ServerResponseStatus.SqliteError, ex.Message);
                 }
                 catch (ArgumentException ex)
                 {
+                    log.Error("Argument error while processing message from client {ClientIP}: {ErrorMessage}", clientIPAddress, ex.Message);
                     response = new ServerResponse(ServerResponseStatus.ArgumentError, ex.Message);
                 }
                 catch (OperationCanceledException)
                 {
+                    log.Information("Client {ClientIP} disconnected caused by Server stopping requested", clientIPAddress);
                     clientCancellationTokenSource.Dispose();
                     throw;
                 }
                 catch (Exception ex)
                 {
+                    log.Error("Unknown error while processing message from client {ClientIP}: {ErrorMessage}", clientIPAddress, ex.Message);
                     response = new ServerResponse(ServerResponseStatus.UnknownError, ex.Message);
                 }
 
                 if (qsoMessage.IsTest)
                 {
                     string message = $"Got server status request from {clientIPAddress}. Status: {response.Status}";
+                    log.Debug(message);
                     serverProgressUpdater.UpdateLog(message, true);
                 }
-                else
-                {
-                    var rec = qsoRecords[qsoRecords.Count - 1];
-                    string message = $"{rec["SOURCE_IP_ADDRESS"]} {rec["SOURCE_NAME"]} {rec["QSO_TIME"]} {rec["BAND"]} {rec["FREQ"]} {rec["MODE"]} {rec["CALL"]}";
-                    serverProgressUpdater.UpdateLog(message);
-                }
+
                 await w.WriteLineAsync(JsonSerializer.Serialize(response));
                 await w.FlushAsync();
             }
@@ -177,7 +198,6 @@ namespace QSOCollector.Network.Server
 
                 if (serverProgressUpdater.IsDebug)
                 {
-                    // Log parsed records
                     foreach (var record in qsoRecords)
                     {
                         StringBuilder logMessage = new();
@@ -186,6 +206,7 @@ namespace QSOCollector.Network.Server
                             logMessage.AppendLine(kv.Key + ": " + kv.Value);
                         }
                         logMessage.AppendLine("----");
+                        log.Debug("Parsed QSO record from client {ClientIP}:\n{Record}", clientIPAddress, logMessage);
                         serverProgressUpdater.UpdateLog(logMessage.ToString(), true);
                     }
                     serverProgressUpdater.UpdateLog("----", true);
@@ -194,8 +215,10 @@ namespace QSOCollector.Network.Server
             catch (Exception ex)
             {
                 // Handle parsing errors
-                serverProgressUpdater.UpdateLog($"ADIF parsing error: {ex.Message}", true);
-                throw new ArgumentException("ADIF parsing error", ex);
+                string logMessage = "ADIF parsing error";
+                log.Error(ex, logMessage);
+                serverProgressUpdater.UpdateLog($"{logMessage}: {ex.Message}", true);
+                throw new ArgumentException(logMessage, ex);
             }
             return qsoRecords;
         }

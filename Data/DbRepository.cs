@@ -1,5 +1,6 @@
 using Microsoft.Data.Sqlite;
 using QSOCollector.Models;
+using Serilog;
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
@@ -8,6 +9,8 @@ namespace QSOCollector.Data
 {
     public class DbRepository
     {
+        private readonly ILogger log = Log.ForContext<DbRepository>();
+
         private const string getTableColumnsSql = "SELECT UPPER(p.name) name, UPPER(p.type) type FROM sqlite_master m JOIN pragma_table_info(m.name) p WHERE lower(m.name) = lower(@tablename) and not p.pk";
         private const string selectSettingsSql = "SELECT key, value FROM settings";
         private const string insertSettingsSql = "INSERT OR REPLACE INTO settings (key, value) VALUES (@key, @value)";
@@ -32,7 +35,8 @@ namespace QSOCollector.Data
 
         public DbRepository(string dbConnectionString)
         {
-            connectionString = dbConnectionString;
+            this.connectionString = dbConnectionString;
+            log.Debug("Initialized DbRepository with connection string: {connectionString}", dbConnectionString);
         }
 
         public Dictionary<string, string?> LoadSettings()
@@ -75,6 +79,7 @@ namespace QSOCollector.Data
 
         public List<ListenerConfig> GetListenerConfigs()
         {
+            log.Debug("Loading listener configurations from database");
             using var connection = new SqliteConnection(connectionString);
             connection.Open();
             using var command = connection.CreateCommand();
@@ -85,16 +90,18 @@ namespace QSOCollector.Data
 
         public void ReplaceListenerConfigs(List<ListenerConfig> configs)
         {
+            log.Debug("Replacing listener configurations in database with {count} configs", configs.Count);
             using var connection = new SqliteConnection(connectionString);
             connection.Open();
             using var transaction = connection.BeginTransaction();
-            DeleteListenerConfigs(connection, configs);
+            CleanupListenerConfigs(connection, configs);
             SaveListenerConfigs(connection, configs);
             transaction.Commit();
         }
 
         public void CleanClientQsos()
         {
+            log.Debug("Cleaning temporary QSO data from database");
             using var connection = new SqliteConnection(connectionString);
             connection.Open();
             using var transaction = connection.BeginTransaction();
@@ -106,6 +113,7 @@ namespace QSOCollector.Data
 
         public void CleanupServerQsoData()
         {
+            log.Warning("Cleaning server QSO data from database. This will delete all non-temporary QSOs and all import and export records. This action cannot be undone.");
             using var connection = new SqliteConnection(connectionString);
             connection.Open();
             using var transaction = connection.BeginTransaction();
@@ -121,19 +129,9 @@ namespace QSOCollector.Data
             transaction.Commit();
         }
 
-        public void CleanImports()
-        {
-            using var connection = new SqliteConnection(connectionString);
-            connection.Open();
-            using var transaction = connection.BeginTransaction();
-            using var command = connection.CreateCommand();
-            command.CommandText = "DELETE FROM qsodata WHERE is_temporary = 0";
-            command.ExecuteNonQuery();
-            transaction.Commit();
-        }
-
         public void CleanRawQsoData()
         {
+            log.Warning("Cleaning client raw QSO data from database");
             using var connection = new SqliteConnection(connectionString);
             connection.Open();
             using var transaction = connection.BeginTransaction();
@@ -143,7 +141,7 @@ namespace QSOCollector.Data
             transaction.Commit();
         }
 
-        private static void DeleteListenerConfigs(SqliteConnection connection, List<ListenerConfig> configs)
+        private static void CleanupListenerConfigs(SqliteConnection connection, List<ListenerConfig> configs)
         {
             using var command = connection.CreateCommand();
             command.CommandText = "DELETE FROM listeners";
@@ -204,6 +202,7 @@ namespace QSOCollector.Data
 
         public void ForceImportQsoRecords(List<Dictionary<string, string?>> dups, string folder, string fileName, Func<string, Task> progressUpdater)
         {
+            log.Information("Force saving duplicate QSOs to database. This will delete all duplicates of the QSOs to be imported and then save the QSOs again. This action cannot be undone.");
             using var connection = new SqliteConnection(connectionString);
             connection.Open();
             using var transaction = connection.BeginTransaction();
@@ -231,7 +230,13 @@ namespace QSOCollector.Data
                     deleted += commandImportId.ExecuteNonQuery();
                     if (deleted % 10 == 0)
                     {
-                        progressUpdater.Invoke($"Deleted {deleted} duplicates of {dups.Count}");
+                        string logMessage = $"Deleted {deleted} duplicates of {dups.Count}";
+                        if (log.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+                            string dupJson = JsonSerializer.Serialize(dup);
+                            log.Verbose("logMessage: {dup}", dupJson);
+                        }
+                        
+                        progressUpdater.Invoke(logMessage);
                     }
                 });
                 progressUpdater.Invoke($"Deleted {deleted} duplicates of {dups.Count}");
@@ -240,8 +245,9 @@ namespace QSOCollector.Data
 
                 transaction.Commit();
             }
-            catch (SqliteException)
+            catch (SqliteException ex)
             {
+                log.Error(ex, "Error force saving duplicate QSOs to database. Rolling back transaction.");
                 transaction.Rollback();
                 throw;
             }
@@ -249,6 +255,7 @@ namespace QSOCollector.Data
 
         public List<Dictionary<string, string?>> ImportQsoRecords(List<Dictionary<string, string?>> qsoRecords, string folder, string fileName, Func<string, Task> progressUpdater)
         {
+            log.Information("Saving QSOs to database. Returned a list of dups");
             using var connection = new SqliteConnection(connectionString);
             connection.Open();
             using var transaction = connection.BeginTransaction();
@@ -281,10 +288,13 @@ namespace QSOCollector.Data
                 commandImportComplete.ExecuteNonQuery();
 
                 transaction.Commit();
+
+                log.Information("Finished saving QSOs to database: saved - {successCount}, skipped {dupsCount} dups", qsoRecords.Count - dups.Count, dups.Count);
                 return dups;
             }
-            catch (SqliteException)
+            catch (SqliteException ex)
             {
+                log.Error(ex, "Error saving QSOs to database. Rolling back transaction.");
                 transaction.Rollback();
                 throw;
             }
@@ -298,10 +308,16 @@ namespace QSOCollector.Data
             try
             {
                 ExecuteSavingQsoRecords(connection, qsoRecords, importId, isTemporary: isTemporary);
+                log.Debug("Finished saving QSOs to database. Successfully saved {successCount} QSOs.", qsoRecords.Count);
+                if (log.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+                    string qsoRecordsJson = JsonSerializer.Serialize(qsoRecords);
+                    log.Verbose("Saved QSOs: {qsoRecords}", qsoRecordsJson);
+                }
                 transaction.Commit();
             }
-            catch (SqliteException)
+            catch (SqliteException ex)
             {
+                log.Error(ex, "Error saving QSOs to database. Rolling back transaction.");
                 transaction.Rollback();
                 throw;
             }
@@ -321,6 +337,10 @@ namespace QSOCollector.Data
             qsodataColumns ??= GetTableColumns("qsodata");
             foreach (var qsoRecord in qsoRecords)
             {
+                if (log.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) { 
+                    string qsoRecordJson = JsonSerializer.Serialize(qsoRecord);
+                    log.Verbose("Save QSO: {qsoRecord}", qsoRecordJson);
+                }
                 n++;
                 using var command = connection.CreateCommand();
                 command.CommandText = insertQsoSql;
@@ -367,12 +387,15 @@ namespace QSOCollector.Data
                     progressUpdater?.Invoke($"Saved: {succCount} + dups: {dupsCount} = {n} of {qsoRecords.Count}");
                 }
             }
-            progressUpdater?.Invoke($"Saved: {succCount} + dups: {dupsCount} = {n} of {qsoRecords.Count}");
+            string logMessage = $"Saved: {succCount} + dups: {dupsCount} = {n} of {qsoRecords.Count}";
+            log.Information(logMessage);
+            progressUpdater?.Invoke(logMessage);
             return dups;
         }
 
         internal void SaveRawQso(QsoMessage qsoMessage)
         {
+            log.Debug("Saving raw QSO message to database: {qsoMessage}", qsoMessage);
             using var connection = new SqliteConnection(connectionString);
             connection.Open();
             using var command = connection.CreateCommand();
@@ -408,6 +431,7 @@ namespace QSOCollector.Data
 
         public void DeleteTemporaryQsoRecord(int id)
         {
+            log.Debug("Deleting temporary QSO record with id {id} from database", id);
             using var connection = new SqliteConnection(connectionString);
             connection.Open();
             using var transaction = connection.BeginTransaction();
@@ -419,8 +443,9 @@ namespace QSOCollector.Data
                 command.ExecuteNonQuery();
                 transaction.Commit();
             }
-            catch (SqliteException)
+            catch (SqliteException ex)
             {
+                log.Error(ex, "Error deleting temporary QSO record with id {id} from database. Rolling back transaction.", id);
                 transaction.Rollback();
                 throw;
             }
@@ -475,6 +500,7 @@ namespace QSOCollector.Data
                 reader.Read();
                 int exportId = reader.GetInt32(0);
                 reader.Close();
+                log.Information("Marking {Count} QSOs as exported in database with exportId {exportId}", keys.Count, exportId);
 
                 do
                 {

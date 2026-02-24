@@ -68,11 +68,13 @@ namespace QSOCollector.Root
 
         private static Serilog.Core.Logger CreateLogger() => new LoggerConfiguration()
             .MinimumLevel.Debug()
+            .Enrich.FromLogContext()
 
             // Branch 1: The Client Log
             .WriteTo.Logger(lc => lc
                 .Filter.ByIncludingOnly(Matching.FromSource("QSOCollector.Network.Client"))
                 .WriteTo.File(appDataFolder + "\\logs\\client.log",
+                outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level}] {SourceContext}: {Message}{NewLine}{Exception}",
                 rollingInterval: RollingInterval.Day, // New file every day
                 retainedFileCountLimit: 30))          // Keep 30 days of logs
 
@@ -80,12 +82,14 @@ namespace QSOCollector.Root
             .WriteTo.Logger(lc => lc
                 .Filter.ByIncludingOnly(Matching.FromSource("QSOCollector.Network.Server"))
                 .WriteTo.File(appDataFolder + "\\logs\\server.log",
+                outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level}] {SourceContext}: {Message}{NewLine}{Exception}",
                 rollingInterval: RollingInterval.Day,
                 retainedFileCountLimit: 30
                 ))
 
             // 3. General/Catch-all (Optional)
             .WriteTo.File(appDataFolder + "\\logs\\all-eventss.log",
+            outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level}] {SourceContext}: {Message}{NewLine}{Exception}",
                 rollingInterval: RollingInterval.Day,
                 retainedFileCountLimit: 30)
 
