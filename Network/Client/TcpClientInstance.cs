@@ -21,6 +21,7 @@ namespace QSOCollector.Network.Client
             client = new TcpClient();
             client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseUnicastPort, true);
             client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+            log.Information("Connecting to server at {ServerIp}:{ServerPort}", ipAddress, port);
             client.Connect(ipAddress, port);
             Socket socket = client.Client;
             /*
@@ -35,11 +36,14 @@ namespace QSOCollector.Network.Client
             // 30 seconds idle time and 1 second interval
             socket.IOControl(IOControlCode.KeepAliveValues, [1, 0, 0, 0, 0xE8, 0x03, 0x00, 0x00, 0xE8, 0x03, 0x00, 0x00], null);
             this.progressUpdater = progressUpdater;
+            log.Information("TCP client connected to server at {ServerIp}:{ServerPort}", ipAddress, port);
         }
 
         public bool IsConnected()
         {
-            return client != null && client.Connected;
+            bool isConnected = client != null && client.Connected;
+            log.Debug("Is TCP client connection status: {isConnected}", isConnected);
+            return isConnected;
         }
 
         public async Task SendMessage(QsoMessage qsoMessage, int responseDelay)
@@ -50,11 +54,14 @@ namespace QSOCollector.Network.Client
 
             if (!IsConnected())
             {
-                throw new SocketException((int)SocketError.ConnectionAborted);
+                string logMessage = "TCP client is not connected to server, cannot send message. Closing client";
+                log.Warning(logMessage);
+                throw new SocketException((int)SocketError.ConnectionAborted, logMessage);
             }
 
             if (stream == null)
             {
+                log.Information("Initializing network stream and reader/writer for TCP client");
                 stream = client.GetStream();
                 reader = new StreamReader(stream);
                 writer = new StreamWriter(stream)
@@ -63,9 +70,10 @@ namespace QSOCollector.Network.Client
                 };
             }
 
-            writer.WriteLine(qsoMessageJson);
-            if (!qsoMessage.IsTest)
+            if (!qsoMessage.IsHeartBeat)
             {
+                log.Debug("Sending message to server: {Source}:{Format}", qsoMessage.Source, qsoMessage.OriginalFormat);
+                writer.WriteLine(qsoMessageJson);
                 string logMessage = $"QSO from {qsoMessage.Source} sent to server";
                 log.Information(logMessage);
                 log.Debug("Sent message: {qsoMessage}", qsoMessage.OriginalQsoData);
@@ -73,12 +81,16 @@ namespace QSOCollector.Network.Client
             }
             else
             {
+                log.Debug("Sending Heartbeat message to server");
+                writer.WriteLine(qsoMessageJson);
                 string logMessage = "Server status requested";
                 log.Debug(logMessage);
                 progressUpdater.UpdateLog(logMessage, true);
             }
 
+            log.Debug("Waiting for server response with a timeout of {ResponseDelay} ms", responseDelay);
             string? responseMessage = await reader.ReadLineAsync(new CancellationTokenSource(responseDelay).Token);
+            log.Debug("Received server response: {responseMessage}", responseMessage);
             ServerResponse serverResponse = JsonSerializer.Deserialize<ServerResponse>(responseMessage);
             if (serverResponse == null)
             {
@@ -96,7 +108,7 @@ namespace QSOCollector.Network.Client
                 return;
             }
 
-            string responseDetailedMessage = qsoMessage.IsTest ? $"Server status: {serverResponse.Status}" : $"QSO from {qsoMessage.Source} processed by server";
+            string responseDetailedMessage = qsoMessage.IsHeartBeat ? $"Server status: {serverResponse.Status}" : $"QSO from {qsoMessage.Source} processed by server";
             log.Debug(responseDetailedMessage);
             progressUpdater.UpdateLog(responseDetailedMessage, true);
             progressUpdater.UpdateServerStatus("Active", null);
@@ -104,11 +116,16 @@ namespace QSOCollector.Network.Client
 
         public void Terminate()
         {
+            log.Information("Terminating TCP client requested");
             if (client != null)
             {
                 log.Information("Terminating TCP client connection");
                 client.Close();
                 client.Dispose();
+            }
+            else
+            {
+                log.Warning("TCP client is already terminated");
             }
         }
     }

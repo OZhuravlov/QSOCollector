@@ -115,72 +115,120 @@ namespace QSOCollector.Network.Server
 
             while (true)
             {
-                string? qsoMessageJson = await r.ReadLineAsync(clientCancellationTokenSource.Token);
-                if (qsoMessageJson == null) continue;
-                QsoMessage? qsoMessage = JsonSerializer.Deserialize<QsoMessage>(qsoMessageJson);
-                if (qsoMessage == null) continue;
-
                 ServerResponse response;
-                List<Dictionary<string, string>> qsoRecords = [];
+                QsoMessage? qsoMessage;
                 try
                 {
-                    if (!qsoMessage.IsTest)
+                    log.Debug("Waiting for message from client {ClientIP}...", clientIPAddress);
+                    string? qsoMessageJson = await r.ReadLineAsync(clientCancellationTokenSource.Token);
+                    if (qsoMessageJson == null)
                     {
-                        qsoRecords = ParseQsoMessage(qsoMessage);
-                        if (qsoRecords.Count == 0)
-                        {
-                            log.Warning("No valid QSO records found in the message from client {ClientIP}, source {Source}, format {Format}, data {Data}", 
-                                clientIPAddress, 
-                                qsoMessage.Source,
-                                qsoMessage.OriginalFormat,
-                                qsoMessage.OriginalQsoData
-                                );
-                            throw new ArgumentException("No valid QSO records found in ADIF data");
-                        }
-
-                        dbRepository.SaveQsoRecords(qsoRecords, isTemporary: false);
-                        serverProgressUpdater.UpdateLog($"{qsoMessage}", true);
-                        foreach (var rec in qsoRecords)
-                        {
-                            string qsoInfo = $"{rec["SOURCE_IP_ADDRESS"]} {rec["SOURCE_NAME"]} {rec["QSO_TIME"]} {rec["BAND"]} {rec["FREQ"]} {rec["MODE"]} {rec["CALL"]}";
-                            log.Information("Saved QSO: {qsoInfo}", qsoInfo);
-                            serverProgressUpdater.UpdateLog(qsoInfo);
-                            serverProgressUpdater.UpdateProgress(ServerProgressUpdater.ParseDateTime(rec["QSO_TIME"]), rec["MODE"], null);
-                        }
+                        string logMessage = $"Client {clientIPAddress} disconnected (null message received). Closing client connection";
+                        log.Warning(logMessage);
+                        throw new SocketException((int)SocketError.ConnectionAborted, logMessage);
                     }
-                    response = new ServerResponse(ServerResponseStatus.Ok);
+
+                    qsoMessage = JsonSerializer.Deserialize<QsoMessage>(qsoMessageJson);
+                    if (qsoMessage == null)
+                    {
+                        log.Warning("Got null qsoMessage from Client {ClientIP} after deserialization. Ignoring", clientIPAddress);
+                        continue;
+                    }
+
+                    if (qsoMessage.IsHeartBeat) {
+                        string message = $"Got heartbeat from {clientIPAddress}";
+                        log.Debug(message);
+                        serverProgressUpdater.UpdateLog(message, true);
+                    } 
+                    else
+                    {
+                        ProcessQsoMessage(qsoMessage, dbRepository);
+                    }
+
+                    response = new(ServerResponseStatus.Ok);
                 }
                 catch (SqliteException ex)
                 {
                     log.Error("SQLite error while processing message from client {ClientIP}: {ErrorMessage}", clientIPAddress, ex.Message);
-                    response = new ServerResponse(ServerResponseStatus.SqliteError, ex.Message);
+                    response = new (ServerResponseStatus.SqliteError, ex.Message);
                 }
                 catch (ArgumentException ex)
                 {
                     log.Error("Argument error while processing message from client {ClientIP}: {ErrorMessage}", clientIPAddress, ex.Message);
-                    response = new ServerResponse(ServerResponseStatus.ArgumentError, ex.Message);
+                    response = new (ServerResponseStatus.ArgumentError, ex.Message);
                 }
                 catch (OperationCanceledException)
                 {
-                    log.Information("Client {ClientIP} disconnected caused by Server stopping requested", clientIPAddress);
+                    log.Information("Client {ClientIP} disconnected caused by Server stopping requested. Closing client connection", clientIPAddress);
+                    serverProgressUpdater.UpdateLog($"Client {clientIPAddress} disconnected caused by Server stopping requested. Closing client connection", true);
                     clientCancellationTokenSource.Dispose();
+                    client.Close();
+                    client.Dispose();
                     throw;
+                }
+                catch (SocketException ex)
+                {
+                    string logMessage = $"Client {clientIPAddress} socket exception while reading request from Client. ErrorCode {ex.ErrorCode}, native ErrorCode {ex.NativeErrorCode}. Closing client connection";
+                    log.Warning(logMessage);
+                    serverProgressUpdater.UpdateLog(logMessage);
+                    client.Close();
+                    client.Dispose();
+                    break;
                 }
                 catch (Exception ex)
                 {
-                    log.Error("Unknown error while processing message from client {ClientIP}: {ErrorMessage}", clientIPAddress, ex.Message);
+                    string logMessage = $"Unknown error while processing message from client {clientIPAddress}: {ex.Message}";
+                    log.Error(logMessage);
+                    serverProgressUpdater.UpdateLog(logMessage);
                     response = new ServerResponse(ServerResponseStatus.UnknownError, ex.Message);
                 }
 
-                if (qsoMessage.IsTest)
-                {
-                    string message = $"Got server status request from {clientIPAddress}. Status: {response.Status}";
-                    log.Debug(message);
-                    serverProgressUpdater.UpdateLog(message, true);
-                }
+                log.Debug("Sending response to client {ClientIP}: {Response}", clientIPAddress, response);
 
-                await w.WriteLineAsync(JsonSerializer.Serialize(response));
-                await w.FlushAsync();
+                try
+                {
+                    await w.WriteLineAsync(JsonSerializer.Serialize(response));
+                    await w.FlushAsync();
+                }
+                catch (SocketException ex) 
+                {
+                    string logMessage = $"Client {clientIPAddress} socket exception while sending response to Client. ErrorCode {ex.ErrorCode}, native ErrorCode {ex.NativeErrorCode}. Closing client connection";
+                    log.Warning(logMessage);
+                    serverProgressUpdater.UpdateLog(logMessage);
+                    client.Close();
+                    client.Dispose();
+                    break;
+                }
+            }
+        }
+
+        private void ProcessQsoMessage(QsoMessage qsoMessage, DbRepository dbRepository) {
+            List<Dictionary<string, string>> qsoRecords = ParseQsoMessage(qsoMessage);
+            log.Debug("Parsed {RecordCount} QSO records from message from client {ClientIP}, source {Source}, format {Format}",
+                qsoRecords.Count,
+                clientIPAddress,
+                qsoMessage.Source,
+                qsoMessage.OriginalFormat
+                );
+            if (qsoRecords.Count == 0)
+            {
+                log.Warning("No valid QSO records found in the message from client {ClientIP}, source {Source}, format {Format}, data {Data}",
+                    clientIPAddress,
+                    qsoMessage.Source,
+                    qsoMessage.OriginalFormat,
+                    qsoMessage.OriginalQsoData
+                    );
+                throw new ArgumentException("No valid QSO records found in ADIF data");
+            }
+            log.Debug("Saving {RecordCount} QSO records from message from client {ClientIP} to database", qsoRecords.Count, clientIPAddress);
+            dbRepository.SaveQsoRecords(qsoRecords, isTemporary: false);
+            serverProgressUpdater.UpdateLog($"{qsoMessage}", true);
+            foreach (var rec in qsoRecords)
+            {
+                string qsoInfo = $"{rec["SOURCE_IP_ADDRESS"]} {rec["SOURCE_NAME"]} {rec["QSO_TIME"]} {rec["BAND"]} {rec["FREQ"]} {rec["MODE"]} {rec["CALL"]}";
+                log.Information("Saved QSO: {qsoInfo}", qsoInfo);
+                serverProgressUpdater.UpdateLog(qsoInfo);
+                serverProgressUpdater.UpdateProgress(ServerProgressUpdater.ParseDateTime(rec["QSO_TIME"]), rec["MODE"], null);
             }
         }
 
@@ -189,6 +237,7 @@ namespace QSOCollector.Network.Server
             List<Dictionary<string, string>> qsoRecords = [];
             try
             {
+                log.Debug("Parsing QSO message from client {ClientIP}, source {Source}, format {Format}", clientIPAddress, qsoMessage.Source, qsoMessage.OriginalFormat);
                 qsoRecords = qsoMessage.OriginalFormat switch
                 {
                     "ADIF" => AdifToTableFieldsMapper.Map(qsoMessage, sourceIpAddress: clientIPAddress),

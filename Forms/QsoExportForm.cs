@@ -2,6 +2,7 @@
 using QSOCollector.Helpers;
 using QSOCollector.Models;
 using QSOCollector.Root;
+using Serilog;
 using System.Diagnostics;
 using System.Text;
 
@@ -9,6 +10,8 @@ namespace QSOCollector
 {
     public partial class QsoExportForm : Form
     {
+        private readonly ILogger log = Log.ForContext<QsoExportForm>();
+
         private readonly DbRepository dbRepository;
         private List<QsoExportExpectedAmounts> expectedAmounts;
         private readonly QsoExportFilters exportFilters = new();
@@ -283,6 +286,7 @@ namespace QSOCollector
 
             if (adifEntries.Count == 0)
             {
+                log.Information("No QSO found to export with current filters: {@Filters}", exportFilters);
                 MessageBox.Show("No QSO found to export with current filters", "Nothing to export", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
@@ -315,10 +319,12 @@ namespace QSOCollector
                     filePath = saveFileDialog.FileName;
                     folder = Path.GetDirectoryName(filePath);
                     fileName = Path.GetFileName(filePath);
+                    log.Information("Exporting {Count} QSO(s) to file {FilePath}", adifEntries.Count, filePath);
                     File.WriteAllText(filePath, fileContent);
                 }
                 else
                 {
+                    log.Information("Export cancelled by user");
                     return;
                 }
             }
@@ -333,6 +339,7 @@ namespace QSOCollector
 
             if (dialogResultSetExported == DialogResult.Yes)
             {
+                log.Information("Setting {Count} QSO(s) as exported in database", adifEntries.Count);
                 dbRepository.SetQSOsExported([.. adifEntries.Keys], folder, fileName, exportFilters, true);
                 expectedAmounts = dbRepository.GetQsoAmountsForExport();
                 handleButton(exportButton, false, $"Exported ({adifEntries.Count})");
@@ -341,6 +348,7 @@ namespace QSOCollector
             }
             else
             {
+                log.Information("User chose not to set QSO(s) as exported in database");
                 dbRepository.SetQSOsExported([.. adifEntries.Keys], folder, fileName, exportFilters, false);
             }
 

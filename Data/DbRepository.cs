@@ -231,11 +231,7 @@ namespace QSOCollector.Data
                     if (deleted % 10 == 0)
                     {
                         string logMessage = $"Deleted {deleted} duplicates of {dups.Count}";
-                        if (log.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-                            string dupJson = JsonSerializer.Serialize(dup);
-                            log.Verbose("logMessage: {dup}", dupJson);
-                        }
-                        
+                        log.Verbose("logMessage: {@dup}", dup);
                         progressUpdater.Invoke(logMessage);
                     }
                 });
@@ -309,10 +305,7 @@ namespace QSOCollector.Data
             {
                 ExecuteSavingQsoRecords(connection, qsoRecords, importId, isTemporary: isTemporary);
                 log.Debug("Finished saving QSOs to database. Successfully saved {successCount} QSOs.", qsoRecords.Count);
-                if (log.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-                    string qsoRecordsJson = JsonSerializer.Serialize(qsoRecords);
-                    log.Verbose("Saved QSOs: {qsoRecords}", qsoRecordsJson);
-                }
+                log.Verbose("Saved QSOs: {@qsoRecords}", qsoRecords);
                 transaction.Commit();
             }
             catch (SqliteException ex)

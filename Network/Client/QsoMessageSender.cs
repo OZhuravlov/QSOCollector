@@ -121,7 +121,7 @@ namespace QSOCollector.Network.Client
                 {
                     try
                     {
-                        if (qsoMessage.IsTest)
+                        if (qsoMessage.IsHeartBeat)
                         {
                             log.Debug("Try to send heartbeat message to server");
                         }
@@ -161,7 +161,7 @@ namespace QSOCollector.Network.Client
             log.Warning(logMessage);
             progressUpdater.UpdateServerStatus("Unavailable", logMessage);
 
-            if (qsoMessage.IsTest) return;
+            if (qsoMessage.IsHeartBeat) return;
 
             log.Information("Save QSO message to local DB due to server connection error: source {Source}, format {Format}", qsoMessage.Source, qsoMessage.OriginalFormat);
             log.Debug("QSO message data: {QsoMessage}", qsoMessage.OriginalQsoData);

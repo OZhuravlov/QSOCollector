@@ -80,10 +80,7 @@ namespace QSOCollector
 
         private void HandleStartupParams(StartupParams startupParams)
         {
-            if (log.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-                string startupParamsJson = JsonSerializer.Serialize(startupParams);
-                log.Information("Handling application startup parameters: {startupParams}", startupParamsJson);
-            }
+            log.Information("Handling application startup parameters: {@startupParams}", startupParams);
             
             enableDebugWhenAutoStartCheckbox.Checked = startupParams.Debug;
             if (startupParams.StartServer)
@@ -627,10 +624,7 @@ namespace QSOCollector
         private void RestoreSavedFormValuesFromDB()
         {
             Dictionary<string, string?> settings = dbRepository.LoadSettings();
-            if (log.IsEnabled(Serilog.Events.LogEventLevel.Information)) { 
-                string settingsJson = JsonSerializer.Serialize(settings);
-                log.Information("Restoring Main Form setting from DB: {settings}", settingsJson);
-            }
+            log.Information("Restoring Main Form setting from DB: {settings}", settings);
             
             if (settings.TryGetValue("ServerEnabled", out var serverEnabled))
                 enableServerCheckBox.Checked = Convert.ToBoolean(serverEnabled);
@@ -655,8 +649,7 @@ namespace QSOCollector
             dbRepository.SaveSetting("ClientServerPort", clientServerPortTextBox.Text);
             dbRepository.SaveSetting("AutoStart", autoStartCheckbox.Checked.ToString());
             if (log.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-                string settingsJson = JsonSerializer.Serialize(dbRepository.LoadSettings());
-                log.Information("Saved Main Form setting to DB: {Settings}", settingsJson);
+                log.Information("Saved Main Form setting to DB: {Settings}", dbRepository.LoadSettings());
             }
         }
 

@@ -7,6 +7,6 @@
         public string OriginalQsoData { get; set; }
         public string AdifQsoData { get; set; }
 
-        public bool IsTest { get => "TEST".Equals(Source, StringComparison.OrdinalIgnoreCase); }
+        public bool IsHeartBeat { get => "TEST".Equals(Source, StringComparison.OrdinalIgnoreCase); }
     }
 }

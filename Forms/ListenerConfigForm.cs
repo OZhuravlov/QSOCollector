@@ -301,9 +301,7 @@ namespace QSOCollector
             if (saveFileDialog.ShowDialog() == DialogResult.OK)
             {
                 List<Models.ListenerConfig> listenerConfigs = dbRepository.GetListenerConfigs();
-                string jsonListenerConfigs = JToken.Parse(
-                    JsonSerializer.Serialize<List<Models.ListenerConfig>>(listenerConfigs)
-                    ).ToString();
+                string jsonListenerConfigs = JToken.Parse(JsonSerializer.Serialize(listenerConfigs)).ToString();
                 string filePath = saveFileDialog.FileName;
                 File.WriteAllText(filePath, jsonListenerConfigs);
             }
@@ -335,7 +333,7 @@ namespace QSOCollector
                 var fileStream = openFileDialog.OpenFile();
                 using StreamReader reader = new(fileStream);
                 string jsonListenerConfigs = reader.ReadToEnd();
-                List<Models.ListenerConfig> listenerConfigs = JsonSerializer.Deserialize<List<Models.ListenerConfig>>(jsonListenerConfigs);
+                var listenerConfigs = JsonSerializer.Deserialize<List<Models.ListenerConfig>>(jsonListenerConfigs);
                 dbRepository.ReplaceListenerConfigs(listenerConfigs);
                 ListenersForm_Load(this, EventArgs.Empty);
             }

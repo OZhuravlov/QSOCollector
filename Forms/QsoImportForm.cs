@@ -3,12 +3,15 @@ using QSOCollector.Helpers;
 using QSOCollector.Models;
 using QSOCollector.Parsers;
 using QSOCollector.Root;
+using Serilog;
 using System.ComponentModel;
 
 namespace QSOCollector
 {
     public partial class QsoImportForm : Form
     {
+        private readonly ILogger log = Log.ForContext<QsoImportForm>();
+
         private readonly DbRepository dbRepository;
         private string? filePath = null;
         private string? fileName = null;
@@ -25,12 +28,14 @@ namespace QSOCollector
         {
             if (string.IsNullOrEmpty(fileContent))
             {
-                MessageBox.Show("The file is empty", "Invalid file content", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                log.Warning("Import button clicked but file content is empty");
+                MessageBox.Show("File is empty", "Invalid file content", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
             if (!fileContent.Contains(AdifToTableFieldsMapper.endOfRecord, StringComparison.OrdinalIgnoreCase))
             {
-                MessageBox.Show("The file doesn't contain valid ADIF records. Nothing to import", "Invalid file content", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                log.Warning("Import button clicked but file doesn't contain valid ADIF records");
+                MessageBox.Show("File doesn't contain valid ADIF records. Nothing to import", "Invalid file content", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
             importProgressBar.Visible = true;
@@ -46,6 +51,7 @@ namespace QSOCollector
             openFileDialog.RestoreDirectory = true;
             if (openFileDialog.ShowDialog() == DialogResult.OK)
             {
+                log.Information("File selected for import: {FilePath}", openFileDialog.FileName);
                 fileName = openFileDialog.SafeFileName;
                 folder = Path.GetDirectoryName(openFileDialog.FileName);
                 filePath = openFileDialog.FileName;
@@ -60,6 +66,7 @@ namespace QSOCollector
             }
             else
             {
+                log.Information("File selection cancelled");
                 fileContent = null;
                 filePath = null;
                 fileContent = null;
