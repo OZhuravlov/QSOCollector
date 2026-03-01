@@ -48,6 +48,7 @@ namespace QSOCollector.Network.Server
             listener = new(ipEndPoint);
             listener.Start();
             running = true;
+            log.Information("Server started on port {port}", ipEndPoint.Port);
             while (running)
             {
                 CancellationTokenSource clientCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cts.Token);
@@ -193,6 +194,15 @@ namespace QSOCollector.Network.Server
                 catch (SocketException ex) 
                 {
                     string logMessage = $"Client {clientIPAddress} socket exception while sending response to Client. ErrorCode {ex.ErrorCode}, native ErrorCode {ex.NativeErrorCode}. Closing client connection";
+                    log.Warning(logMessage);
+                    serverProgressUpdater.UpdateLog(logMessage);
+                    client.Close();
+                    client.Dispose();
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    string logMessage = $"Unknown error while while sending response to client {clientIPAddress}: {ex.Message}";
                     log.Warning(logMessage);
                     serverProgressUpdater.UpdateLog(logMessage);
                     client.Close();

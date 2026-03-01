@@ -81,7 +81,7 @@ namespace QSOCollector
         private void HandleStartupParams(StartupParams startupParams)
         {
             log.Information("Handling application startup parameters: {@startupParams}", startupParams);
-            
+
             enableDebugWhenAutoStartCheckbox.Checked = startupParams.Debug;
             if (startupParams.StartServer)
             {
@@ -91,7 +91,8 @@ namespace QSOCollector
                     log.Information("{message} with Log Details enabled", logMessage);
                     serverShowLogDetailsCheckBox.Checked = true;
                 }
-                else { 
+                else
+                {
                     log.Information(logMessage);
                 }
 
@@ -143,11 +144,12 @@ namespace QSOCollector
                 {
                     StartClientButton_Click(startClientButton, EventArgs.Empty);
                 }
-                catch (Exception ex) { 
+                catch (Exception ex)
+                {
                     log.Error(ex, "Error while auto-starting Client");
                     throw;
                 }
-                
+
                 clientTab.Refresh();
             }
             else
@@ -170,13 +172,16 @@ namespace QSOCollector
                 serverLogTextBox.AppendText($"{logMessage}\r\n");
                 mainTabControl.SelectedTab = serverTab;
 
-                try {
+                try
+                {
                     StartServerButton_Click(startServerButton, EventArgs.Empty);
-                } catch (Exception ex) {
+                }
+                catch (Exception ex)
+                {
                     log.Error(ex, "Error while auto-staring Server");
                     throw;
                 }
-                
+
                 serverTab.Refresh();
             }
             else
@@ -197,7 +202,9 @@ namespace QSOCollector
                 if (result != DialogResult.Yes)
                 {
                     e.Cancel = true;
-                } else { 
+                }
+                else
+                {
                     log.Warning("User confirmed to exit. Client will be stopped");
                 }
             }
@@ -209,7 +216,9 @@ namespace QSOCollector
                 if (result != DialogResult.Yes)
                 {
                     e.Cancel = true;
-                } else { 
+                }
+                else
+                {
                     log.Warning("User confirmed to exit. Server will be stopped");
                 }
             }
@@ -625,7 +634,7 @@ namespace QSOCollector
         {
             Dictionary<string, string?> settings = dbRepository.LoadSettings();
             log.Information("Restoring Main Form setting from DB: {settings}", settings);
-            
+
             if (settings.TryGetValue("ServerEnabled", out var serverEnabled))
                 enableServerCheckBox.Checked = Convert.ToBoolean(serverEnabled);
             if (settings.TryGetValue("ServerPort", out var serverPort))
@@ -648,7 +657,8 @@ namespace QSOCollector
             dbRepository.SaveSetting("ClientServerNameIp", clientServerNameIpTextBox.Text);
             dbRepository.SaveSetting("ClientServerPort", clientServerPortTextBox.Text);
             dbRepository.SaveSetting("AutoStart", autoStartCheckbox.Checked.ToString());
-            if (log.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            if (log.IsEnabled(Serilog.Events.LogEventLevel.Information))
+            {
                 log.Information("Saved Main Form setting to DB: {Settings}", dbRepository.LoadSettings());
             }
         }
@@ -758,7 +768,8 @@ namespace QSOCollector
             enableDebugWhenAutoStartCheckbox.Enabled = autoStartCheckbox.Checked;
             string? applicationName = Assembly.GetExecutingAssembly().GetName().Name;
 
-            if (string.IsNullOrEmpty(applicationName)) { 
+            if (string.IsNullOrEmpty(applicationName))
+            {
                 log.Error("Application name is null or empty, cannot set auto-start registry key");
                 return;
             }
@@ -819,6 +830,26 @@ namespace QSOCollector
             log.Debug("Resetting Server Form called");
             new ServerCleanupForm(dbRepository).ShowDialog(this);
             HandleServerCheckBoxChanged(enableServerCheckBox);
+        }
+
+        private void mainTabControl_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            var tabControl = sender as TabControl;
+            TabPage? selectedTab = tabControl?.SelectedTab;
+            if (selectedTab == null) return;
+
+            TextBox? textBox = selectedTab.Name switch
+            {
+                "clientTab" => clientLogTextBox,
+                "serverTab" => serverLogTextBox,
+                _ => null
+            };
+
+            if (textBox != null)
+            {
+                textBox.SelectionStart = textBox.Text.Length;
+                textBox.ScrollToCaret();
+            }
         }
     }
 }

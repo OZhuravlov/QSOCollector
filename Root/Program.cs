@@ -3,6 +3,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using QSOCollector.Logging;
 using QSOCollector.Models;
 using Serilog;
 using Serilog.Filters;
@@ -69,27 +70,30 @@ namespace QSOCollector.Root
         private static Serilog.Core.Logger CreateLogger() => new LoggerConfiguration()
             .MinimumLevel.Debug()
             .Enrich.FromLogContext()
+            .Enrich.With(new ShortSourceContextEnricher(30))
 
             // Branch 1: The Client Log
             .WriteTo.Logger(lc => lc
                 .Filter.ByIncludingOnly(Matching.FromSource("QSOCollector.Network.Client"))
                 .WriteTo.File(appDataFolder + "\\logs\\client.log",
-                outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level}] {SourceContext}: {Message}{NewLine}{Exception}",
+                outputTemplate: "{Timestamp:u} [{Level:u3}] {ShortSourceContext,-30}: {Message:lj}{NewLine}{Exception}",
                 rollingInterval: RollingInterval.Day, // New file every day
+                restrictedToMinimumLevel: Serilog.Events.LogEventLevel.Information,
                 retainedFileCountLimit: 30))          // Keep 30 days of logs
 
             // Branch 2: The Server Log
             .WriteTo.Logger(lc => lc
                 .Filter.ByIncludingOnly(Matching.FromSource("QSOCollector.Network.Server"))
                 .WriteTo.File(appDataFolder + "\\logs\\server.log",
-                outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level}] {SourceContext}: {Message}{NewLine}{Exception}",
+                outputTemplate: "{Timestamp:u} [{Level:u3}] {ShortSourceContext,-30}: {Message:lj}{NewLine}{Exception}",
                 rollingInterval: RollingInterval.Day,
+                restrictedToMinimumLevel: Serilog.Events.LogEventLevel.Information,
                 retainedFileCountLimit: 30
                 ))
 
             // 3. General/Catch-all (Optional)
-            .WriteTo.File(appDataFolder + "\\logs\\all-eventss.log",
-            outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level}] {SourceContext}: {Message}{NewLine}{Exception}",
+            .WriteTo.File(appDataFolder + "\\logs\\all-events.log",
+            outputTemplate: "{Timestamp:u} [{Level:u3}] {ShortSourceContext,-30}: {Message:lj}{NewLine}{Exception}",
                 rollingInterval: RollingInterval.Day,
                 retainedFileCountLimit: 30)
 

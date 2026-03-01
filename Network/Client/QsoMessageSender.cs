@@ -6,7 +6,6 @@ using Serilog;
 using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
-using System.Text.Json;
 
 namespace QSOCollector.Network.Client
 {
@@ -128,7 +127,11 @@ namespace QSOCollector.Network.Client
                         else {
                             log.Information("Try to send QSO message to server: source {Source}, format {Format}", qsoMessage.Source, qsoMessage.OriginalFormat);
                         }
-                        
+
+                        if (tcpClient == null || !tcpClient.IsConnected()) { 
+                            tcpClient = new(serverIp, serverPort, progressUpdater);
+                        }
+
                         await tcpClient.SendMessage(qsoMessage, responseTimeoutMs);
                         shouldRetry = false;
                     }
@@ -140,7 +143,7 @@ namespace QSOCollector.Network.Client
                         }
                         log.Warning("Recreate TCP client and retry #{tryNumber}", tryNumber);
                         shouldRetry = true;
-                        tcpClient = new(serverIp, serverPort, progressUpdater);
+                        tcpClient?.Terminate();
                         await Task.Delay(TimeSpan.FromSeconds(1));
                         continue;
                     }

@@ -116,6 +116,7 @@ namespace QSOCollector
             mainTabControl.SelectedIndex = 0;
             mainTabControl.Size = new Size(690, 486);
             mainTabControl.TabIndex = 0;
+            mainTabControl.SelectedIndexChanged += mainTabControl_SelectedIndexChanged;
             // 
             // clientTab
             // 
