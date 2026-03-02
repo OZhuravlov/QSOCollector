@@ -31,6 +31,7 @@
   <ItemGroup>
     <EmbeddedResource Include="Migrations\002_adifImportTable.sql" />
     <EmbeddedResource Include="Migrations\001_adifExportTable.sql" />
+    <EmbeddedResource Include="Migrations\011_createExportSchedulerTable .sql" />
     <EmbeddedResource Include="Migrations\010_createRawQsodataTable.sql" />
     <EmbeddedResource Include="Migrations\009_add-column-external_id-to-QsoTable.sql" />
     <EmbeddedResource Include="Migrations\008_make-forward_port-non-unique.sql" />

@@ -68,6 +68,7 @@ namespace QSOCollector
             startClientButton = new Button();
             enableClientCheckBox = new CheckBox();
             serverTab = new TabPage();
+            qsoAutoExportButton = new Button();
             serverClientMonitoringButton = new Button();
             resetServerButton = new Button();
             serverShowLogDetailsCheckBox = new CheckBox();
@@ -114,7 +115,7 @@ namespace QSOCollector
             mainTabControl.Margin = new Padding(3, 2, 3, 2);
             mainTabControl.Name = "mainTabControl";
             mainTabControl.SelectedIndex = 0;
-            mainTabControl.Size = new Size(690, 486);
+            mainTabControl.Size = new Size(690, 494);
             mainTabControl.TabIndex = 0;
             mainTabControl.SelectedIndexChanged += mainTabControl_SelectedIndexChanged;
             // 
@@ -135,7 +136,7 @@ namespace QSOCollector
             clientTab.Margin = new Padding(3, 2, 3, 2);
             clientTab.Name = "clientTab";
             clientTab.Padding = new Padding(3, 2, 3, 2);
-            clientTab.Size = new Size(682, 454);
+            clientTab.Size = new Size(682, 462);
             clientTab.TabIndex = 0;
             clientTab.Text = "Client";
             // 
@@ -530,6 +531,7 @@ namespace QSOCollector
             // 
             // serverTab
             // 
+            serverTab.Controls.Add(qsoAutoExportButton);
             serverTab.Controls.Add(serverClientMonitoringButton);
             serverTab.Controls.Add(resetServerButton);
             serverTab.Controls.Add(serverShowLogDetailsCheckBox);
@@ -545,10 +547,26 @@ namespace QSOCollector
             serverTab.Margin = new Padding(3, 2, 3, 2);
             serverTab.Name = "serverTab";
             serverTab.Padding = new Padding(3, 2, 3, 2);
-            serverTab.Size = new Size(682, 454);
+            serverTab.Size = new Size(682, 462);
             serverTab.TabIndex = 1;
             serverTab.Text = "Server";
             serverTab.UseVisualStyleBackColor = true;
+            // 
+            // qsoAutoExportButton
+            // 
+            qsoAutoExportButton.BackColor = Color.Transparent;
+            qsoAutoExportButton.Enabled = false;
+            qsoAutoExportButton.FlatStyle = FlatStyle.System;
+            qsoAutoExportButton.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            qsoAutoExportButton.ForeColor = SystemColors.ControlText;
+            qsoAutoExportButton.Location = new Point(519, 421);
+            qsoAutoExportButton.Margin = new Padding(3, 2, 3, 2);
+            qsoAutoExportButton.Name = "qsoAutoExportButton";
+            qsoAutoExportButton.Size = new Size(144, 37);
+            qsoAutoExportButton.TabIndex = 14;
+            qsoAutoExportButton.Text = "Setup Automatic Export to ADIF";
+            qsoAutoExportButton.UseVisualStyleBackColor = false;
+            qsoAutoExportButton.Click += qsoAutoExportButton_Click;
             // 
             // serverClientMonitoringButton
             // 
@@ -557,10 +575,10 @@ namespace QSOCollector
             serverClientMonitoringButton.FlatStyle = FlatStyle.System;
             serverClientMonitoringButton.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
             serverClientMonitoringButton.ForeColor = SystemColors.ControlText;
-            serverClientMonitoringButton.Location = new Point(180, 420);
+            serverClientMonitoringButton.Location = new Point(132, 421);
             serverClientMonitoringButton.Margin = new Padding(3, 2, 3, 2);
             serverClientMonitoringButton.Name = "serverClientMonitoringButton";
-            serverClientMonitoringButton.Size = new Size(96, 30);
+            serverClientMonitoringButton.Size = new Size(96, 37);
             serverClientMonitoringButton.TabIndex = 13;
             serverClientMonitoringButton.Text = "Monitoring";
             serverClientMonitoringButton.UseVisualStyleBackColor = false;
@@ -601,12 +619,12 @@ namespace QSOCollector
             qsoImportButton.Enabled = false;
             qsoImportButton.FlatStyle = FlatStyle.System;
             qsoImportButton.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            qsoImportButton.Location = new Point(487, 420);
+            qsoImportButton.Location = new Point(237, 421);
             qsoImportButton.Margin = new Padding(3, 2, 3, 2);
             qsoImportButton.Name = "qsoImportButton";
-            qsoImportButton.Size = new Size(84, 30);
+            qsoImportButton.Size = new Size(134, 37);
             qsoImportButton.TabIndex = 1;
-            qsoImportButton.Text = "QSO Import";
+            qsoImportButton.Text = "Import from ADIF";
             qsoImportButton.UseVisualStyleBackColor = false;
             qsoImportButton.Click += qsoImportButton_Click;
             // 
@@ -790,12 +808,12 @@ namespace QSOCollector
             qsoExportButton.FlatStyle = FlatStyle.System;
             qsoExportButton.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
             qsoExportButton.ForeColor = SystemColors.ControlText;
-            qsoExportButton.Location = new Point(337, 420);
+            qsoExportButton.Location = new Point(381, 421);
             qsoExportButton.Margin = new Padding(3, 2, 3, 2);
             qsoExportButton.Name = "qsoExportButton";
-            qsoExportButton.Size = new Size(96, 30);
+            qsoExportButton.Size = new Size(117, 37);
             qsoExportButton.TabIndex = 0;
-            qsoExportButton.Text = "QSO Export";
+            qsoExportButton.Text = "Export to ADIF";
             qsoExportButton.UseVisualStyleBackColor = false;
             qsoExportButton.Click += qsoExportButton_Click;
             // 
@@ -858,7 +876,7 @@ namespace QSOCollector
             aboutTab.Location = new Point(4, 28);
             aboutTab.Margin = new Padding(3, 2, 3, 2);
             aboutTab.Name = "aboutTab";
-            aboutTab.Size = new Size(682, 454);
+            aboutTab.Size = new Size(682, 462);
             aboutTab.TabIndex = 2;
             aboutTab.Text = "About";
             aboutTab.UseVisualStyleBackColor = true;
@@ -920,7 +938,7 @@ namespace QSOCollector
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(689, 487);
+            ClientSize = new Size(689, 490);
             Controls.Add(autoStartCheckbox);
             Controls.Add(enableDebugWhenAutoStartCheckbox);
             Controls.Add(mainTabControl);
@@ -1014,5 +1032,6 @@ namespace QSOCollector
         private DataGridViewTextBoxColumn lastExportedQsoTime;
         private Button resetServerButton;
         private Button serverClientMonitoringButton;
+        private Button qsoAutoExportButton;
     }
 }

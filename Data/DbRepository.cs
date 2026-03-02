@@ -1,4 +1,5 @@
 using Microsoft.Data.Sqlite;
+using Newtonsoft.Json.Linq;
 using QSOCollector.Models;
 using Serilog;
 using System.Reflection;
@@ -15,6 +16,7 @@ namespace QSOCollector.Data
         private const string selectSettingsSql = "SELECT key, value FROM settings";
         private const string insertSettingsSql = "INSERT OR REPLACE INTO settings (key, value) VALUES (@key, @value)";
         private const string getListenerConfigsSql = "SELECT name as Name, id as Id, qso_port as QsoPort, forward_port as ForwardPort, acknowledge_port as AcknowledgePort, message_format as MessageFormat, is_active IsActive FROM listeners WHERE is_active = true";
+        private const string getExportSchedulerHoursSql = "SELECT hour FROM qso_export_scheduler order by hour";
         private const string insertListenerConfigsSql = "INSERT INTO listeners (name, qso_port, forward_port, acknowledge_port, message_format, is_active) " +
                     " VALUES (@Name, @QsoPort, @ForwardPort, @AcknowledgePort, @MessageFormat, @IsActive)";
         private const string getServerQsoAmountsSql = "SELECT q.mode QsoAmountMode, COUNT(CASE WHEN q.qso_time >= current_date THEN 1 END) TodayQsoAmount, count(*) TotalQsoAmount, COUNT(e.id) ExportedQsoAmount, MAX(q.qso_time) LastQsoTime, MAX(e.end_time) LastExportedQsoTime FROM qsodata q LEFT JOIN adif_export e ON q.export_id = e.id AND e.is_confirmed = true WHERE q.is_temporary = false GROUP BY q.mode UNION ALL SELECT 'Total', COUNT(CASE WHEN q.qso_time >= current_date THEN 1 END), COUNT(*), COUNT(e.id), MAX(q.qso_time), MAX(e.end_time) FROM qsodata q LEFT JOIN adif_export e ON q.export_id = e.id AND e.is_confirmed = true WHERE q.is_temporary = false";
@@ -386,7 +388,7 @@ namespace QSOCollector.Data
             return dups;
         }
 
-        internal void SaveRawQso(QsoMessage qsoMessage)
+        public void SaveRawQso(QsoMessage qsoMessage)
         {
             log.Debug("Saving raw QSO message to database: {qsoMessage}", qsoMessage);
             using var connection = new SqliteConnection(connectionString);
@@ -510,7 +512,7 @@ namespace QSOCollector.Data
                         command.Parameters.Add(new SqliteParameter($"@id{i}", keys[startPos - count - 1 + i]));
 
                     }
-                    sb.Append(")");
+                    sb.Append(')');
                     command.CommandText = sb.ToString();
                     command.ExecuteNonQuery();
                 } while (startPos < keys.Count);
@@ -520,6 +522,45 @@ namespace QSOCollector.Data
                 commandExportComplete.Parameters.Add(new SqliteParameter("@id", exportId));
                 commandExportComplete.ExecuteNonQuery();
 
+                transaction.Commit();
+            }
+            catch (SqliteException)
+            {
+                transaction.Rollback();
+                throw;
+            }
+        }
+
+        public List<string> GetExportHours()
+        {
+            log.Debug("Loading export scheduler hours from database");
+            using var connection = new SqliteConnection(connectionString);
+            connection.Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = getExportSchedulerHoursSql;
+            using var reader = command.ExecuteReader();
+            return GetSingleStringData(reader, "hour");
+        }
+
+        public void SaveExportHours(List<string> hours)
+        {
+            log.Debug("Saving export scheduler hours to database");
+            using var connection = new SqliteConnection(connectionString);
+            connection.Open();
+            using var transaction = connection.BeginTransaction();
+            try
+            {
+                using var commandDelete = connection.CreateCommand();
+                commandDelete.CommandText = "DELETE FROM qso_export_scheduler";
+                commandDelete.ExecuteNonQuery();
+
+                hours.ForEach(hour =>
+                {
+                    using var commandInsert = connection.CreateCommand();
+                    commandInsert.CommandText = "INSERT INTO qso_export_scheduler (hour) VALUES (@hour)";
+                    commandInsert.Parameters.Add(new SqliteParameter("@hour", hour));
+                    commandInsert.ExecuteNonQuery();
+                });
                 transaction.Commit();
             }
             catch (SqliteException)
@@ -691,6 +732,16 @@ namespace QSOCollector.Data
                     prop.SetValue(item, Convert.ChangeType(value, propType));
                 }
                 results.Add(item);
+            }
+            return results;
+        }
+
+        private static List<string> GetSingleStringData(SqliteDataReader reader, string fieldName)
+        {
+            List<string> results = [];
+            while (reader.Read())
+            {
+                results.Add(Convert.ToString(reader[fieldName]));
             }
             return results;
         }

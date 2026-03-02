@@ -851,5 +851,10 @@ namespace QSOCollector
                 textBox.ScrollToCaret();
             }
         }
+
+        private void qsoAutoExportButton_Click(object sender, EventArgs e)
+        {
+            new QsoAutoExportForm(dbRepository).ShowDialog(this);
+        }
     }
 }
