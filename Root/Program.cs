@@ -1,10 +1,14 @@
 using DbUp;
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using QSOCollector.Data;
 using QSOCollector.Logging;
 using QSOCollector.Models;
+using QSOCollector.Service;
 using Serilog;
 using Serilog.Filters;
 using SQLitePCL;
@@ -21,6 +25,7 @@ namespace QSOCollector.Root
         public static readonly string importFolder = appDataFolder + "\\import";
         public static readonly string exportFolder = appDataFolder + "\\export";
         public static readonly string configFolder = appDataFolder + "\\config";
+        public static readonly string defaultAutoExportFolder = appDataFolder + "\\auto\\QSO_export";
 
         /// <summary>
         ///  The main entry point for the application.
@@ -47,7 +52,6 @@ namespace QSOCollector.Root
             string dbFileName = "qsoCollector.s3db";
             string connectionString = InitializeDatabase(dbFileName);
             RunMigrations(connectionString);
-            InitializeAdditionalFolders();
 
             try
             {
@@ -55,10 +59,11 @@ namespace QSOCollector.Root
                 Application.SetCompatibleTextRenderingDefault(false);
                 Application.EnableVisualStyles();
 
-                IHost host = ConfigureServices();
+                IHost host = ConfigureServices(connectionString);
 
-                var mainForm = ActivatorUtilities.CreateInstance<QsoCollectorForm>(host.Services, connectionString, startupParams);
+                InitializeAdditionalFolders(host);
 
+                var mainForm = ActivatorUtilities.CreateInstance<QsoCollectorForm>(host.Services, startupParams);
                 Application.Run(mainForm);
             }
             finally
@@ -99,11 +104,17 @@ namespace QSOCollector.Root
 
             .CreateLogger();
 
-        private static void InitializeAdditionalFolders()
+        private static void InitializeAdditionalFolders(IHost host)
         {
             InitializeFolder(importFolder);
             InitializeFolder(exportFolder);
             InitializeFolder(configFolder);
+            InitializeFolder(defaultAutoExportFolder);
+            string autoExportFolder = host.Services.GetService<IOptions<AutoExportTaskOptions>>().Value.Folder;
+            if (!string.IsNullOrEmpty(autoExportFolder))
+            {
+                InitializeFolder(autoExportFolder);
+            }
         }
 
         private static string InitializeDatabase(string dbFileName)
@@ -191,9 +202,19 @@ namespace QSOCollector.Root
             return startupParams;
         }
 
-        private static IHost ConfigureServices()
+        private static IHost ConfigureServices(string connectionString)
         {
             return Host.CreateDefaultBuilder()
+                        // Ensure appsettings.json from the application folder is loaded
+                        // explicitly so values come from the JSON file (base) and
+                        // environment variables can still override when present.
+                        .ConfigureAppConfiguration((hostingContext, config) =>
+                        {
+                            // Use the application base directory to locate appsettings.json
+                            config.SetBasePath(AppContext.BaseDirectory);
+                            config.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
+                            config.AddEnvironmentVariables();
+                        })
                         .ConfigureLogging(logging =>
                         {
                             logging.ClearProviders(); // Removes default Console/Debug loggers
@@ -202,6 +223,8 @@ namespace QSOCollector.Root
                         .ConfigureServices((context, services) =>
                         {
                             services.AddTransient<QsoCollectorForm>(); // Register your main form for DI
+                            // register DbRepository as implementation of IDbRepository so it can be injected by interface
+                            services.AddSingleton<IDbRepository>(_ => new DbRepository(connectionString));
                         })
                         .Build();
         }

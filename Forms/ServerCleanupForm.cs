@@ -7,9 +7,9 @@ namespace QSOCollector.Forms
     {
         private readonly ILogger log = Log.ForContext<ServerCleanupForm>();
 
-        private readonly DbRepository dbRepository;
+        private readonly IDbRepository dbRepository;
 
-        public ServerCleanupForm(DbRepository dbRepository)
+        public ServerCleanupForm(IDbRepository dbRepository)
         {
             InitializeComponent();
             this.dbRepository = dbRepository;

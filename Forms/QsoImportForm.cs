@@ -12,13 +12,13 @@ namespace QSOCollector
     {
         private readonly ILogger log = Log.ForContext<QsoImportForm>();
 
-        private readonly DbRepository dbRepository;
+        private readonly IDbRepository dbRepository;
         private string? filePath = null;
         private string? fileName = null;
         private string? folder = null;
         private string? fileContent = null;
 
-        public QsoImportForm(DbRepository dbRepository)
+        public QsoImportForm(IDbRepository dbRepository)
         {
             this.dbRepository = dbRepository;
             InitializeComponent();

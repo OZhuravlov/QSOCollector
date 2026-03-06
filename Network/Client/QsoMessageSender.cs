@@ -19,13 +19,13 @@ namespace QSOCollector.Network.Client
         private readonly string serverIp;
         private readonly int serverPort;
         private readonly BlockingCollection<QsoMessage> qsoMessageQueue;
-        private readonly DbRepository dbRepository;
+        private readonly IDbRepository dbRepository;
         private readonly ClientProgressUpdater progressUpdater;
         private readonly CancellationTokenSource cancellationTokenSource;
         private TcpClientInstance? tcpClient;
 
         public QsoMessageSender(string serverIp, int serverPort, BlockingCollection<QsoMessage> qsoMessageQueue,
-            DbRepository dbRepository, ClientProgressUpdater progressUpdater, CancellationTokenSource cancellationTokenSource)
+            IDbRepository dbRepository, ClientProgressUpdater progressUpdater, CancellationTokenSource cancellationTokenSource)
         {
             this.serverIp = serverIp;
             this.serverPort = serverPort;

@@ -54,7 +54,7 @@
             hour18Label = new Label();
             hour17Label = new Label();
             selectedHoursTextBox = new TextBox();
-            label1 = new Label();
+            selectedHoursLabel = new Label();
             enableExportSchedulerCheckBox = new CheckBox();
             mainFilterGroupBox = new GroupBox();
             everyHourRadioButton = new RadioButton();
@@ -62,6 +62,8 @@
             saveExportScheduler = new Button();
             cancelEditExportScheduler = new Button();
             setupGroupBox = new GroupBox();
+            chooseFolderButton = new Button();
+            folderTextBox = new TextBox();
             hoursGroupBox.SuspendLayout();
             mainFilterGroupBox.SuspendLayout();
             setupGroupBox.SuspendLayout();
@@ -381,15 +383,15 @@
             selectedHoursTextBox.Size = new Size(332, 43);
             selectedHoursTextBox.TabIndex = 13;
             // 
-            // label1
+            // selectedHoursLabel
             // 
-            label1.AutoSize = true;
-            label1.Font = new Font("Segoe UI", 10.2F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            label1.Location = new Point(116, 117);
-            label1.Name = "label1";
-            label1.Size = new Size(100, 19);
-            label1.TabIndex = 14;
-            label1.Text = "Selected Hours";
+            selectedHoursLabel.AutoSize = true;
+            selectedHoursLabel.Font = new Font("Segoe UI", 10.2F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            selectedHoursLabel.Location = new Point(116, 117);
+            selectedHoursLabel.Name = "selectedHoursLabel";
+            selectedHoursLabel.Size = new Size(100, 19);
+            selectedHoursLabel.TabIndex = 14;
+            selectedHoursLabel.Text = "Selected Hours";
             // 
             // enableExportSchedulerCheckBox
             // 
@@ -407,7 +409,7 @@
             // mainFilterGroupBox
             // 
             mainFilterGroupBox.Controls.Add(everyHourRadioButton);
-            mainFilterGroupBox.Controls.Add(label1);
+            mainFilterGroupBox.Controls.Add(selectedHoursLabel);
             mainFilterGroupBox.Controls.Add(dailyAtRadioButton);
             mainFilterGroupBox.Controls.Add(selectedHoursTextBox);
             mainFilterGroupBox.Controls.Add(hoursGroupBox);
@@ -452,7 +454,7 @@
             // 
             // saveExportScheduler
             // 
-            saveExportScheduler.Location = new Point(220, 247);
+            saveExportScheduler.Location = new Point(220, 336);
             saveExportScheduler.Margin = new Padding(3, 2, 3, 2);
             saveExportScheduler.Name = "saveExportScheduler";
             saveExportScheduler.Size = new Size(71, 31);
@@ -463,7 +465,7 @@
             // 
             // cancelEditExportScheduler
             // 
-            cancelEditExportScheduler.Location = new Point(53, 247);
+            cancelEditExportScheduler.Location = new Point(51, 336);
             cancelEditExportScheduler.Margin = new Padding(3, 2, 3, 2);
             cancelEditExportScheduler.Name = "cancelEditExportScheduler";
             cancelEditExportScheduler.Size = new Size(77, 31);
@@ -483,12 +485,38 @@
             setupGroupBox.TabStop = false;
             setupGroupBox.Text = "Setup";
             // 
+            // chooseFolderButton
+            // 
+            chooseFolderButton.BackColor = Color.SteelBlue;
+            chooseFolderButton.FlatStyle = FlatStyle.Popup;
+            chooseFolderButton.ForeColor = Color.Transparent;
+            chooseFolderButton.Location = new Point(9, 248);
+            chooseFolderButton.Margin = new Padding(3, 2, 3, 2);
+            chooseFolderButton.Name = "chooseFolderButton";
+            chooseFolderButton.Size = new Size(95, 25);
+            chooseFolderButton.TabIndex = 20;
+            chooseFolderButton.Text = "Choose folder";
+            chooseFolderButton.UseVisualStyleBackColor = false;
+            chooseFolderButton.Click += chooseFolderButton_Click;
+            // 
+            // folderTextBox
+            // 
+            folderTextBox.Location = new Point(6, 278);
+            folderTextBox.Multiline = true;
+            folderTextBox.Name = "folderTextBox";
+            folderTextBox.ReadOnly = true;
+            folderTextBox.Size = new Size(342, 53);
+            folderTextBox.TabIndex = 22;
+            folderTextBox.Text = "No file chosen";
+            // 
             // QsoAutoExportForm
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             BackColor = SystemColors.Control;
-            ClientSize = new Size(353, 281);
+            ClientSize = new Size(353, 374);
+            Controls.Add(folderTextBox);
+            Controls.Add(chooseFolderButton);
             Controls.Add(setupGroupBox);
             Controls.Add(saveExportScheduler);
             Controls.Add(cancelEditExportScheduler);
@@ -502,6 +530,7 @@
             setupGroupBox.ResumeLayout(false);
             setupGroupBox.PerformLayout();
             ResumeLayout(false);
+            PerformLayout();
         }
 
         #endregion
@@ -532,7 +561,7 @@
         private Label hour22Label;
         private Label hour23Label;
         private TextBox selectedHoursTextBox;
-        private Label label1;
+        private Label selectedHoursLabel;
         private CheckBox enableExportSchedulerCheckBox;
         private GroupBox mainFilterGroupBox;
         private RadioButton everyHourRadioButton;
@@ -540,5 +569,7 @@
         private Button saveExportScheduler;
         private Button cancelEditExportScheduler;
         private GroupBox setupGroupBox;
+        private Button chooseFolderButton;
+        private TextBox folderTextBox;
     }
 }

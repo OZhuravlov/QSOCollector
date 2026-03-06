@@ -21,12 +21,14 @@ namespace QSOCollector.Network.Server
         private readonly List<AcceptedClient> clients = [];
         private readonly CancellationTokenSource cts;
         private readonly ServerProgressUpdater serverProgressUpdater;
+        private readonly IDbRepository dbRepository;
 
-        public TcpServer(int port, ServerProgressUpdater serverProgressUpdater)
+        public TcpServer(int port, ServerProgressUpdater serverProgressUpdater, IDbRepository dbRepository)
         {
             ipEndPoint = new(IPAddress.Any, port);
             cts = new CancellationTokenSource();
             this.serverProgressUpdater = serverProgressUpdater;
+            this.dbRepository = dbRepository ?? throw new ArgumentNullException(nameof(dbRepository));
             string logMessage = $"TCP Server initialized on port {port}";
             log.Information(logMessage);
             this.serverProgressUpdater.UpdateLog(logMessage);
@@ -38,12 +40,7 @@ namespace QSOCollector.Network.Server
             cts.Cancel();
         }
 
-        public async Task Start(string connectionString)
-        {
-            await Run(connectionString);
-        }
-
-        private async Task Run(string connectionString)
+        public async Task Start()
         {
             listener = new(ipEndPoint);
             listener.Start();
@@ -69,13 +66,13 @@ namespace QSOCollector.Network.Server
                     // 30 seconds idle time and 1 second interval
                     socket.IOControl(IOControlCode.KeepAliveValues, [1, 0, 0, 0, 0xE8, 0x03, 0x00, 0x00, 0xE8, 0x03, 0x00, 0x00], null);
 
-                    AcceptedClient client = new(tcpClient, clientCancellationTokenSource, serverProgressUpdater);
+                    AcceptedClient client = new(tcpClient, clientCancellationTokenSource, serverProgressUpdater, dbRepository);
                     IPEndPoint? remoteIpEndPoint = tcpClient.Client.RemoteEndPoint as IPEndPoint;
                     string logMessage = $"New client with IP {remoteIpEndPoint?.Address} connected";
                     log.Information(logMessage);
                     serverProgressUpdater.UpdateLog(logMessage);
                     clients.Add(client);
-                    Task clientTask = client.Run(connectionString); //don't await
+                    Task clientTask = client.Run(); //don't await
                     clientTask.ContinueWith(t => clients.Remove(client));
                 }
                 catch (OperationCanceledException)
@@ -98,16 +95,19 @@ namespace QSOCollector.Network.Server
         }
     }
 
-    internal class AcceptedClient(TcpClient client, CancellationTokenSource clientCancellationTokenSource, ServerProgressUpdater serverProgressUpdater)
+    internal class AcceptedClient(TcpClient client, CancellationTokenSource clientCancellationTokenSource, ServerProgressUpdater serverProgressUpdater, IDbRepository dbRepository)
     {
         private readonly ILogger log = Log.ForContext<AcceptedClient>();
 
+        private readonly TcpClient client = client ?? throw new ArgumentNullException(nameof(client));
+        private readonly CancellationTokenSource clientCancellationTokenSource = clientCancellationTokenSource ?? throw new ArgumentNullException(nameof(clientCancellationTokenSource));
+        private readonly ServerProgressUpdater serverProgressUpdater = serverProgressUpdater ?? throw new ArgumentNullException(nameof(serverProgressUpdater));
         private readonly NetworkStream stream = client.GetStream();
         private readonly string clientIPAddress = ((IPEndPoint)client.Client.RemoteEndPoint).Address.ToString();
+        private readonly IDbRepository dbRepository = dbRepository ?? throw new ArgumentNullException(nameof(dbRepository));
 
-        public async Task Run(string dbConnectionString)
+        public async Task Run()
         {
-            DbRepository dbRepository = new(dbConnectionString);
             StreamReader r = new(stream);
             StreamWriter w = new(stream)
             {
@@ -212,7 +212,7 @@ namespace QSOCollector.Network.Server
             }
         }
 
-        private void ProcessQsoMessage(QsoMessage qsoMessage, DbRepository dbRepository) {
+        private void ProcessQsoMessage(QsoMessage qsoMessage, IDbRepository dbRepository) {
             List<Dictionary<string, string>> qsoRecords = ParseQsoMessage(qsoMessage);
             log.Debug("Parsed {RecordCount} QSO records from message from client {ClientIP}, source {Source}, format {Format}",
                 qsoRecords.Count,

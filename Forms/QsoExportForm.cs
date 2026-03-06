@@ -12,11 +12,11 @@ namespace QSOCollector
     {
         private readonly ILogger log = Log.ForContext<QsoExportForm>();
 
-        private readonly DbRepository dbRepository;
+        private readonly IDbRepository dbRepository;
         private List<QsoExportExpectedAmounts> expectedAmounts;
         private readonly QsoExportFilters exportFilters = new();
 
-        public QsoExportForm(DbRepository dbRepository, List<QsoExportExpectedAmounts> expectedAmounts)
+        public QsoExportForm(IDbRepository dbRepository, List<QsoExportExpectedAmounts> expectedAmounts)
         {
             this.dbRepository = dbRepository;
             this.expectedAmounts = expectedAmounts;

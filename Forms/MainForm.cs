@@ -5,7 +5,8 @@ using QSOCollector.Helpers;
 using QSOCollector.Models;
 using QSOCollector.Network.Client;
 using QSOCollector.Network.Server;
-using Serilog;
+using QSOCollector.Service;
+using Serilog; 
 using System.Collections.Concurrent;
 using System.Data;
 using System.Data.SQLite;
@@ -13,7 +14,6 @@ using System.Globalization;
 using System.Net.Sockets;
 using System.Reflection;
 using System.Text;
-using System.Text.Json;
 
 namespace QSOCollector
 {
@@ -21,21 +21,22 @@ namespace QSOCollector
     {
         private readonly ILogger log = Log.ForContext<QsoCollectorForm>();
 
-        private readonly string connectionString;
-        private readonly DbRepository dbRepository;
+        private readonly IDbRepository dbRepository;
         private readonly StartupParams startupParams;
         private readonly DataTable serverQsoAmountDataTable;
-        private CancellationTokenSource? clientCancellationTokenSource = new();
+        private CancellationTokenSource clientCancellationTokenSource = new();
+        private CancellationTokenSource serverCancellationTokenSource = new();
         private ClientProgressUpdater? clientProgressUpdater;
         private ServerProgressUpdater? serverProgressUpdater;
         private TcpServer? tcpServer = null;
         private bool isLocalClientRunning = false;
         private bool isLocalServerRunning = false;
+        private AutoExportTaskService autoExportTaskService;
 
-        public QsoCollectorForm(string connectionString, StartupParams startupParams)
+        public QsoCollectorForm(StartupParams startupParams, IDbRepository dbRepository)
         {
-            this.connectionString = connectionString;
-            dbRepository = new DbRepository(connectionString);
+            this.dbRepository = dbRepository ?? throw new ArgumentNullException(nameof(dbRepository));
+
             serverQsoAmountDataTable = new()
             {
                 Locale = CultureInfo.InvariantCulture
@@ -45,11 +46,9 @@ namespace QSOCollector
 
             InitializeComponent();
             this.Text += $"        v.{Assembly.GetExecutingAssembly().GetName().Version}";
-            RestoreSavedFormValuesFromDB();
+            RestoreSettingsFromDb();
             HandleServerCheckBoxChanged(enableServerCheckBox);
-            //            serverLogTextBox.Clear();
             HandleClientCheckBoxChanged(enableClientCheckBox);
-            //            clientLogTextBox.Clear();
             PopulateAboutTab();
         }
 
@@ -225,7 +224,7 @@ namespace QSOCollector
             if (!e.Cancel)
             {
                 log.Information("Saving form values to DB before exit");
-                SaveFormValuesToDB();
+                SaveSettingsToDB();
             }
         }
 
@@ -305,6 +304,7 @@ namespace QSOCollector
 
         private void StopServer()
         {
+            serverCancellationTokenSource = RenewToken(serverCancellationTokenSource);
             tcpServer?.Stop();
             tcpServer = null;
             enableServerCheckBox.Enabled = true;
@@ -315,6 +315,9 @@ namespace QSOCollector
             ButtonStyleHandler.Update(startServerButton, true, Color.DarkSeaGreen);
             ButtonStyleHandler.Update(stopServerButton, false);
             ButtonStyleHandler.Update(resetServerButton, true, Color.LightGray);
+            ButtonStyleHandler.Update(qsoAutoExportButton, true, Color.LightGray);
+            ButtonStyleHandler.Update(qsoAutoExportButton, false, Color.Lavender);
+            StopAutoExportTask();
         }
 
         private void StartServerButton_Click(object sender, EventArgs e)
@@ -329,9 +332,11 @@ namespace QSOCollector
             ButtonStyleHandler.Update(startServerButton, false, Color.Lavender);
             ButtonStyleHandler.Update(stopServerButton, true, Color.RosyBrown);
             ButtonStyleHandler.Update(resetServerButton, false, Color.Lavender);
+            ButtonStyleHandler.Update(qsoAutoExportButton, true, Color.LightGray);
             string logMessage = $"Server started on port {port}";
             log.Information(logMessage);
             serverLogTextBox.AppendText($"{logMessage}\r\n");
+            StartAutoExportTask();
         }
 
         private async void StartServer(int port)
@@ -341,9 +346,9 @@ namespace QSOCollector
             try
             {
                 serverProgressUpdater = new(serverQsoAmountDataTable, serverLogTextBox);
-                tcpServer = new(port, serverProgressUpdater);
+                tcpServer = new(port, serverProgressUpdater, dbRepository);
                 isLocalServerRunning = true;
-                await tcpServer.Start(connectionString);
+                await tcpServer.Start();
                 await RefreshServerQsoAmountDataTable();
             }
             catch (Exception ex)
@@ -375,7 +380,7 @@ namespace QSOCollector
             try
             {
                 log.Debug("Populate QSO Amount table");
-                serverQsoAmountsDataAdapter = new SQLiteDataAdapter(selectCommand, connectionString);
+                serverQsoAmountsDataAdapter = new SQLiteDataAdapter(selectCommand, dbRepository.GetConnectionString());
                 SQLiteCommandBuilder commandBuilder = new(serverQsoAmountsDataAdapter);
                 ClearDataForServerQsoAmountDataGridView();
                 serverQsoAmountsDataAdapter.Fill(serverQsoAmountDataTable);
@@ -574,6 +579,11 @@ namespace QSOCollector
             return CancellationTokenSource.CreateLinkedTokenSource(clientCancellationTokenSource.Token);
         }
 
+        private CancellationTokenSource CreateLinkedServerCancellationTokenSource()
+        {
+            return CancellationTokenSource.CreateLinkedTokenSource(serverCancellationTokenSource.Token);
+        }
+
         private void StopClientButton_Click(object sender, EventArgs e)
         {
             DialogResult result = MessageBox.Show("Are you sure you want to stop the client?", "Confirm Stop Client", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
@@ -586,12 +596,7 @@ namespace QSOCollector
 
         private void StopClient()
         {
-            clientCancellationTokenSource.Cancel(true);
-            if (clientCancellationTokenSource.IsCancellationRequested)
-            {
-                clientCancellationTokenSource.Dispose();
-                clientCancellationTokenSource = new CancellationTokenSource();
-            }
+            clientCancellationTokenSource = RenewToken(clientCancellationTokenSource);
             clientProgressUpdater = null;
             enableClientCheckBox.Enabled = true;
             clientServerNameIpTextBox.Enabled = true;
@@ -630,7 +635,7 @@ namespace QSOCollector
             }
         }
 
-        private void RestoreSavedFormValuesFromDB()
+        private void RestoreSettingsFromDb()
         {
             Dictionary<string, string?> settings = dbRepository.LoadSettings();
             log.Information("Restoring Main Form setting from DB: {settings}", settings);
@@ -649,7 +654,7 @@ namespace QSOCollector
                 autoStartCheckbox.Checked = Convert.ToBoolean(autoStart);
         }
 
-        private void SaveFormValuesToDB()
+        private void SaveSettingsToDB()
         {
             dbRepository.SaveSetting("ServerEnabled", enableServerCheckBox.Checked.ToString());
             dbRepository.SaveSetting("ServerPort", serverPortTextBox.Text);
@@ -665,7 +670,7 @@ namespace QSOCollector
 
         private void ListenersConfigButton_Click(object sender, EventArgs e)
         {
-            new ListenersForm(connectionString, isLocalClientRunning).ShowDialog(this);
+            new ListenersForm(dbRepository, isLocalClientRunning).ShowDialog(this);
         }
 
         private void clientLogDetailsCheckBox_CheckedChanged(object sender, EventArgs e)
@@ -814,9 +819,9 @@ namespace QSOCollector
         private void resetClientButton_Click(object sender, EventArgs e)
         {
             log.Debug("Resetting Client Form called");
-            SaveFormValuesToDB();
+            SaveSettingsToDB();
             new ClientCleanupForm(dbRepository).ShowDialog(this);
-            RestoreSavedFormValuesFromDB();
+            RestoreSettingsFromDb();
             HandleClientServerChanged();
         }
 
@@ -855,6 +860,44 @@ namespace QSOCollector
         private void qsoAutoExportButton_Click(object sender, EventArgs e)
         {
             new QsoAutoExportForm(dbRepository).ShowDialog(this);
+            StartAutoExportTask();
+        }
+
+        private void StartAutoExportTask()
+        {
+            StopAutoExportTask();
+            autoExportTaskService = new(dbRepository);
+            autoExportTaskService.Init();
+            Task.Run(() => autoExportTaskService.Start());
+        }
+
+        private void StopAutoExportTask()
+        {
+            if (autoExportTaskService == null)
+            {
+                log.Debug("Auto export task service is not running, no need to stop");
+                return;
+            }
+            autoExportTaskService.Stop();
+        }
+
+        private void CancelToken(CancellationTokenSource? tokenSource) {
+            if (tokenSource == null || tokenSource.IsCancellationRequested) {
+                log.Information("No cancellation token to be cancelled");
+                return;
+            }
+
+            log.Information("Cancelling token {token}", tokenSource);
+            tokenSource.Cancel();
+            if (tokenSource.IsCancellationRequested)
+            {
+               tokenSource.Dispose();
+            }
+        }
+        private CancellationTokenSource RenewToken(CancellationTokenSource? tokenSource)
+        {
+            CancelToken(tokenSource);
+            return new CancellationTokenSource();
         }
     }
 }

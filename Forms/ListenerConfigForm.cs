@@ -10,15 +10,13 @@ namespace QSOCollector
 {
     public partial class ListenersForm : Form
     {
-        private readonly string connectionString;
         private readonly bool isLocalClientRunning;
-        private readonly DbRepository dbRepository;
+        private readonly IDbRepository dbRepository;
 
-        public ListenersForm(string connectionString, bool isLocalClientRunning)
+        public ListenersForm(IDbRepository dbRepository, bool isLocalClientRunning)
         {
-            this.connectionString = connectionString;
             this.isLocalClientRunning = isLocalClientRunning;
-            dbRepository = new DbRepository(connectionString);
+            this.dbRepository = dbRepository;
             InitializeComponent();
         }
 
@@ -27,7 +25,7 @@ namespace QSOCollector
             // Bind the DataGridView to the BindingSource
             // and load the data from the database.
             dataGridView1.DataSource = bindingSource1;
-            GetListenersConfigDataForDataGridView1(connectionString, "select id, name, qso_port, forward_port, acknowledge_port, message_format, is_active from listeners");
+            GetListenersConfigDataForDataGridView1(dbRepository.GetConnectionString(), "select id, name, qso_port, forward_port, acknowledge_port, message_format, is_active from listeners");
             exportConfigButton.Enabled = dataGridView1.Rows.Count > 0;
         }
 

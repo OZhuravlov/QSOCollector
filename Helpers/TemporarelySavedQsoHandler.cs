@@ -5,7 +5,7 @@ using System.Collections.Concurrent;
 
 namespace QSOCollector.Helpers
 {
-    public class TemporarelySavedQsoHandler(DbRepository dbRepository, BlockingCollection<QsoMessage> qsoMessageQueue,
+    public class TemporarelySavedQsoHandler(IDbRepository dbRepository, BlockingCollection<QsoMessage> qsoMessageQueue,
         QsoMessageSender qsoMessageSender, ClientProgressUpdater progressUpdater, CancellationTokenSource cancellationTokenSource)
     {
 

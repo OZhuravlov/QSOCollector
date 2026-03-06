@@ -1,5 +1,4 @@
 using Microsoft.Data.Sqlite;
-using Newtonsoft.Json.Linq;
 using QSOCollector.Models;
 using Serilog;
 using System.Reflection;
@@ -8,7 +7,7 @@ using System.Text.Json;
 
 namespace QSOCollector.Data
 {
-    public class DbRepository
+    public class DbRepository : IDbRepository
     {
         private readonly ILogger log = Log.ForContext<DbRepository>();
 
@@ -41,6 +40,10 @@ namespace QSOCollector.Data
             log.Debug("Initialized DbRepository with connection string: {connectionString}", dbConnectionString);
         }
 
+        public string GetConnectionString() { 
+            return connectionString;
+        }
+
         public Dictionary<string, string?> LoadSettings()
         {
             var settings = new Dictionary<string, string?>();
@@ -58,7 +61,7 @@ namespace QSOCollector.Data
             return settings;
         }
 
-        public void SaveSetting(string key, string value)
+        public void SaveSetting(string key, string? value)
         {
             using var connection = new SqliteConnection(connectionString);
             connection.Open();
@@ -68,7 +71,11 @@ namespace QSOCollector.Data
                 using var command = connection.CreateCommand();
                 command.CommandText = insertSettingsSql;
                 command.Parameters.Add(new SqliteParameter("@key", key));
-                command.Parameters.Add(new SqliteParameter("@value", value));
+                if (value != null) {
+                    command.Parameters.Add(new SqliteParameter("@value", value));
+                } else {
+                    command.Parameters.Add(new SqliteParameter("@value", DBNull.Value));
+                }
                 command.ExecuteNonQuery();
                 transaction.Commit();
             }
@@ -539,7 +546,7 @@ namespace QSOCollector.Data
             using var command = connection.CreateCommand();
             command.CommandText = getExportSchedulerHoursSql;
             using var reader = command.ExecuteReader();
-            return GetSingleStringData(reader, "hour");
+            return GetSimpleData<string>(reader, "hour");
         }
 
         public void SaveExportHours(List<string> hours)
@@ -568,6 +575,17 @@ namespace QSOCollector.Data
                 transaction.Rollback();
                 throw;
             }
+        }
+
+        public DateTime GetLatestExportTaskTime()
+        {
+            log.Verbose("Get latest export task timestamp");
+            using var connection = new SqliteConnection(connectionString);
+            connection.Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = "select max(start_time) max_start_time from adif_export where is_auto = true";
+            using var reader = command.ExecuteReader();
+            return GetSimpleData<DateTime>(reader, "max_start_time")[0];
         }
 
         private static void AddAdifSqlCommandTextAndParams(SqliteCommand command, QsoExportFilters exportFilters)
@@ -661,10 +679,7 @@ namespace QSOCollector.Data
         private static void AddSqlParameter(SqliteCommand command, string paramKey, object? paramValue, List<string>? parameterKeys = null)
         {
             command.Parameters.Add(new SqliteParameter($"@{paramKey}", paramValue ?? DBNull.Value));
-            if (parameterKeys != null)
-            {
-                parameterKeys.Add(paramKey);
-            }
+            parameterKeys?.Add(paramKey);
         }
 
         private static List<string> GetParameterKeys(string commandText)
@@ -736,12 +751,20 @@ namespace QSOCollector.Data
             return results;
         }
 
-        private static List<string> GetSingleStringData(SqliteDataReader reader, string fieldName)
+        private static List<T> GetSimpleData<T>(SqliteDataReader reader, string fieldName)
         {
-            List<string> results = [];
+            List<T> results = [];
             while (reader.Read())
             {
-                results.Add(Convert.ToString(reader[fieldName]));
+                Type type = typeof(T);
+                type = Nullable.GetUnderlyingType(type) ?? type;
+                object value = reader[fieldName];
+                if (value == DBNull.Value) { 
+                    results.Add(default!);
+                    continue;
+                }
+                T? item = (T?) (value == DBNull.Value ? null : Convert.ChangeType(value, type));
+                results.Add(item);
             }
             return results;
         }

@@ -1,15 +1,23 @@
 ﻿using QSOCollector.Data;
 using QSOCollector.Helpers;
+using QSOCollector.Network.Server;
+using QSOCollector.Root;
+using Serilog;
+using System.Runtime.InteropServices;
+using System.Text;
 
 namespace QSOCollector.Forms
 {
     public partial class QsoAutoExportForm : Form
     {
-        private readonly DbRepository dbRepository;
-        private List<String> savedHours;
-        private List<String> hours;
+        private readonly ILogger log = Log.ForContext<TcpServer>();
 
-        public QsoAutoExportForm(DbRepository dbRepository)
+        private readonly IDbRepository dbRepository;
+        private List<String> savedHours;
+        private readonly List<String> hours;
+        private string mainFolder = Program.defaultAutoExportFolder;
+
+        public QsoAutoExportForm(IDbRepository dbRepository)
         {
             this.dbRepository = dbRepository;
             savedHours = dbRepository.GetExportHours();
@@ -18,6 +26,12 @@ namespace QSOCollector.Forms
             enableExportSchedulerCheckBox.Checked = hours.Count > 0;
             HandleHourLabels();
             enableExportSchedulerCheckBox_CheckedChanged(enableExportSchedulerCheckBox, EventArgs.Empty);
+            dbRepository.LoadSettings().TryGetValue("AutoExportFolder", out string? mainFolder);
+            if (!string.IsNullOrEmpty(mainFolder))
+            {
+                this.mainFolder = mainFolder;
+            }
+            folderTextBox.Text = PathShortener(this.mainFolder, 140);
         }
 
         private void HandleHourLabels()
@@ -39,8 +53,14 @@ namespace QSOCollector.Forms
                 }
             }
             selectedHoursTextBox.Clear();
-            string hoursText = hours.Count > 0 ? String.Join(", ", hours) : "No hours selected";
-            selectedHoursTextBox.Text = String.Join(", ", hours);
+            selectedHoursTextBox.Text = hours.Count > 0 ? String.Join(", ", hours) : "No hours selected";
+            HandleSaveExportSchedulerButton();
+        }
+
+        private void HandleSaveExportSchedulerButton()
+        {
+            saveExportScheduler.Text = (hours.Count > 0 && enableExportSchedulerCheckBox.Checked) ? "Start" : "Save";
+            saveExportScheduler.Enabled = !enableExportSchedulerCheckBox.Checked || hours.Count > 0;
         }
 
         private void hourLabel_Click(object sender, EventArgs e)
@@ -68,7 +88,8 @@ namespace QSOCollector.Forms
 
         private void saveExportScheduler_Click(object sender, EventArgs e)
         {
-            if (enableExportSchedulerCheckBox.Checked && hours.Count == 0) {
+            if (enableExportSchedulerCheckBox.Checked && hours.Count == 0)
+            {
                 MessageBox.Show("Since Scheduler is enabled then at least one export execution hour must be selected. Please select or disable Scheduler", "Cannot save export scheduler", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
@@ -80,13 +101,15 @@ namespace QSOCollector.Forms
 
             dbRepository.SaveExportHours(hours);
             savedHours = [.. hours];
+            dbRepository.SaveSetting("AutoExportFolder", mainFolder);
             this.Close();
         }
 
         private void QsoAutoExportForm_FormClosing(object sender, FormClosingEventArgs e)
         {
-            if (HandleCancelEditExportScheduler()) {
-                return; 
+            if (HandleCancelEditExportScheduler())
+            {
+                return;
             }
             e.Cancel = true;
         }
@@ -94,7 +117,8 @@ namespace QSOCollector.Forms
 
         private void cancelEditExportScheduler_Click(object sender, EventArgs e)
         {
-            if (HandleCancelEditExportScheduler()) {
+            if (HandleCancelEditExportScheduler())
+            {
                 this.Close();
             }
         }
@@ -121,9 +145,11 @@ namespace QSOCollector.Forms
         private void RadioButtonChanged()
         {
             hours.Clear();
-            if (everyHourRadioButton.Checked) {
+            if (everyHourRadioButton.Checked)
+            {
                 hours.Clear();
-                for (int i = 0; i < 24; i++) {
+                for (int i = 0; i < 24; i++)
+                {
                     hours.Add(i.ToString("D2"));
                 }
             }
@@ -139,6 +165,7 @@ namespace QSOCollector.Forms
                 return;
             }
             HandleCheckBoxForChildControls(checkbox, parent, checkbox.Checked);
+            HandleSaveExportSchedulerButton();
         }
 
         private static void HandleCheckBoxForChildControls(CheckBox checkbox, Control parentControl, bool enabled)
@@ -149,9 +176,12 @@ namespace QSOCollector.Forms
 
                 if (control is Button button)
                 {
-                    if (enabled) {
+                    if (enabled)
+                    {
                         ButtonStyleHandler.Update(button, enabled, Color.White);
-                    } else {
+                    }
+                    else
+                    {
                         ButtonStyleHandler.Update(button, enabled);
                     }
                     continue;
@@ -162,5 +192,34 @@ namespace QSOCollector.Forms
             }
         }
 
+        private void chooseFolderButton_Click(object sender, EventArgs e)
+        {
+            using FolderBrowserDialog folderDialog = new();
+            folderDialog.InitialDirectory = mainFolder;
+            if (folderDialog.ShowDialog() == DialogResult.OK)
+            {
+                mainFolder = folderDialog.SelectedPath;
+                log.Information("Folder selected for auto export: {SelectedPath}", mainFolder);
+                folderTextBox.Text = PathShortener(mainFolder, 140);
+            }
+            else
+            {
+                log.Information("File selection cancelled");
+            }
+        }
+
+        [DllImport("shlwapi.dll", CharSet = CharSet.Unicode)]
+        static extern bool PathCompactPathEx(
+               [Out] StringBuilder pszOut,
+               string szPath,
+               int cchMax,
+               int dwFlags);
+
+        static string PathShortener(string path, int length)
+        {
+            StringBuilder sb = new(length + 1);
+            PathCompactPathEx(sb, path, length, 0);
+            return sb.ToString();
+        }
     }
 }
