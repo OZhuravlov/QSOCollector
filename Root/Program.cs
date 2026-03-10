@@ -26,6 +26,7 @@ namespace QSOCollector.Root
         public static readonly string exportFolder = appDataFolder + "\\export";
         public static readonly string configFolder = appDataFolder + "\\config";
         public static readonly string defaultAutoExportFolder = appDataFolder + "\\auto\\QSO_export";
+        public static readonly bool isPremiumAutoExportEnabled = false;
 
         /// <summary>
         ///  The main entry point for the application.

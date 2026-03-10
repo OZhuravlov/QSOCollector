@@ -123,7 +123,7 @@ namespace QSOCollector.Service
 
             File.WriteAllText(exportAllFilePath, fileContent);
             log.Information("Exported QSOs to file: {exportAllFilePath}", exportAllFilePath);
-            File.AppendAllText(infoFilePath, $"{now:yyyy-MM-dd HH:mm}: {fileName}, All - {adifEntries.Count} QSOs" + Environment.NewLine);
+            File.AppendAllText(infoFilePath, $"[{now:yyyy-MM-dd HH:mm}]: {fileName}, All - {adifEntries.Count} QSOs" + Environment.NewLine);
         }
 
         private void EnsureDirectoriesExist()
@@ -136,7 +136,7 @@ namespace QSOCollector.Service
             {
                 Directory.CreateDirectory(allFolder);
             }
-            if (!Directory.Exists(premiumFolder))
+            if (Program.isPremiumAutoExportEnabled && !Directory.Exists(premiumFolder))
             {
                 Directory.CreateDirectory(premiumFolder);
             }

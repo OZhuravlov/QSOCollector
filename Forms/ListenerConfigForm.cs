@@ -38,7 +38,7 @@ namespace QSOCollector
 
                 // Create a command builder to generate SQL update, insert, and
                 // delete commands based on selectCommand.
-                SQLiteCommandBuilder commandBuilder = new SQLiteCommandBuilder(dataAdapter);
+                SQLiteCommandBuilder commandBuilder = new (dataAdapter);
 
                 // Populate a new data table and bind it to the BindingSource.
                 DataTable table = new()

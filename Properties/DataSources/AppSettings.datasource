@@ -6,5 +6,5 @@
     cause the file to be unrecognizable by the program.
 -->
 <GenericObjectDataSource DisplayName="AppSettings" Version="1.0" xmlns="urn:schemas-microsoft-com:xml-msdatasource">
-  <TypeInfo>QSOCollector.AppSettings, QSOCollector, Version=1.4.0, Culture=neutral, PublicKeyToken=null</TypeInfo>
+  <TypeInfo>QSOCollector.AppSettings, QSOCollector, Version=1.4.1, Culture=neutral, PublicKeyToken=null</TypeInfo>
 </GenericObjectDataSource>

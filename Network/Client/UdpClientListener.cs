@@ -118,7 +118,7 @@ namespace QSOCollector.Network.Client
                 if (!qsoMessage.OriginalQsoData.Contains(text, StringComparison.OrdinalIgnoreCase))
                 {
                     string logMessage = $"Warning: Received QSO message does not appear to be in expected format ({listenerConfig.MessageFormat}). Ignoring";
-                    log.Warning(logMessage);
+                    log.Warning("{logMessage}: {origQsoData}", logMessage, qsoMessage.OriginalQsoData);
                     progressUpdater.UpdateLog(logMessage);
                     return false;
                 }

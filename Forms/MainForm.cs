@@ -881,8 +881,10 @@ namespace QSOCollector
             autoExportTaskService.Stop();
         }
 
-        private void CancelToken(CancellationTokenSource? tokenSource) {
-            if (tokenSource == null || tokenSource.IsCancellationRequested) {
+        private void CancelToken(CancellationTokenSource? tokenSource)
+        {
+            if (tokenSource == null || tokenSource.IsCancellationRequested)
+            {
                 log.Information("No cancellation token to be cancelled");
                 return;
             }
@@ -891,13 +893,18 @@ namespace QSOCollector
             tokenSource.Cancel();
             if (tokenSource.IsCancellationRequested)
             {
-               tokenSource.Dispose();
+                tokenSource.Dispose();
             }
         }
         private CancellationTokenSource RenewToken(CancellationTokenSource? tokenSource)
         {
             CancelToken(tokenSource);
             return new CancellationTokenSource();
+        }
+
+        private void premiumCallsignsButton_Click(object sender, EventArgs e)
+        {
+            new PremiunCallsignsForm(dbRepository).ShowDialog(this);
         }
     }
 }
