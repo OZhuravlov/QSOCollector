@@ -19,12 +19,12 @@ namespace QSOCollector.Parsers
 
         private static string DeserializeN1mmContactInfoAndMapToAdif(QsoMessage qsoMessage, out string? id)
         {
-            var serializer = new XmlSerializer(typeof(N1mmContactInfo));
+            string rootName = qsoMessage.Replace ? "contactreplace" : "contactinfo";
+            var serializer = new XmlSerializer(typeof(N1mmContactInfo), new XmlRootAttribute(rootName));
             N1mmContactInfo contactInfo;
             using (var reader = new StringReader(qsoMessage.OriginalQsoData))
             {
                 contactInfo = (N1mmContactInfo)serializer.Deserialize(reader)!;
-
             }
             id = contactInfo.Id;
             return N1mmContactInfoToAdifQsoMessageMapper.Map(contactInfo);

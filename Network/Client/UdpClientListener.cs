@@ -67,7 +67,13 @@ namespace QSOCollector.Network.Client
                     log.Debug("UDP message received on port {Port} ({ListenerName}:{Format}): {ReceivedData}", 
                         qsoPort, listenerConfig.Name, listenerConfig.MessageFormat, receivedData);
 
-                    QsoMessage qsoMessage = new() { Source = listenerConfig.Name, OriginalFormat = listenerConfig.MessageFormat, OriginalQsoData = receivedData };
+                    QsoMessage qsoMessage = new() { 
+                        Source = listenerConfig.Name, 
+                        OriginalFormat = listenerConfig.MessageFormat, 
+                        OriginalQsoData = receivedData,
+                        Replace = receivedData.Contains("<contactreplace>", StringComparison.OrdinalIgnoreCase)
+                    };
+
                     if (!IsExpectedMessageFormat(qsoMessage)) {
                         continue;
                     }
@@ -110,7 +116,7 @@ namespace QSOCollector.Network.Client
             string[] requiredTexts = listenerConfig.MessageFormat switch
             {
                 "ADIF" => ["<EOR>", "<QSO_DATE:"],
-                "N1MM" => ["<contactinfo>", "</contactinfo>"],
+                "N1MM" => qsoMessage.Replace ? ["<contactreplace>", "</contactreplace>"] : ["<contactinfo>", "</contactinfo>"],
                 _ => []
             };
             foreach (string text in requiredTexts)

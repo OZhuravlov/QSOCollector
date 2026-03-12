@@ -26,7 +26,7 @@ namespace QSOCollector.Helpers
                         foreach (var qsoMessage in tempQsoMessages)
                         {
                             qsoMessageQueue.Add(qsoMessage.Value);
-                            dbRepository.DeleteTemporaryQsoRecord(qsoMessage.Key);
+                            dbRepository.DeleteQsoRecord(qsoMessage.Key);
                             progressUpdater.UpdateLog($"Resend to server locally saved QSO id {qsoMessage.Key} from {qsoMessage.Value.Source}");
                         }
                         progressUpdater.UpdateTempSaved(-tempQsoMessages.Count);

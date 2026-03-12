@@ -38,6 +38,7 @@
 	<ItemGroup>
     <EmbeddedResource Include="Migrations\002_adifImportTable.sql" />
     <EmbeddedResource Include="Migrations\001_adifExportTable.sql" />
+    <EmbeddedResource Include="Migrations\014_add-replaced-culumn-to-qsodataTables.sql" />
     <EmbeddedResource Include="Migrations\013_createPremiumCallsignTable.sql" />
     <EmbeddedResource Include="Migrations\012_add-culumn-to-adifExportTable.sql" />
     <EmbeddedResource Include="Migrations\011_createExportSchedulerTable .sql" />

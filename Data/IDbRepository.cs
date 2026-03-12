@@ -19,7 +19,7 @@ namespace QSOCollector.Data
         void SaveQsoRecords(List<Dictionary<string, string?>> qsoRecords, int? importId = null, bool isTemporary = false);
         void SaveRawQso(QsoMessage qsoMessage);
         Dictionary<int, QsoMessage> GetTemporaryQsoMessages();
-        void DeleteTemporaryQsoRecord(int id);
+        void DeleteQsoRecord(int id);
         Dictionary<int, string> GetAdif(QsoExportFilters exportFilters);
         void SetQSOsExported(List<int> keys, string folder, string fileName, QsoExportFilters filter, bool isConfirmed);
         List<string> GetExportHours();

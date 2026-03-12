@@ -74,11 +74,11 @@ namespace QSOCollector.Parsers
                     qsoMap[kv.Key] = kv.Value;
                 }
                 string adifRecord = record + endOfRecord;
+                qsoMap["IS_REPLACE"] = qsoMessage.Replace.ToString();
                 qsoMap["ORIG_QSODATA"] = qsoMessage.OriginalFormat == "ADIF" ? adifRecord : qsoMessage.OriginalQsoData;
                 qsoMap["ADIF_QSODATA"] = adifRecord;
                 qsoMap["QSO_TIME"] = GetQsoTime(qsoMap).ToString("yyyy-MM-dd HH:mm:ss");
-                string? qsoOperator;
-                if (!qsoMap.ContainsKey("STATION_CALLSIGN") && qsoMap.TryGetValue("OPERATOR", out qsoOperator))
+                if (!qsoMap.ContainsKey("STATION_CALLSIGN") && qsoMap.TryGetValue("OPERATOR", out string? qsoOperator))
                 {
                     qsoMap["STATION_CALLSIGN"] = qsoOperator;
                 }

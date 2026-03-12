@@ -10,6 +10,7 @@ namespace QSOCollector.Data
     public class DbRepository : IDbRepository
     {
         private readonly ILogger log = Log.ForContext<DbRepository>();
+        private readonly int maxMinuteIntervalToReplaceQso = 5;
 
         private const string getTableColumnsSql = "SELECT UPPER(p.name) name, UPPER(p.type) type FROM sqlite_master m JOIN pragma_table_info(m.name) p WHERE lower(m.name) = lower(@tablename) and not p.pk";
         private const string selectSettingsSql = "SELECT key, value FROM settings";
@@ -20,15 +21,16 @@ namespace QSOCollector.Data
                     " VALUES (@Name, @QsoPort, @ForwardPort, @AcknowledgePort, @MessageFormat, @IsActive)";
         private const string getServerQsoAmountsSql = "SELECT q.mode QsoAmountMode, COUNT(CASE WHEN q.qso_time >= current_date THEN 1 END) TodayQsoAmount, count(*) TotalQsoAmount, COUNT(e.id) ExportedQsoAmount, MAX(q.qso_time) LastQsoTime, MAX(e.end_time) LastExportedQsoTime FROM qsodata q LEFT JOIN adif_export e ON q.export_id = e.id AND e.is_confirmed = true WHERE q.is_temporary = false GROUP BY q.mode UNION ALL SELECT 'Total', COUNT(CASE WHEN q.qso_time >= current_date THEN 1 END), COUNT(*), COUNT(e.id), MAX(q.qso_time), MAX(e.end_time) FROM qsodata q LEFT JOIN adif_export e ON q.export_id = e.id AND e.is_confirmed = true WHERE q.is_temporary = false";
         private const string getQsoAmountsForExportSql = "SELECT COALESCE(q.source_name, '<UNKNOWN>') SourceName, e.id IS NOT NULL IsExported, DATE(q.qso_time) QsoDate, q.mode_group ModeGroup, q.mode Mode, q.band Band, COALESCE(q.operator, '<UNKNOWN>') Operator, COALESCE(q.source_ip_address, '<UNKNOWN>') SourceIp, count(*) Count FROM qsodata q LEFT JOIN adif_export e ON q.export_id = e.id AND e.is_confirmed = true WHERE q.is_temporary = false GROUP BY COALESCE(q.source_name, '<UNKNOWN>'), e.id IS NOT NULL, DATE(q.qso_time), q.mode_group, q.mode, q.band, COALESCE(q.operator, '<UNKNOWN>'), COALESCE(q.source_ip_address, '<UNKNOWN>')";
-        private const string insertRawQsoSql = "INSERT INTO raw_qsodata (source_name, orig_format, orig_qsodata) VALUES (@Source, @OriginalFormat, @OriginalQsoData)";
-        private const string insertQsoSql = "INSERT INTO qsodata (is_temporary, source_name, source_ip_address, external_id, import_id, qso_time, programid, station_callsign, qso_date, qso_date_off, call, time_on, time_off, band, freq, freq_rx, mode, mode_group, contest_id, rst_sent, rst_rcvd, exch_sent, exch_rcvd, operator, my_gridsquare, gridsquare, distance, comment, pfx, dxcc_pref, cqz, ituz, cont, qslmsg, dxcc, orig_format, orig_qsodata, adif_qsodata)" +
-                    " VALUES (@is_temporary, @source_name, @source_ip_address, @external_id, @import_id, @qso_time, @programid, @station_callsign, @qso_date, @qso_date_off, @call, @time_on, @time_off, @band, @freq, @freq_rx, @mode, @mode_group, @contest_id, @rst_sent, @rst_rcvd, @exch_sent, @exch_rcvd, @operator, @my_gridsquare, @gridsquare, @distance, @comment, @pfx, @dxcc_pref, @cqz, @ituz, @cont, @qslmsg, @dxcc, @orig_format, @orig_qsodata, @adif_qsodata)";
-        private const string getTemporaryQsoSql = "SELECT id, source_name, orig_format, orig_qsodata, adif_qsodata " +
+        private const string insertRawQsoSql = "INSERT INTO raw_qsodata (source_name, orig_format, orig_qsodata, is_replace) VALUES (@Source, @OriginalFormat, @OriginalQsoData, @Replace)";
+        private const string insertQsoSql = "INSERT INTO qsodata (is_temporary, source_name, source_ip_address, external_id, import_id, qso_time, programid, station_callsign, qso_date, qso_date_off, call, time_on, time_off, band, freq, freq_rx, mode, mode_group, contest_id, rst_sent, rst_rcvd, exch_sent, exch_rcvd, operator, my_gridsquare, gridsquare, distance, comment, pfx, dxcc_pref, cqz, ituz, cont, qslmsg, dxcc, orig_format, orig_qsodata, adif_qsodata, is_replace)" +
+                    " VALUES (@is_temporary, @source_name, @source_ip_address, @external_id, @import_id, @qso_time, @programid, @station_callsign, @qso_date, @qso_date_off, @call, @time_on, @time_off, @band, @freq, @freq_rx, @mode, @mode_group, @contest_id, @rst_sent, @rst_rcvd, @exch_sent, @exch_rcvd, @operator, @my_gridsquare, @gridsquare, @distance, @comment, @pfx, @dxcc_pref, @cqz, @ituz, @cont, @qslmsg, @dxcc, @orig_format, @orig_qsodata, @adif_qsodata, @is_replace)";
+        private const string getTemporaryQsoSql = "SELECT id, source_name, orig_format, orig_qsodata, adif_qsodata, is_replace " +
             "  FROM qsodata " +
             " WHERE is_temporary = 1 AND orig_format IS NOT NULL AND orig_qsodata IS NOT NULL " +
             " ORDER BY id " +
             " LIMIT 100";
-        private const string deleteTemporaryQsoQsl = "DELETE FROM qsodata WHERE is_temporary = 1 and id = @id";
+        private const string deleteQsoQsl = "DELETE FROM qsodata WHERE id = @id";
+        private const string selectQsoToReplaceQsl = "SELECT id, export_id FROM qsodata WHERE external_id = @externalId AND qso_time BETWEEN @minTime AND @maxTime AND is_temporary = @isTemporary ORDER BY id DESC LIMIT 1";
         private const int SQLITE_CONSTRAINT_UNIQUE = 2067;
 
         private readonly string connectionString;
@@ -373,6 +375,8 @@ namespace QSOCollector.Data
 
                 parameterKeys.RemoveAll(key => addedParamKeys.Contains(key));
 
+                HandlePosibleQsoReplacement(connection, qsoRecord, isTemporary);
+
                 try
                 {
                     command.ExecuteNonQuery();
@@ -395,6 +399,47 @@ namespace QSOCollector.Data
             return dups;
         }
 
+        private void HandlePosibleQsoReplacement(SqliteConnection connection, Dictionary<string, string?> qsoRecord, bool isTemporary)
+        {
+            qsoRecord.TryGetValue("IS_REPLACE", out string? isReplace);
+            if (string.IsNullOrEmpty(isReplace) || !bool.Parse(isReplace))
+            {
+                return;
+            }
+
+            qsoRecord.TryGetValue("EXTERNAL_ID", out string? externalId);
+            if (string.IsNullOrEmpty(externalId))
+            {
+                log.Warning("No externalId provided in QSO replacement: {qsoRecord}", qsoRecord);
+                return;
+            }
+
+            DateTime qsoTime = DateTime.Parse(qsoRecord["QSO_TIME"]);
+
+            using var command = connection.CreateCommand();
+            command.CommandText = selectQsoToReplaceQsl;
+            AddSqlParameter(command, "externalId", externalId);
+            AddSqlParameter(command, "minTime", qsoTime.AddMinutes(-maxMinuteIntervalToReplaceQso));
+            AddSqlParameter(command, "maxTime", qsoTime.AddMinutes(maxMinuteIntervalToReplaceQso));
+            AddSqlParameter(command, "isTemporary", isTemporary);
+            using var reader = command.ExecuteReader();
+            if (reader.Read())
+            {
+                int id = reader.GetInt32(0);
+                int? exportId = reader.GetValue(1) == DBNull.Value ? null : reader.GetInt32(1);
+                if (exportId != null) {
+                    log.Warning("QSO with externalId [{externalId}] and Qso Time [{qsoTime}] has been already exported nd can't be replaced", externalId, qsoTime);
+                    return;
+                }
+                log.Warning("Delete QSO id {id}, externalId [{externalId}], isTemporary [{isTemporary}] and Qso Time [{qsoTime}] to be replaced", id, externalId, isTemporary, qsoTime);
+                DeleteQsoRecord(connection, id);
+            }
+            else
+            {
+                log.Warning("No QSO for replacent found with externalId [{externalId}] and whithin -+ 5 minute of Qso Time [{qsoTime}]", externalId, qsoTime);
+            }
+        }
+
         public void SaveRawQso(QsoMessage qsoMessage)
         {
             log.Debug("Saving raw QSO message to database: {qsoMessage}", qsoMessage);
@@ -405,6 +450,7 @@ namespace QSOCollector.Data
             AddSqlParameter(command, "Source", qsoMessage.Source);
             AddSqlParameter(command, "OriginalFormat", qsoMessage.OriginalFormat);
             AddSqlParameter(command, "OriginalQsoData", qsoMessage.OriginalQsoData);
+            AddSqlParameter(command, "Replace", qsoMessage.Replace);
             command.ExecuteNonQuery();
         }
 
@@ -424,31 +470,45 @@ namespace QSOCollector.Data
                     Source = reader.GetValue(1) == DBNull.Value ? null : reader.GetString(1),
                     OriginalFormat = reader.GetString(2),
                     OriginalQsoData = reader.GetString(3),
-                    AdifQsoData = reader.GetString(4)
+                    AdifQsoData = reader.GetString(4),
+                    Replace = reader.GetBoolean(5)
                 };
                 qsoMessages.Add(id, qsoMessage);
             }
             return qsoMessages;
         }
 
-        public void DeleteTemporaryQsoRecord(int id)
+        public void DeleteQsoRecord(int id)
         {
-            log.Debug("Deleting temporary QSO record with id {id} from database", id);
+            log.Debug("Deleting QSO record with id {id} from database", id);
             using var connection = new SqliteConnection(connectionString);
             connection.Open();
             using var transaction = connection.BeginTransaction();
             try
             {
+                DeleteQsoRecord(connection, id);
+                transaction.Commit();
+            }
+            catch (SqliteException)
+            {
+                transaction.Rollback();
+                throw;
+            }
+        }
+
+        private void DeleteQsoRecord(SqliteConnection connection, int id)
+        {
+            log.Debug("Deleting QSO record with id {id} from database", id);
+            try
+            {
                 using var command = connection.CreateCommand();
-                command.CommandText = deleteTemporaryQsoQsl;
+                command.CommandText = deleteQsoQsl;
                 command.Parameters.Add(new SqliteParameter("@id", id));
                 command.ExecuteNonQuery();
-                transaction.Commit();
             }
             catch (SqliteException ex)
             {
                 log.Error(ex, "Error deleting temporary QSO record with id {id} from database. Rolling back transaction.", id);
-                transaction.Rollback();
                 throw;
             }
         }
