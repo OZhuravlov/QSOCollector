@@ -235,7 +235,8 @@ namespace QSOCollector.Network.Server
             serverProgressUpdater.UpdateLog($"{qsoMessage}", true);
             foreach (var rec in qsoRecords)
             {
-                string qsoInfo = $"{rec["SOURCE_IP_ADDRESS"]} {rec["SOURCE_NAME"]} {rec["QSO_TIME"]} {rec["BAND"]} {rec["FREQ"]} {rec["MODE"]} {rec["CALL"]}";
+                string isReplace = qsoMessage.Replace ? "Correction" : "";
+                string qsoInfo = $"{rec["SOURCE_IP_ADDRESS"]} {rec["SOURCE_NAME"]} {rec["QSO_TIME"]} {rec["BAND"]} {rec["FREQ"]} {rec["MODE"]} {rec["CALL"]} {isReplace}";
                 log.Information("Saved QSO: {qsoInfo}", qsoInfo);
                 serverProgressUpdater.UpdateLog(qsoInfo);
                 serverProgressUpdater.UpdateProgress(ServerProgressUpdater.ParseDateTime(rec["QSO_TIME"]), rec["MODE"], null);

@@ -2,7 +2,7 @@
 
 namespace QSOCollector.Models
 {
-    [XmlRoot("contactinfo")]
+    [XmlRoot]
     public class N1mmContactInfo
     {
         [XmlElement("app")]
