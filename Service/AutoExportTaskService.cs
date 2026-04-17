@@ -124,6 +124,8 @@ namespace QSOCollector.Service
             File.WriteAllText(exportAllFilePath, fileContent);
             log.Information("Exported QSOs to file: {exportAllFilePath}", exportAllFilePath);
             File.AppendAllText(infoFilePath, $"[{now:yyyy-MM-dd HH:mm}]: {fileName}, All - {adifEntries.Count} QSOs" + Environment.NewLine);
+            log.Information("Set QSOs exported to folder {exportAllFilePath} with filename {fileName}. QSO amount {amount}", exportAllFilePath, fileName, adifEntries.Keys.Count);
+            dbRepository.SetQSOsExported([.. adifEntries.Keys], exportAllFilePath, fileName, filters, true);
         }
 
         private void EnsureDirectoriesExist()

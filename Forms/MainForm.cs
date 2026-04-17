@@ -906,5 +906,16 @@ namespace QSOCollector
         {
             new PremiunCallsignsForm(dbRepository).ShowDialog(this);
         }
+
+        private void serverClientMonitoringButton_Click(object sender, EventArgs e)
+        {
+            if (tcpServer == null)
+            {
+                MessageBox.Show("Server is not running. Please start the server first.", "Server Not Running", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            new ServerClientMonitoringForm(tcpServer.GetClientsMonitoring()).ShowDialog(this);
+        }
     }
 }

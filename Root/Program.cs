@@ -4,11 +4,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using QSOCollector.Data;
 using QSOCollector.Logging;
 using QSOCollector.Models;
-using QSOCollector.Service;
 using Serilog;
 using Serilog.Filters;
 using SQLitePCL;
@@ -111,11 +109,6 @@ namespace QSOCollector.Root
             InitializeFolder(exportFolder);
             InitializeFolder(configFolder);
             InitializeFolder(defaultAutoExportFolder);
-            string autoExportFolder = host.Services.GetService<IOptions<AutoExportTaskOptions>>().Value.Folder;
-            if (!string.IsNullOrEmpty(autoExportFolder))
-            {
-                InitializeFolder(autoExportFolder);
-            }
         }
 
         private static string InitializeDatabase(string dbFileName)

@@ -30,6 +30,7 @@
 
 	<!-- Ensure appsettings.json is copied to the output directory so it is available at runtime -->
 	<ItemGroup>
+		<None Include=".copilot\instructions.md" />
 		<None Include="appsettings.json">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>

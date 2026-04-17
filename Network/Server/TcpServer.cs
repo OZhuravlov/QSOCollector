@@ -4,6 +4,7 @@ using QSOCollector.Helpers;
 using QSOCollector.Models;
 using QSOCollector.Parsers;
 using Serilog;
+using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -11,14 +12,14 @@ using System.Text.Json;
 
 namespace QSOCollector.Network.Server
 {
-    internal class TcpServer
+    public class TcpServer
     {
         private readonly ILogger log = Log.ForContext<TcpServer>();
 
         private readonly IPEndPoint ipEndPoint;
         private TcpListener? listener;
         private bool running;
-        private readonly List<AcceptedClient> clients = [];
+        private readonly ConcurrentDictionary<string, ClientMonitoringInfo> clientsMonitoring = new();
         private readonly CancellationTokenSource cts;
         private readonly ServerProgressUpdater serverProgressUpdater;
         private readonly IDbRepository dbRepository;
@@ -38,6 +39,11 @@ namespace QSOCollector.Network.Server
         {
             running = false;
             cts.Cancel();
+        }
+
+        public ConcurrentDictionary<string, ClientMonitoringInfo> GetClientsMonitoring()
+        {
+            return clientsMonitoring;
         }
 
         public async Task Start()
@@ -66,14 +72,32 @@ namespace QSOCollector.Network.Server
                     // 30 seconds idle time and 1 second interval
                     socket.IOControl(IOControlCode.KeepAliveValues, [1, 0, 0, 0, 0xE8, 0x03, 0x00, 0x00, 0xE8, 0x03, 0x00, 0x00], null);
 
-                    AcceptedClient client = new(tcpClient, clientCancellationTokenSource, serverProgressUpdater, dbRepository);
                     IPEndPoint? remoteIpEndPoint = tcpClient.Client.RemoteEndPoint as IPEndPoint;
-                    string logMessage = $"New client with IP {remoteIpEndPoint?.Address} connected";
+                    string clientIp = remoteIpEndPoint?.Address.ToString() ?? "Unknown";
+
+                    var clientInfo = new ClientMonitoringInfo
+                    {
+                        IpAddress = clientIp,
+                        Status = ClientStatus.Connected,
+                        ConnectionTime = DateTime.UtcNow,
+                        LastActivityTime = DateTime.UtcNow,
+                        QsosReceived = 0
+                    };
+                    clientsMonitoring.TryAdd(clientIp, clientInfo);
+
+                    string logMessage = $"New client with IP {clientIp} connected";
                     log.Information(logMessage);
                     serverProgressUpdater.UpdateLog(logMessage);
-                    clients.Add(client);
+
+                    AcceptedClient client = new(tcpClient, clientCancellationTokenSource, serverProgressUpdater, dbRepository, clientIp, clientsMonitoring);
                     Task clientTask = client.Run(); //don't await
-                    clientTask.ContinueWith(t => clients.Remove(client));
+                    clientTask.ContinueWith(t => 
+                    {
+                        if (clientsMonitoring.TryGetValue(clientIp, out var info))
+                        {
+                            info.Status = ClientStatus.Disconnected;
+                        }
+                    });
                 }
                 catch (OperationCanceledException)
                 {
@@ -95,7 +119,7 @@ namespace QSOCollector.Network.Server
         }
     }
 
-    internal class AcceptedClient(TcpClient client, CancellationTokenSource clientCancellationTokenSource, ServerProgressUpdater serverProgressUpdater, IDbRepository dbRepository)
+    internal class AcceptedClient(TcpClient client, CancellationTokenSource clientCancellationTokenSource, ServerProgressUpdater serverProgressUpdater, IDbRepository dbRepository, string clientIPAddress, ConcurrentDictionary<string, ClientMonitoringInfo> clientsMonitoring)
     {
         private readonly ILogger log = Log.ForContext<AcceptedClient>();
 
@@ -103,8 +127,9 @@ namespace QSOCollector.Network.Server
         private readonly CancellationTokenSource clientCancellationTokenSource = clientCancellationTokenSource ?? throw new ArgumentNullException(nameof(clientCancellationTokenSource));
         private readonly ServerProgressUpdater serverProgressUpdater = serverProgressUpdater ?? throw new ArgumentNullException(nameof(serverProgressUpdater));
         private readonly NetworkStream stream = client.GetStream();
-        private readonly string clientIPAddress = ((IPEndPoint)client.Client.RemoteEndPoint).Address.ToString();
+        private readonly string clientIPAddress = clientIPAddress ?? throw new ArgumentNullException(nameof(clientIPAddress));
         private readonly IDbRepository dbRepository = dbRepository ?? throw new ArgumentNullException(nameof(dbRepository));
+        private readonly ConcurrentDictionary<string, ClientMonitoringInfo> clientsMonitoring = clientsMonitoring ?? throw new ArgumentNullException(nameof(clientsMonitoring));
 
         public async Task Run()
         {
@@ -127,6 +152,12 @@ namespace QSOCollector.Network.Server
                         string logMessage = $"Client {clientIPAddress} disconnected (null message received). Closing client connection";
                         log.Warning(logMessage);
                         throw new SocketException((int)SocketError.ConnectionAborted, logMessage);
+                    }
+
+                    // Update last activity time
+                    if (clientsMonitoring.TryGetValue(clientIPAddress, out var clientInfo))
+                    {
+                        clientInfo.LastActivityTime = DateTime.UtcNow;
                     }
 
                     qsoMessage = JsonSerializer.Deserialize<QsoMessage>(qsoMessageJson);
@@ -162,6 +193,10 @@ namespace QSOCollector.Network.Server
                 {
                     log.Information("Client {ClientIP} disconnected caused by Server stopping requested. Closing client connection", clientIPAddress);
                     serverProgressUpdater.UpdateLog($"Client {clientIPAddress} disconnected caused by Server stopping requested. Closing client connection", true);
+                    if (clientsMonitoring.TryGetValue(clientIPAddress, out var clientInfo))
+                    {
+                        clientInfo.Status = ClientStatus.Disconnected;
+                    }
                     clientCancellationTokenSource.Dispose();
                     client.Close();
                     client.Dispose();
@@ -172,6 +207,10 @@ namespace QSOCollector.Network.Server
                     string logMessage = $"Client {clientIPAddress} socket exception while reading request from Client. ErrorCode {ex.ErrorCode}, native ErrorCode {ex.NativeErrorCode}. Closing client connection";
                     log.Warning(logMessage);
                     serverProgressUpdater.UpdateLog(logMessage);
+                    if (clientsMonitoring.TryGetValue(clientIPAddress, out var clientInfo))
+                    {
+                        clientInfo.Status = ClientStatus.Disconnected;
+                    }
                     client.Close();
                     client.Dispose();
                     break;
@@ -181,6 +220,10 @@ namespace QSOCollector.Network.Server
                     string logMessage = $"Unknown error while processing message from client {clientIPAddress}: {ex.Message}";
                     log.Error(logMessage);
                     serverProgressUpdater.UpdateLog(logMessage);
+                    if (clientsMonitoring.TryGetValue(clientIPAddress, out var clientInfo))
+                    {
+                        clientInfo.Status = ClientStatus.Disconnected;
+                    }
                     response = new ServerResponse(ServerResponseStatus.UnknownError, ex.Message);
                 }
 
@@ -196,15 +239,22 @@ namespace QSOCollector.Network.Server
                     string logMessage = $"Client {clientIPAddress} socket exception while sending response to Client. ErrorCode {ex.ErrorCode}, native ErrorCode {ex.NativeErrorCode}. Closing client connection";
                     log.Warning(logMessage);
                     serverProgressUpdater.UpdateLog(logMessage);
+                    if (clientsMonitoring.TryGetValue(clientIPAddress, out var clientInfo))
+                    {
+                        clientInfo.Status = ClientStatus.Disconnected;
+                    }
                     client.Close();
                     client.Dispose();
                     break;
                 }
                 catch (Exception ex)
                 {
-                    string logMessage = $"Unknown error while while sending response to client {clientIPAddress}: {ex.Message}";
-                    log.Warning(logMessage);
-                    serverProgressUpdater.UpdateLog(logMessage);
+                    log.Warning("Unknown error while while sending response to client {clientIPAddress}: {message}", clientIPAddress, ex.Message);
+                    serverProgressUpdater.UpdateLog($"Client {clientIPAddress} looks disconnected");
+                    if (clientsMonitoring.TryGetValue(clientIPAddress, out var clientInfo))
+                    {
+                        clientInfo.Status = ClientStatus.Disconnected;
+                    }
                     client.Close();
                     client.Dispose();
                     break;
@@ -232,6 +282,13 @@ namespace QSOCollector.Network.Server
             }
             log.Debug("Saving {RecordCount} QSO records from message from client {ClientIP} to database", qsoRecords.Count, clientIPAddress);
             dbRepository.SaveQsoRecords(qsoRecords, isTemporary: false);
+
+            // Increment QsosReceived after successful database save
+            if (clientsMonitoring.TryGetValue(clientIPAddress, out var clientInfo))
+            {
+                clientInfo.QsosReceived += qsoRecords.Count;
+            }
+
             serverProgressUpdater.UpdateLog($"{qsoMessage}", true);
             foreach (var rec in qsoRecords)
             {

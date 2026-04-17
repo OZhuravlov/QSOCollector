@@ -43,7 +43,7 @@ namespace QSOCollector.Network.Client
             {
                 tcpClient = null;
                 log.Error(ex, "Failed to connect to server at {ServerIp}:{ServerPort}", serverIp, serverPort);
-                progressUpdater.UpdateServerStatus("Unavailable", $"Unexpected error while creating QSO sender: {ex.Message}");
+                progressUpdater.UpdateServerStatus("Unavailable", $"Cannot connect to server at {serverIp}:{serverPort}");
             }
         }
 
