@@ -45,7 +45,10 @@ namespace QSOCollector
             this.startupParams = startupParams;
 
             InitializeComponent();
-            this.Text += $"        v.{Assembly.GetExecutingAssembly().GetName().Version}";
+            var version = Assembly.GetExecutingAssembly()
+                .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+                ?.InformationalVersion ?? "Unknown";
+            this.Text += $"        v.{version}";
             RestoreSettingsFromDb();
             HandleServerCheckBoxChanged(enableServerCheckBox);
             HandleClientCheckBoxChanged(enableClientCheckBox);
