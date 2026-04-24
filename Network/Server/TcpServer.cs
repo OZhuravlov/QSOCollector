@@ -206,7 +206,7 @@ namespace QSOCollector.Network.Server
                 {
                     string logMessage = $"Client {clientIPAddress} socket exception while reading request from Client. ErrorCode {ex.ErrorCode}, native ErrorCode {ex.NativeErrorCode}. Closing client connection";
                     log.Warning(logMessage);
-                    serverProgressUpdater.UpdateLog(logMessage);
+                    serverProgressUpdater.UpdateLog($"Client {clientIPAddress} looks disconnected: can't read request from Client", true);
                     if (clientsMonitoring.TryGetValue(clientIPAddress, out var clientInfo))
                     {
                         clientInfo.Status = ClientStatus.Disconnected;
@@ -219,7 +219,7 @@ namespace QSOCollector.Network.Server
                 {
                     string logMessage = $"Unknown error while processing message from client {clientIPAddress}: {ex.Message}";
                     log.Error(logMessage);
-                    serverProgressUpdater.UpdateLog(logMessage);
+                    serverProgressUpdater.UpdateLog($"Client {clientIPAddress} looks disconnected: client message not completed", true);
                     if (clientsMonitoring.TryGetValue(clientIPAddress, out var clientInfo))
                     {
                         clientInfo.Status = ClientStatus.Disconnected;
@@ -238,7 +238,7 @@ namespace QSOCollector.Network.Server
                 {
                     string logMessage = $"Client {clientIPAddress} socket exception while sending response to Client. ErrorCode {ex.ErrorCode}, native ErrorCode {ex.NativeErrorCode}. Closing client connection";
                     log.Warning(logMessage);
-                    serverProgressUpdater.UpdateLog(logMessage);
+                    serverProgressUpdater.UpdateLog($"Client {clientIPAddress} looks disconnected: can't send response to client", true);
                     if (clientsMonitoring.TryGetValue(clientIPAddress, out var clientInfo))
                     {
                         clientInfo.Status = ClientStatus.Disconnected;
@@ -250,7 +250,7 @@ namespace QSOCollector.Network.Server
                 catch (Exception ex)
                 {
                     log.Warning("Unknown error while while sending response to client {clientIPAddress}: {message}", clientIPAddress, ex.Message);
-                    serverProgressUpdater.UpdateLog($"Client {clientIPAddress} looks disconnected");
+                    serverProgressUpdater.UpdateLog($"Client {clientIPAddress} looks disconnected: other error");
                     if (clientsMonitoring.TryGetValue(clientIPAddress, out var clientInfo))
                     {
                         clientInfo.Status = ClientStatus.Disconnected;

@@ -10,7 +10,7 @@
 	<ApplicationIcon>compass_icon_185893.ico</ApplicationIcon>
 	<ApplicationHighDpiMode>SystemAware</ApplicationHighDpiMode>
 	<ForceDesignerDpiUnaware>true</ForceDesignerDpiUnaware>
-	<Version>1.5.0</Version>
+	<Version>1.5.1</Version>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -20,8 +20,8 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
 	  <DebugType>portable</DebugType>
 	  <ProduceReferenceAssembly>true</ProduceReferenceAssembly>
-	  <AssemblyVersion>1.5.0</AssemblyVersion>
-	  <AssemblyInformationalVersion>1.5.0</AssemblyInformationalVersion>
+	  <AssemblyVersion>1.5.1</AssemblyVersion>
+	  <AssemblyInformationalVersion>1.5.1</AssemblyInformationalVersion>
 	  <GenerateAssemblyFileVersionAttribute>false</GenerateAssemblyFileVersionAttribute>
 	  <Deterministic>true</Deterministic>
 	  <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
