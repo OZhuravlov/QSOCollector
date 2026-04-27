@@ -83,7 +83,10 @@ namespace QSOCollector.Network.Server
                         LastActivityTime = DateTime.UtcNow,
                         QsosReceived = 0
                     };
-                    clientsMonitoring.TryAdd(clientIp, clientInfo);
+
+                    // Use AddOrUpdate to handle reconnections from the same IP address
+                    // When a client reconnects, we want to reset its status to Connected
+                    clientsMonitoring.AddOrUpdate(clientIp, clientInfo, (key, oldValue) => clientInfo);
 
                     string logMessage = $"New client with IP {clientIp} connected";
                     log.Information(logMessage);

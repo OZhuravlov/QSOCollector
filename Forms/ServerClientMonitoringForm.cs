@@ -5,9 +5,11 @@ namespace QSOCollector
 {
     public partial class ServerClientMonitoringForm : Form
     {
+        private const int InactivityTimeoutMinutes = 5;
+
         private readonly ConcurrentDictionary<string, ClientMonitoringInfo> clientsMonitoring;
         private System.Windows.Forms.Timer refreshTimer;
-        private DataGridView dataGridView;
+        private DataGridView clientDataGridView;
 
         public ServerClientMonitoringForm(ConcurrentDictionary<string, ClientMonitoringInfo> clientsMonitoring)
         {
@@ -26,7 +28,7 @@ namespace QSOCollector
             this.FormBorderStyle = FormBorderStyle.SizableToolWindow;
 
             // Create DataGridView
-            dataGridView = new DataGridView
+            clientDataGridView = new DataGridView
             {
                 Dock = DockStyle.Fill,
                 AutoGenerateColumns = false,
@@ -34,25 +36,27 @@ namespace QSOCollector
                 AllowUserToAddRows = false,
                 AllowUserToDeleteRows = false,
                 AllowUserToResizeRows = false,
+                AllowUserToOrderColumns = true,
                 RowHeadersVisible = false,
                 BackgroundColor = SystemColors.Window,
                 GridColor = SystemColors.Control
             };
 
-            this.Controls.Add(dataGridView);
+            this.Controls.Add(clientDataGridView);
         }
 
         private void SetupDataGridView()
         {
-            dataGridView.Columns.Clear();
+            clientDataGridView.Columns.Clear();
 
             // IP Address Column
-            dataGridView.Columns.Add(new DataGridViewTextBoxColumn
+            clientDataGridView.Columns.Add(new DataGridViewTextBoxColumn
             {
                 DataPropertyName = "IpAddress",
                 HeaderText = "IP Address",
-                Width = 120,
-                DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleLeft }
+                AutoSizeMode = DataGridViewAutoSizeColumnMode.None,
+                Width = 140,
+                DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter }
             });
 
             // Status Column
@@ -60,17 +64,19 @@ namespace QSOCollector
             {
                 DataPropertyName = "Status",
                 HeaderText = "Status",
-                Width = 100,
+                AutoSizeMode = DataGridViewAutoSizeColumnMode.None,
+                Width = 120,
                 DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter }
             };
-            dataGridView.Columns.Add(statusColumn);
+            clientDataGridView.Columns.Add(statusColumn);
 
             // Connection Time Column
-            dataGridView.Columns.Add(new DataGridViewTextBoxColumn
+            clientDataGridView.Columns.Add(new DataGridViewTextBoxColumn
             {
                 DataPropertyName = "ConnectionTime",
                 HeaderText = "Connected At",
-                Width = 150,
+                AutoSizeMode = DataGridViewAutoSizeColumnMode.None,
+                Width = 170,
                 DefaultCellStyle = new DataGridViewCellStyle 
                 { 
                     Alignment = DataGridViewContentAlignment.MiddleCenter,
@@ -79,11 +85,12 @@ namespace QSOCollector
             });
 
             // Last Activity Column
-            dataGridView.Columns.Add(new DataGridViewTextBoxColumn
+            clientDataGridView.Columns.Add(new DataGridViewTextBoxColumn
             {
                 DataPropertyName = "LastActivityTime",
                 HeaderText = "Last Activity",
-                Width = 150,
+                AutoSizeMode = DataGridViewAutoSizeColumnMode.None,
+                Width = 170,
                 DefaultCellStyle = new DataGridViewCellStyle 
                 { 
                     Alignment = DataGridViewContentAlignment.MiddleCenter,
@@ -92,22 +99,27 @@ namespace QSOCollector
             });
 
             // QSOs Received Column
-            dataGridView.Columns.Add(new DataGridViewTextBoxColumn
+            clientDataGridView.Columns.Add(new DataGridViewTextBoxColumn
             {
                 DataPropertyName = "QsosReceived",
                 HeaderText = "QSOs Received",
-                Width = 100,
-                DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleRight }
+                AutoSizeMode = DataGridViewAutoSizeColumnMode.None,
+                Width = 120,
+                DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter }
             });
 
-            dataGridView.AutoResizeColumns();
+            // Center align all column headers
+            foreach (DataGridViewColumn column in clientDataGridView.Columns)
+            {
+                column.HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter;
+            }
         }
 
         private void SetupTimer()
         {
             refreshTimer = new System.Windows.Forms.Timer
             {
-                Interval = 10000 // 10 seconds
+                Interval = 10000
             };
             refreshTimer.Tick += (s, e) => RefreshClientList();
             refreshTimer.Start();
@@ -127,13 +139,29 @@ namespace QSOCollector
                 return;
             }
 
+            UpdateClientStatusByActivityTimeout();
+
             var clientList = clientsMonitoring.Values
-                .OrderByDescending(c => c.Status == ClientStatus.Connected)  // Connected clients first
-                .ThenByDescending(c => c.LastActivityTime)  // Most recently active first
+                .OrderByDescending(c => c.Status == ClientStatus.Connected)
+                .ThenByDescending(c => c.LastActivityTime)
                 .ToList();
 
-            dataGridView.DataSource = null;
-            dataGridView.DataSource = clientList;
+            clientDataGridView.DataSource = null;
+            clientDataGridView.DataSource = clientList;
+        }
+
+        private void UpdateClientStatusByActivityTimeout()
+        {
+            var timeoutThreshold = DateTime.UtcNow.AddMinutes(-InactivityTimeoutMinutes);
+
+            foreach (var clientInfo in clientsMonitoring.Values)
+            {
+                if (clientInfo.Status == ClientStatus.Connected && 
+                    clientInfo.LastActivityTime < timeoutThreshold)
+                {
+                    clientInfo.Status = ClientStatus.Unknown;
+                }
+            }
         }
 
         protected override void OnFormClosing(FormClosingEventArgs e)
