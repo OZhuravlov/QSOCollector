@@ -25,5 +25,8 @@ namespace QSOCollector.Data
         List<string> GetExportHours();
         void SaveExportHours(List<string> hours);
         DateTime GetLatestExportTaskTime();
+        List<Dictionary<string, object?>> SearchQsosByCall(string callPattern, string? modeGroup = null, string? band = null, int maxResults = 200);
+        List<string> GetDistinctModeGroups();
+        List<string> GetDistinctBands();
     }
 }

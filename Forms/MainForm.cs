@@ -10,6 +10,7 @@ using Serilog;
 using System.Collections.Concurrent;
 using System.Data;
 using System.Data.SQLite;
+using System.Diagnostics;
 using System.Globalization;
 using System.Net.Sockets;
 using System.Reflection;
@@ -48,7 +49,7 @@ namespace QSOCollector
             var version = Assembly.GetExecutingAssembly()
                 .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
                 ?.InformationalVersion ?? "Unknown";
-            this.Text += $"        v.{version}";
+            Text += $"        v.{version}";
             RestoreSettingsFromDb();
             HandleServerCheckBoxChanged(enableServerCheckBox);
             HandleClientCheckBoxChanged(enableClientCheckBox);
@@ -57,17 +58,38 @@ namespace QSOCollector
 
         private void PopulateAboutTab()
         {
-            string readme = Assembly.GetExecutingAssembly().GetName().Name + ".README.md";
-            Stream? stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(readme);
-            if (stream != null)
+            // About tab now shows concise info with links to GitHub and User Manual
+            // No longer loads embedded README.md
+            var version = Assembly.GetExecutingAssembly()
+                .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+                ?.InformationalVersion ?? "Unknown";
+            aboutInfoLabel.Text = $"QSOCollector v{version}\r\n\r\nDXpedition QSO management tool for collecting, managing, and exporting QSO logs.\r\n\r\nFor full documentation, open the User Manual or visit the GitHub project.";
+        }
+
+        private void openManualButton_Click(object sender, EventArgs e)
+        {
+            try
             {
-                using StreamReader reader = new(stream);
-                string result = reader.ReadToEnd();
-                aboutTextBox.Text = result;
+                string manualPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "UserManual", "index.html");
+                if (File.Exists(manualPath))
+                {
+                    var psi = new ProcessStartInfo
+                    {
+                        FileName = manualPath,
+                        UseShellExecute = true
+                    };
+                    Process.Start(psi);
+                }
+                else
+                {
+                    MessageBox.Show($"User Manual not found at: {manualPath}", "Manual Not Found", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    log.Warning("User Manual file not found at {manualPath}", manualPath);
+                }
             }
-            else
+            catch (Exception ex)
             {
-                aboutTab.Visible = false;
+                log.Error(ex, "Failed to open User Manual");
+                MessageBox.Show("Failed to open User Manual: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -166,7 +188,7 @@ namespace QSOCollector
         {
             enableServerCheckBox.Enabled = true;
             HandleServerCheckBoxChanged(enableServerCheckBox);
-            ServerPortTextBox_TextChanged(serverPortTextBox, EventArgs.Empty);
+            serverPortTextBox_TextChanged(serverPortTextBox, EventArgs.Empty);
             if (startServerButton.Enabled)
             {
                 string logMessage = "Auto-starting server...";
@@ -320,6 +342,8 @@ namespace QSOCollector
             ButtonStyleHandler.Update(resetServerButton, true, Color.LightGray);
             ButtonStyleHandler.Update(qsoAutoExportButton, true, Color.LightGray);
             ButtonStyleHandler.Update(qsoAutoExportButton, false, Color.Lavender);
+            ButtonStyleHandler.Update(serverClientMonitoringButton, true, Color.LightGray);
+            ButtonStyleHandler.Update(serverClientMonitoringButton, false, Color.Lavender);
             StopAutoExportTask();
         }
 
@@ -336,6 +360,7 @@ namespace QSOCollector
             ButtonStyleHandler.Update(stopServerButton, true, Color.RosyBrown);
             ButtonStyleHandler.Update(resetServerButton, false, Color.Lavender);
             ButtonStyleHandler.Update(qsoAutoExportButton, true, Color.LightGray);
+            ButtonStyleHandler.Update(serverClientMonitoringButton, true, Color.LightGray);
             string logMessage = $"Server started on port {port}";
             log.Information(logMessage);
             serverLogTextBox.AppendText($"{logMessage}\r\n");
@@ -404,7 +429,7 @@ namespace QSOCollector
             serverQsoAmountDataTable?.Rows.Clear();
         }
 
-        private void ServerPortTextBox_TextChanged(object sender, EventArgs e)
+        private void serverPortTextBox_TextChanged(object sender, EventArgs e)
         {
             if (string.IsNullOrEmpty(serverPortTextBox.Text))
             {
@@ -414,6 +439,7 @@ namespace QSOCollector
             {
                 ButtonStyleHandler.Update(startServerButton, true, Color.DarkSeaGreen);
             }
+            SaveSettingsToDB();
         }
 
         private void PortTextBox_KeyPress(object sender, KeyPressEventArgs e)
@@ -617,11 +643,13 @@ namespace QSOCollector
         private void clientServerNameIpTextBox_TextChanged(object sender, EventArgs e)
         {
             HandleClientServerChanged();
+            SaveSettingsToDB();
         }
 
         private void clientServerPortTextBox_TextChanged(object sender, EventArgs e)
         {
             HandleClientServerChanged();
+            SaveSettingsToDB();
         }
 
         private void HandleClientServerChanged()
@@ -910,6 +938,11 @@ namespace QSOCollector
             new PremiunCallsignsForm(dbRepository).ShowDialog(this);
         }
 
+        private void qsoSearchButton_Click(object sender, EventArgs e)
+        {
+            new QsoSearchForm(dbRepository).ShowDialog(this);
+        }
+
         private void serverClientMonitoringButton_Click(object sender, EventArgs e)
         {
             if (tcpServer == null)
@@ -919,6 +952,23 @@ namespace QSOCollector
             }
 
             new ServerClientMonitoringForm(tcpServer.GetClientsMonitoring()).ShowDialog(this);
+        }
+
+        private void githubLinkLabel_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
+        {
+            try
+            {
+                string url = e.Link.LinkData.ToString();
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = url,
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Unable to open link: " + ex.Message);
+            }
         }
     }
 }

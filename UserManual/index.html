@@ -1,0 +1,2203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QSOCollector - User Manual</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="js/navigation.js"></script>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <h1>📚 QSOCollector User Manual</h1>
+            <p class="subtitle">Complete Guide for DXpedition QSO Management</p>
+            <p class="version">Version 1.0 | .NET 10 | Windows 10/11</p>
+        </div>
+    </header>
+
+    <div class="container">
+        <aside class="sidebar">
+            <nav class="toc">
+                <h3>📖 Table of Contents</h3>
+                <ul class="main-menu">
+                    <li><a href="#overview" onclick="loadSection('overview')">🎯 Overview</a></li>
+                    <li><a href="#system-requirements" onclick="loadSection('system-requirements')">🔧 System Requirements</a></li>
+                    <li><a href="#installation" onclick="loadSection('installation')">📥 Installation</a></li>
+                    <li><a href="#quick-start" onclick="loadSection('quick-start')">⚡ Quick Start</a></li>
+                    <li>
+                        <span class="menu-toggle" onclick="toggleMenu(this)">⚙️ Configuration</span>
+                        <ul class="submenu" style="display:none;">
+                            <li><a href="#network-setup" onclick="loadSection('network-setup')">Network Setup</a></li>
+                            <li><a href="#server-config" onclick="loadSection('server-config')">Server Configuration</a></li>
+                            <li><a href="#client-config" onclick="loadSection('client-config')">Client Configuration</a></li>
+                            <li><a href="#udp-listeners" onclick="loadSection('udp-listeners')">UDP Listeners</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span class="menu-toggle" onclick="toggleMenu(this)">🎮 Operations</span>
+                        <ul class="submenu" style="display:none;">
+                            <li><a href="#server-operations" onclick="loadSection('server-operations')">Server Operations</a></li>
+                            <li><a href="#client-operations" onclick="loadSection('client-operations')">Client Operations</a></li>
+                            <li><a href="#import-export" onclick="loadSection('import-export')">Import & Export</a></li>
+                            <li><a href="#qso-search" onclick="loadSection('qso-search')">QSO Search</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span class="menu-toggle" onclick="toggleMenu(this)">🔍 Advanced</span>
+                        <ul class="submenu" style="display:none;">
+                            <li><a href="#networking" onclick="loadSection('networking')">Network Architecture</a></li>
+                            <li><a href="#database" onclick="loadSection('database')">Database Management</a></li>
+                            <li><a href="#autostart" onclick="loadSection('autostart')">Autostart & Tray</a></li>
+                            <li><a href="#logging" onclick="loadSection('logging')">Logging & Debugging</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span class="menu-toggle" onclick="toggleMenu(this)">❓ Support</span>
+                        <ul class="submenu" style="display:none;">
+                            <li><a href="#troubleshooting" onclick="loadSection('troubleshooting')">Troubleshooting</a></li>
+                            <li><a href="#faq" onclick="loadSection('faq')">FAQ</a></li>
+                            <li><a href="#glossary" onclick="loadSection('glossary')">Glossary</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </nav>
+            <div class="sidebar-footer">
+                <button class="btn-secondary" onclick="goToTop()">↑ Back to Top</button>
+            </div>
+        </aside>
+
+        <main class="content">
+            <!-- OVERVIEW -->
+            <section id="overview" class="section active">
+                <h2>🎯 Overview</h2>
+                <div class="content-box">
+                    <p><strong>QSOCollector</strong> is a professional-grade Windows application designed specifically for <strong>multi-station DXpeditions</strong> to collect, manage, and export QSO (radio contact) records with reliability and precision.</p>
+
+                    <h3>What is QSOCollector?</h3>
+                    <p>QSOCollector solves critical operational challenges faced by DXpedition teams:</p>
+                    <ul>
+                        <li>🎯 <strong>Centralized Database</strong> - Single source of truth for all QSO records</li>
+                        <li>🔒 <strong>Reliable Collection</strong> - TCP-based transmission eliminates QSO loss in WiFi networks</li>
+                        <li>📊 <strong>Duplicate Prevention</strong> - Intelligent filtering prevents re-export of same QSOs</li>
+                        <li>🌐 <strong>Multi-Station Support</strong> - Collects from unlimited logging stations</li>
+                        <li>📁 <strong>Format Flexibility</strong> - Supports N1MM and ADIF formats</li>
+                        <li>⚡ <strong>Network Resilience</strong> - Automatic local caching if server unavailable</li>
+                    </ul>
+
+                    <h3>Key Capabilities</h3>
+                    <table class="feature-table">
+                        <tr>
+                            <td><strong>Reliable QSO Collection</strong></td>
+                            <td>TCP protocol ensures no QSO loss, automatic retries, local buffering</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Centralized Storage</strong></td>
+                            <td>All QSOs stored in central SQLite database on server PC</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Network Tolerance</strong></td>
+                            <td>Continues collecting when server unavailable, auto-syncs when restored</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Flexible Export</strong></td>
+                            <td>Export new, by date range, or all QSOs with filtering options</td>
+                        </tr>
+                        <tr>
+                            <td><strong>QSO Search</strong></td>
+                            <td>Quickly find QSOs by callsign, band, mode with sorting and filtering</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Automatic Startup</strong></td>
+                            <td>Runs at Windows startup, minimizes to tray, always collecting</td>
+                        </tr>
+                    </table>
+
+                    <h3>Who Should Use QSOCollector?</h3>
+                    <ul>
+                        <li>🏕️ <strong>DXpedition Teams</strong> - Multiple stations, multiple PCs</li>
+                        <li>📡 <strong>Contest Clubs</strong> - Centralized QSO management</li>
+                        <li>🏛️ <strong>QSL Bureaus</strong> - Import/export ADIF archives</li>
+                        <li>🔬 <strong>Radio Researchers</strong> - Analyze propagation patterns</li>
+                    </ul>
+
+                    <div class="info-box">
+                        <strong>💡 Tip:</strong> For best results, ensure QSOCollector runs on all logging PCs before loggers start. This guarantees no QSOs are lost at DXpedition start.
+                    </div>
+                </div>
+            </section>
+
+            <!-- SYSTEM REQUIREMENTS -->
+            <section id="system-requirements" class="section">
+                <h2>🔧 System Requirements</h2>
+                <div class="content-box">
+                    <h3>Minimum Requirements</h3>
+                    <table class="requirements-table">
+                        <tr>
+                            <th>Component</th>
+                            <th>Requirement</th>
+                            <th>Notes</th>
+                        </tr>
+                        <tr>
+                            <td><strong>Operating System</strong></td>
+                            <td>Windows 10/11 (22H2 or later)</td>
+                            <td>Only Windows supported</td>
+                        </tr>
+                        <tr>
+                            <td><strong>.NET Runtime</strong></td>
+                            <td>.NET 10 Desktop Runtime</td>
+                            <td><a href="https://dotnet.microsoft.com/download/dotnet/10.0" target="_blank">Download here</a></td>
+                        </tr>
+                        <tr>
+                            <td><strong>RAM</strong></td>
+                            <td>2 GB minimum</td>
+                            <td>4 GB recommended for server PC</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Disk Space</strong></td>
+                            <td>500 MB</td>
+                            <td>200 MB for app + database</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Network</strong></td>
+                            <td>Ethernet or WiFi 802.11ac</td>
+                            <td>100 Mbps minimum recommended</td>
+                        </tr>
+                    </table>
+
+                    <h3>Recommended Specifications</h3>
+                    <div class="recommendation-box">
+                        <h4>Server PC</h4>
+                        <ul>
+                            <li>CPU: Intel i7/AMD Ryzen 7 or better</li>
+                            <li>RAM: 8 GB+</li>
+                            <li>Storage: SSD with 1 GB+ free space</li>
+                            <li>Network: Gigabit Ethernet (wired connection preferred)</li>
+                            <li>Uptime: Dedicated machine or UPS backup</li>
+                        </ul>
+
+                        <h4>Client PCs</h4>
+                        <ul>
+                            <li>CPU: Intel i5/AMD Ryzen 5 or better</li>
+                            <li>RAM: 4 GB</li>
+                            <li>Storage: 500 MB free</li>
+                            <li>Network: WiFi acceptable, but Ethernet preferred</li>
+                        </ul>
+                    </div>
+
+                    <h3>Supported Logger Software</h3>
+                    <table class="logger-table">
+                        <tr>
+                            <th>Logger</th>
+                            <th>Format</th>
+                            <th>Status</th>
+                        </tr>
+                        <tr>
+                            <td><strong>N1MM Logger+</strong></td>
+                            <td>N1MM (UDP)</td>
+                            <td>✅ Fully Supported</td>
+                        </tr>
+                        <tr>
+                            <td><strong>DXLog.net</strong></td>
+                            <td>N1MM (UDP)</td>
+                            <td>✅ Fully Supported</td>
+                        </tr>
+                        <tr>
+                            <td><strong>SD Wacky</strong></td>
+                            <td>N1MM (UDP)</td>
+                            <td>✅ Fully Supported</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Any Logger</strong></td>
+                            <td>ADIF (UDP/File)</td>
+                            <td>✅ Fully Supported</td>
+                        </tr>
+                    </table>
+
+                    <h3>Network Requirements</h3>
+                    <ul>
+                        <li>All PCs must be on same network (LAN)</li>
+                        <li>Server PC must have static IP or DHCP reservation</li>
+                        <li>Firewall must allow QSOCollector traffic on configured TCP port</li>
+                        <li>Router must not block UDP/TCP between PCs</li>
+                    </ul>
+
+                    <div class="warning-box">
+                        <strong>⚠️ Warning:</strong> Do not run QSOCollector on Internet-facing networks without VPN. QSOCollector is designed for local LAN only.
+                    </div>
+                </div>
+            </section>
+
+            <!-- INSTALLATION -->
+            <section id="installation" class="section">
+                <h2>📥 Installation</h2>
+                <div class="content-box">
+                    <h3>Step 1: Download QSOCollector</h3>
+                    <ol>
+                        <li>Visit <a href="https://github.com/OZhuravlov/QSOCollector/releases" target="_blank">GitHub Releases Page</a></li>
+                        <li>Download latest release ZIP file</li>
+                        <li>Extract to permanent location:
+                            <pre><code>C:\Program Files\QSOCollector
+or
+C:\Users\[YourUsername]\QSOCollector</code></pre>
+                        </li>
+                        <li><strong>Important:</strong> Do NOT run from Downloads or temp folders</li>
+                    </ol>
+
+                    <h3>Step 2: Install .NET 10 Runtime</h3>
+                    <ol>
+                        <li>Check if .NET 10 is installed:
+                            <pre><code>dotnet --version</code></pre>
+                        </li>
+                        <li>If not installed, download from <a href="https://dotnet.microsoft.com/download/dotnet/10.0" target="_blank">Microsoft .NET Download</a></li>
+                        <li>Choose "Desktop Runtime" (not SDK or ASP.NET)</li>
+                        <li>Run installer and follow prompts</li>
+                        <li>Verify installation:
+                            <pre><code>dotnet --version</code></pre>
+                        </li>
+                    </ol>
+
+                    <h3>Step 3: Verify Installation</h3>
+                    <ol>
+                        <li>Double-click <code>QSOCollector.exe</code></li>
+                        <li>Application window should open</li>
+                        <li>Check both "Server" and "Client" tabs are visible</li>
+                        <li>Database created automatically in:
+                            <pre><code>%AppData%\QSOCollector\qso.db</code></pre>
+                        </li>
+                    </ol>
+
+                    <h3>Step 4: Configure Windows Firewall</h3>
+                    <div class="step-box">
+                        <p><strong>For Windows Firewall to allow QSOCollector:</strong></p>
+                        <ol>
+                            <li>Open <strong>Windows Defender Firewall</strong></li>
+                            <li>Click <strong>"Advanced settings"</strong></li>
+                            <li>Right-click <strong>"Inbound Rules"</strong> → <strong>"New Rule..."</strong></li>
+                            <li>Select <strong>"Program"</strong> radio button</li>
+                            <li>Click <strong>"Browse..."</strong> and select <code>QSOCollector.exe</code></li>
+                            <li>Select <strong>"Allow the connection"</strong></li>
+                            <li>Check all three: Domain, Private, Public</li>
+                            <li>Enter name: "QSOCollector" and finish</li>
+                        </ol>
+                    </div>
+
+                    <h3>Step 5: First Launch</h3>
+                    <ul>
+                        <li>✅ Application opens with default settings</li>
+                        <li>✅ Select "Server" or "Client" mode</li>
+                        <li>✅ Configure TCP/UDP ports</li>
+                        <li>✅ Click "Start Server" or "Start Client"</li>
+                    </ul>
+
+                    <h3>Uninstallation</h3>
+                    <p>To remove QSOCollector:</p>
+                    <ol>
+                        <li>Close application completely</li>
+                        <li>Delete QSOCollector folder</li>
+                        <li>Delete database: <code>%AppData%\QSOCollector\qso.db</code></li>
+                        <li>(Optional) Remove Windows Firewall rule</li>
+                    </ol>
+
+                    <div class="info-box">
+                        <strong>💾 Important:</strong> Back up <code>%AppData%\QSOCollector\qso.db</code> before uninstalling if you want to keep QSO records.
+                    </div>
+                </div>
+            </section>
+
+            <!-- QUICK START -->
+            <section id="quick-start" class="section">
+                <h2>⚡ Quick Start Guide</h2>
+                <div class="content-box">
+                    <p><strong>Get QSOCollector running in 5 minutes!</strong></p>
+
+                    <h3>Server Setup (5 minutes)</h3>
+                    <div class="quick-steps">
+                        <div class="step">
+                            <div class="step-number">1</div>
+                            <div class="step-content">
+                                <h4>Launch Application</h4>
+                                <p>Double-click <code>QSOCollector.exe</code></p>
+                            </div>
+                        </div>
+                        <div class="step">
+                            <div class="step-number">2</div>
+                            <div class="step-content">
+                                <h4>Select Server Tab</h4>
+                                <p>Click "Server" tab in main window</p>
+                            </div>
+                        </div>
+                        <div class="step">
+                            <div class="step-number">3</div>
+                            <div class="step-content">
+                                <h4>Configure TCP Port</h4>
+                                <p>Enter port number (e.g., <code>5000</code>)</p>
+                                <p class="note">Note this port - clients will connect here</p>
+                            </div>
+                        </div>
+                        <div class="step">
+                            <div class="step-number">4</div>
+                            <div class="step-content">
+                                <h4>Start Server</h4>
+                                <p>Click "Start Server" button</p>
+                                <p class="note">Status should show "Running" and turn green</p>
+                            </div>
+                        </div>
+                        <div class="step">
+                            <div class="step-number">5</div>
+                            <div class="step-content">
+                                <h4>Monitor Activity</h4>
+                                <p>View incoming connections in Server Log</p>
+                                <p class="note">No clients connected yet - that's normal</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h3>Client Setup (5 minutes per PC)</h3>
+                    <div class="quick-steps">
+                        <div class="step">
+                            <div class="step-number">1</div>
+                            <div class="step-content">
+                                <h4>Launch on Logger PC</h4>
+                                <p>Double-click <code>QSOCollector.exe</code> on PC with logger</p>
+                            </div>
+                        </div>
+                        <div class="step">
+                            <div class="step-number">2</div>
+                            <div class="step-content">
+                                <h4>Select Client Tab</h4>
+                                <p>Click "Client" tab</p>
+                            </div>
+                        </div>
+                        <div class="step">
+                            <div class="step-number">3</div>
+                            <div class="step-content">
+                                <h4>Enter Server Address</h4>
+                                <p>Server IP (e.g., <code>192.168.1.50</code>)</p>
+                                <p>Server TCP Port (e.g., <code>5000</code>) - must match server</p>
+                            </div>
+                        </div>
+                        <div class="step">
+                            <div class="step-number">4</div>
+                            <div class="step-content">
+                                <h4>Configure UDP Listeners</h4>
+                                <p>Click "UDP Listeners" button</p>
+                                <p>Click "Add" for each logger on this PC</p>
+                                <p>Listener Name: (any name, e.g., "N1MM")</p>
+                                <p>QSO Port: (from logger settings, e.g., 12060)</p>
+                                <p>Format: N1MM or ADIF (must match logger)</p>
+                                <p>Click "Save" to store configuration</p>
+                            </div>
+                        </div>
+                        <div class="step">
+                            <div class="step-number">5</div>
+                            <div class="step-content">
+                                <h4>Start Client</h4>
+                                <p>Back on Client tab, click "Start Client"</p>
+                                <p class="note">Server Status should turn green "Connected"</p>
+                            </div>
+                        </div>
+                        <div class="step">
+                            <div class="step-number">6</div>
+                            <div class="step-content">
+                                <h4>Enable Autostart</h4>
+                                <p>Check "Start automatically" checkbox (top-right)</p>
+                                <p class="note">Client will now start with Windows</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h3>Verification Checklist</h3>
+                    <ul class="checklist">
+                        <li>✅ Server is running and listening on configured port</li>
+                        <li>✅ Client(s) show "Connected" in Server Status</li>
+                        <li>✅ Logger is broadcasting on correct UDP port</li>
+                        <li>✅ Client UDP listener "Active" checkbox is checked</li>
+                        <li>✅ Server Log shows incoming QSO messages</li>
+                        <li>✅ Client Log shows QSO transmissions</li>
+                    </ul>
+
+                    <div class="success-box">
+                        <strong>✅ Success!</strong> QSOCollector is now collecting QSOs. Start your loggers and begin operating!
+                    </div>
+                </div>
+            </section>
+
+            <!-- More sections continue below... -->
+
+            <!-- NETWORK SETUP -->
+            <section id="network-setup" class="section">
+                <h2>Network Setup & Configuration</h2>
+                <div class="content-box">
+                    <h3>Finding Your Network Information</h3>
+                    <p>You'll need to know your PC's IP address and available network ports.</p>
+
+                    <h4>Find Your PC's IP Address</h4>
+                    <ol>
+                        <li>Open <strong>Command Prompt</strong> (WIN+R, type <code>cmd</code>)</li>
+                        <li>Type: <code>ipconfig</code></li>
+                        <li>Look for "IPv4 Address" (e.g., <code>192.168.1.50</code>)</li>
+                        <li>This is your Server PC IP</li>
+                    </ol>
+                    <p class="note">Note: IP addresses starting with 192.168 or 10. are private (local network only)</p>
+
+                    <h4>Check Port Availability</h4>
+                    <pre><code>netstat -ano | findstr :5000</code></pre>
+                    <p>If no output appears, port 5000 is available. Try different ports if needed.</p>
+
+                    <h3>Recommended Port Configuration</h3>
+                    <table class="port-table">
+                        <tr>
+                            <th>Service</th>
+                            <th>Default Port</th>
+                            <th>Range</th>
+                            <th>Notes</th>
+                        </tr>
+                        <tr>
+                            <td>Server TCP</td>
+                            <td>5000</td>
+                            <td>5000-5010</td>
+                            <td>Client connections</td>
+                        </tr>
+                        <tr>
+                            <td>N1MM UDP</td>
+                            <td>12060</td>
+                            <td>12000+</td>
+                            <td>From logger config</td>
+                        </tr>
+                        <tr>
+                            <td>Forward UDP</td>
+                            <td>12080</td>
+                            <td>12000+</td>
+                            <td>Alternate listener</td>
+                        </tr>
+                        <tr>
+                            <td>Heartbeat UDP</td>
+                            <td>12061</td>
+                            <td>12000+</td>
+                            <td>Optional keep-alive</td>
+                        </tr>
+                    </table>
+
+                    <h3>Firewall Configuration</h3>
+                    <p><strong>Windows Firewall Setup:</strong></p>
+                    <ol>
+                        <li>Open <strong>Windows Defender Firewall with Advanced Security</strong></li>
+                        <li>Click <strong>"Inbound Rules"</strong> in left panel</li>
+                        <li>Right-click → <strong>"New Rule..."</strong></li>
+                        <li>Select <strong>"Program"</strong></li>
+                        <li>Click <strong>"Browse..."</strong> find <code>QSOCollector.exe</code></li>
+                        <li>Select <strong>"Allow the connection"</strong></li>
+                        <li>Check: Domain, Private, Public</li>
+                        <li>Name: "QSOCollector" → Finish</li>
+                    </ol>
+
+                    <h3>Network Topology Diagram</h3>
+                    <pre style="background: #f5f5f5; padding: 15px; border-radius: 5px; overflow-x: auto;">
+                       Internet
+                          ↕
+                       ┌─ Router ─┐
+                       │          │
+    ┌──────────────────┴──────────┴──────────────┐
+    │                 Local Network               │
+    │                 192.168.1.0/24              │
+    │                                             │
+    │  Server PC (192.168.1.50:5000)             │
+    │  ┌─────────────────────────────────────┐  │
+    │  │ QSOCollector (Server Mode)          │  │
+    │  │ - Listening on TCP:5000             │  │
+    │  │ - Central SQLite Database           │  │
+    │  │ - Import/Export                     │  │
+    │  └─────────────────────────────────────┘  │
+    │         ↑            ↑            ↑        │
+    │         │            │            │        │
+    │    TCP  │       TCP  │       TCP  │        │
+    │    5000 │       5000 │       5000 │        │
+    │         │            │            │        │
+    │  Client PC #1   Client PC #2   Client PC #3│
+    │  (192.168.1.51) (192.168.1.52) (192.168.1.53)
+    │     ↑               ↑               ↑       │
+    │     │ UDP           │ UDP           │ UDP   │
+    │     │ 12060         │ 12060         │ 12060 │
+    │     │               │               │       │
+    │   Logger1         Logger2         Logger3   │
+    │   N1MM            DXLog           N1MM      │
+    │                                             │
+    └─────────────────────────────────────────────┘
+                    </pre>
+
+                    <h3>Remote Access (Advanced)</h3>
+                    <p><strong>For DXpedition remote monitoring:</strong></p>
+                    <ul>
+                        <li>Use VPN connection to access server from outside</li>
+                        <li>DO NOT expose port 5000 directly to Internet</li>
+                        <li>Configure port forwarding only behind VPN</li>
+                        <li>Use SSH tunnel for secure remote access</li>
+                    </ul>
+
+                    <div class="warning-box">
+                        <strong>⚠️ Security Warning:</strong> QSOCollector is designed for local LAN only. Do not expose to Internet without VPN protection.
+                    </div>
+                </div>
+            </section>
+
+            <!-- SERVER CONFIGURATION -->
+            <section id="server-config" class="section">
+                <h2>Server Configuration</h2>
+                <div class="content-box">
+                    <h3>Server Mode Overview</h3>
+                    <p>Server mode runs on ONE central PC and collects QSOs from all Client PCs on the network.</p>
+                    <ul>
+                        <li>✅ Only one Server should run per DXpedition</li>
+                        <li>✅ Stores all QSOs in central SQLite database</li>
+                        <li>✅ Listens for Client connections on TCP port</li>
+                        <li>✅ Provides Import/Export functionality</li>
+                        <li>✅ Should run 24/7 during DXpedition</li>
+                    </ul>
+
+                    <h3>Starting the Server</h3>
+                    <ol>
+                        <li>Launch QSOCollector.exe</li>
+                        <li>Click the <strong>"Server"</strong> tab</li>
+                        <li>In "Server Port" field, enter TCP port (default: 5000)</li>
+                        <li>Click <strong>"Start Server"</strong> button</li>
+                        <li>Status should show <span style="color: green;">🟢 Running</span></li>
+                        <li>Monitor the Server Log for activity</li>
+                    </ol>
+
+                    <h3>Server Configuration Options</h3>
+                    <table class="config-table">
+                        <tr>
+                            <th>Setting</th>
+                            <th>Default</th>
+                            <th>Description</th>
+                        </tr>
+                        <tr>
+                            <td><strong>Server Port</strong></td>
+                            <td>5000</td>
+                            <td>TCP port clients connect to</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Show Log Details</strong></td>
+                            <td>Unchecked</td>
+                            <td>Enable verbose logging (impacts performance)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Start automatically</strong></td>
+                            <td>Unchecked</td>
+                            <td>Auto-start with Windows</td>
+                        </tr>
+                    </table>
+
+                    <h3>Monitoring Server Activity</h3>
+                    <p><strong>Key information displayed:</strong></p>
+                    <ul>
+                        <li><strong>Server Status</strong>: Running / Stopped</li>
+                        <li><strong>Connected Clients</strong>: Number of active client connections</li>
+                        <li><strong>QSO Statistics</strong>:
+                            <ul>
+                                <li>Total QSOs in database</li>
+                                <li>New QSOs (not yet exported)</li>
+                                <li>Exported QSOs</li>
+                                <li>Last export timestamp</li>
+                            </ul>
+                        </li>
+                        <li><strong>Server Log</strong>: Real-time activity log</li>
+                    </ul>
+
+                    <div class="log-example">
+                        <strong>Example Server Log:</strong>
+                        <pre>2026-02-13 10:00:15 Server started on port 5000
+2026-02-13 10:01:22 Client connected from 192.168.1.51
+2026-02-13 10:01:45 Received QSO: N0CALL @ 14.272 MHz
+2026-02-13 10:02:10 Received QSO: W5XYZ @ 14.275 MHz
+2026-02-13 10:02:31 Client connected from 192.168.1.52
+2026-02-13 10:03:15 Received 5 QSOs from 192.168.1.51</pre>
+                    </div>
+
+                    <h3>Troubleshooting Server Start Issues</h3>
+                    <ul>
+                        <li><strong>Port already in use:</strong> Change to different port or kill process using: <code>netstat -ano | findstr :5000</code></li>
+                        <li><strong>Firewall blocked:</strong> Add exception in Windows Firewall</li>
+                        <li><strong>Database error:</strong> Check disk space or database corruption</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- CLIENT CONFIGURATION -->
+            <section id="client-config" class="section">
+                <h2>Client Configuration</h2>
+                <div class="content-box">
+                    <h3>Client Mode Overview</h3>
+                    <p>Client mode runs on each PC with loggers and collects QSOs via UDP, then sends to Server via TCP.</p>
+                    <ul>
+                        <li>✅ Multiple Clients allowed (one per logging PC)</li>
+                        <li>✅ Listens for UDP broadcasts from local loggers</li>
+                        <li>✅ Sends QSOs to Server via TCP</li>
+                        <li>✅ Auto-buffers QSOs if Server unavailable</li>
+                        <li>✅ Should run whenever logger is operating</li>
+                    </ul>
+
+                    <h3>Basic Client Setup</h3>
+                    <ol>
+                        <li>Launch QSOCollector.exe on logger PC</li>
+                        <li>Click <strong>"Client"</strong> tab</li>
+                        <li>Enter:
+                            <ul>
+                                <li><strong>Server IP/Hostname</strong>: Address of server PC (e.g., 192.168.1.50)</li>
+                                <li><strong>Server Port</strong>: Must match server (e.g., 5000)</li>
+                            </ul>
+                        </li>
+                        <li>Click <strong>"UDP Listeners"</strong> to configure</li>
+                        <li>Click <strong>"Start Client"</strong></li>
+                    </ol>
+
+                    <h3>Client Status Indicators</h3>
+                    <table class="status-table">
+                        <tr>
+                            <th>Status</th>
+                            <th>Color</th>
+                            <th>Meaning</th>
+                            <th>Action</th>
+                        </tr>
+                        <tr>
+                            <td><strong>Connected</strong></td>
+                            <td>🟢 Green</td>
+                            <td>Connected to Server</td>
+                            <td>Normal operation - QSOs send immediately</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Disconnected</strong></td>
+                            <td>🔴 Red</td>
+                            <td>Server unavailable</td>
+                            <td>QSOs buffered locally - will sync when available</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Reconnecting</strong></td>
+                            <td>🟡 Yellow</td>
+                            <td>Attempting connection</td>
+                            <td>Wait - automatic retry in progress</td>
+                        </tr>
+                    </table>
+
+                    <h3>Server Connection Settings</h3>
+                    <ul>
+                        <li><strong>Server IP:</strong> Can be hostname or IP address
+                            <ul>
+                                <li>IP: 192.168.1.50</li>
+                                <li>Hostname: server.local or servername</li>
+                            </ul>
+                        </li>
+                        <li><strong>Server Port:</strong> MUST match server configuration (default 5000)</li>
+                        <li><strong>Auto-reconnect:</strong> Client automatically reconnects every 5-10 seconds</li>
+                        <li><strong>Timeout:</strong> After 30 seconds no response, switches to offline mode</li>
+                    </ul>
+
+                    <h3>Client Statistics & Monitoring</h3>
+                    <p>The "QSO Processing" section shows:</p>
+                    <ul>
+                        <li><strong>Received:</strong> QSOs received from local loggers</li>
+                        <li><strong>Sent to Server:</strong> QSOs successfully transmitted</li>
+                        <li><strong>Temporary Saved:</strong> QSOs buffered locally (offline)</li>
+                        <li><strong>Rejected:</strong> Invalid QSOs (format errors)</li>
+                        <li><strong>Last Timestamp:</strong> When each category last had activity</li>
+                    </ul>
+
+                    <div class="info-box">
+                        <strong>💡 Tip:</strong> If "Temporary Saved" count increases while "Sent to Server" stays flat, Server is likely unavailable. Check network connection and server status.
+                    </div>
+
+                    <h3>Client Logging</h3>
+                    <p>Enable "Log details" checkbox in top-right to see verbose logging:</p>
+                    <pre style="background: #f5f5f5; padding: 10px; border-radius: 5px;">2026-02-13 10:00:15 Client started
+2026-02-13 10:00:16 Connecting to 192.168.1.50:5000
+2026-02-13 10:00:17 Connected to server
+2026-02-13 10:00:20 UDP Listener started on port 12060
+2026-02-13 10:01:22 Received QSO from logger: N0CALL
+2026-02-13 10:01:23 Sent QSO to server</pre>
+                </div>
+            </section>
+
+            <!-- UDP LISTENERS -->
+            <section id="udp-listeners" class="section">
+                <h2>UDP Listeners Configuration</h2>
+                <div class="content-box">
+                    <h3>What are UDP Listeners?</h3>
+                    <p>UDP Listeners collect QSO broadcasts from loggers on the local PC via UDP protocol. Each PC can have multiple loggers, each sending to different UDP ports.</p>
+
+                    <h3>Accessing UDP Listeners</h3>
+                    <ol>
+                        <li>Click <strong>"Client"</strong> tab</li>
+                        <li>Click <strong>"UDP Listeners"</strong> button</li>
+                        <li>UDP Listeners dialog opens</li>
+                    </ol>
+
+                    <h3>Creating a Listener</h3>
+                    <ol>
+                        <li>In UDP Listeners dialog, click <strong>"Add"</strong> button</li>
+                        <li>New listener appears in list with default values</li>
+                        <li>Edit each field (see required fields below)</li>
+                        <li>Click <strong>"Save"</strong> to persist configuration</li>
+                    </ol>
+
+                    <h3>UDP Listener Fields</h3>
+                    <table class="listener-fields">
+                        <tr>
+                            <th>Field</th>
+                            <th>Required</th>
+                            <th>Example</th>
+                            <th>Description</th>
+                        </tr>
+                        <tr>
+                            <td><strong>Listener Name</strong></td>
+                            <td>✅ Yes</td>
+                            <td>N1MM Logger</td>
+                            <td>Any name to identify this listener</td>
+                        </tr>
+                        <tr>
+                            <td><strong>QSO Port</strong></td>
+                            <td>✅ Yes</td>
+                            <td>12060</td>
+                            <td>Port logger broadcasts on (from logger config)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Forward Port</strong></td>
+                            <td>❌ No</td>
+                            <td>12080</td>
+                            <td>Optional - forward QSOs to other apps (e.g., ClubLog Live)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Heart Beat Port</strong></td>
+                            <td>❌ No</td>
+                            <td>12061</td>
+                            <td>Optional - listen for keep-alive messages from logger</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Format</strong></td>
+                            <td>✅ Yes</td>
+                            <td>N1MM or ADIF</td>
+                            <td>Format of QSO data from logger</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Active</strong></td>
+                            <td>✅ Yes</td>
+                            <td>Checked</td>
+                            <td>Enable/disable without removing listener</td>
+                        </tr>
+                    </table>
+
+                    <h3>Common Logger Configurations</h3>
+
+                    <h4>N1MM Logger+</h4>
+                    <ul>
+                        <li><strong>Format:</strong> N1MM</li>
+                        <li><strong>QSO Port:</strong> 12060 (default) or as configured</li>
+                        <li><strong>Config in N1MM:</strong> Setup → Broadcast Data</li>
+                    </ul>
+
+                    <h4>DXLog.net</h4>
+                    <ul>
+                        <li><strong>Format:</strong> N1MM (compatible)</li>
+                        <li><strong>QSO Port:</strong> 10001 (default) or custom</li>
+                        <li><strong>Config in DXLog:</strong> Preferences → Network Connections</li>
+                    </ul>
+
+                    <h4>SD Wacky Contesting</h4>
+                    <ul>
+                        <li><strong>Format:</strong> N1MM</li>
+                        <li><strong>QSO Port:</strong> 12060 or custom</li>
+                    </ul>
+
+                    <h4>Any ADIF Logger</h4>
+                    <ul>
+                        <li><strong>Format:</strong> ADIF</li>
+                        <li><strong>QSO Port:</strong> Custom (verify logger broadcasts QSOs)</li>
+                    </ul>
+
+                    <h3>Forward Port Usage</h3>
+                    <p><strong>Why use Forward Port?</strong></p>
+                    <p>On Windows, only one application can listen on a specific UDP port. If another application (e.g., ClubLog Livestream) needs QSO data:</p>
+                    <ol>
+                        <li>Logger broadcasts to port 12060</li>
+                        <li>QSOCollector listens on 12060</li>
+                        <li>QSOCollector forwards to port 12080</li>
+                        <li>ClubLog Livestream listens on 12080</li>
+                    </ol>
+
+                    <h3>Managing Listeners</h3>
+                    <ul>
+                        <li><strong>Add:</strong> Click "Add" to create new listener</li>
+                        <li><strong>Remove:</strong> Select listener, click "Remove"</li>
+                        <li><strong>Edit:</strong> Double-click field to edit</li>
+                        <li><strong>Enable/Disable:</strong> Check/uncheck "Active" checkbox</li>
+                        <li><strong>Save:</strong> Click "Save" to persist all changes</li>
+                    </ul>
+
+                    <h3>Importing/Exporting Listener Configuration</h3>
+                    <ol>
+                        <li>In UDP Listeners dialog, click <strong>"Export Config"</strong></li>
+                        <li>Saves configuration to JSON file</li>
+                        <li>On another PC, click <strong>"Import Config"</strong></li>
+                        <li>Select the JSON file</li>
+                        <li>Configuration loaded and applied</li>
+                    </ol>
+
+                    <p><strong>Example config file:</strong></p>
+                    <pre style="background: #f5f5f5; padding: 10px; border-radius: 5px; font-size: 12px;">
+[
+  {
+    "ListenerName": "N1MM Logger",
+    "QsoPort": 12060,
+    "ForwardPort": 12080,
+    "HeartBeatPort": 12061,
+    "Format": "N1MM",
+    "Active": true
+  },
+  {
+    "ListenerName": "DXLog",
+    "QsoPort": 10001,
+    "Format": "N1MM",
+    "Active": true
+  }
+]</pre>
+
+                    <h3>Troubleshooting Listeners</h3>
+                    <p><strong>Problem: No QSOs received</strong></p>
+                    <ul>
+                        <li>Verify QSO Port matches logger configuration</li>
+                        <li>Verify Format matches logger output (N1MM or ADIF)</li>
+                        <li>Verify "Active" checkbox is checked</li>
+                        <li>Verify logger is actually broadcasting (check logger settings)</li>
+                        <li>Check firewall isn't blocking UDP port</li>
+                    </ul>
+
+                    <p><strong>Problem: Getting duplicate QSOs</strong></p>
+                    <ul>
+                        <li>Ensure Forward Port is not pointing to same logger PC</li>
+                        <li>Check only one listener is active on this port</li>
+                        <li>Verify logger broadcast is enabled (might be sending multiple times)</li>
+                    </ul>
+
+                    <div class="info-box">
+                        <strong>💡 Tip:</strong> Save your listener configuration by exporting to file. This makes setup much faster on multiple PCs.
+                    </div>
+                </div>
+            </section>
+
+            <!-- SERVER OPERATIONS -->
+            <section id="server-operations" class="section">
+                <h2>Server Operations</h2>
+                <div class="content-box">
+                    <h3>Daily Server Workflow</h3>
+                    <ol>
+                        <li><strong>Morning:</strong> Start server, verify all clients connecting</li>
+                        <li><strong>Throughout Day:</strong> Monitor activity, verify QSOs accumulating</li>
+                        <li><strong>Evening:</strong> Export new QSOs, mark as exported</li>
+                        <li><strong>End of DXpedition:</strong> Final export, backup database</li>
+                    </ol>
+
+                    <h3>Monitoring Connected Clients</h3>
+                    <p>The server displays:</p>
+                    <ul>
+                        <li>Number of currently connected clients</li>
+                        <li>IP address of each connected client</li>
+                        <li>QSO transmission status</li>
+                        <li>Error messages (if any)</li>
+                    </ul>
+
+                    <p>Check Server Log for connection events:</p>
+                    <pre style="background: #f5f5f5; padding: 10px; border-radius: 5px;">2026-02-13 10:00:15 Server started
+2026-02-13 10:01:22 Client connected from 192.168.1.51
+2026-02-13 10:02:10 Received 15 QSOs from 192.168.1.51
+2026-02-13 10:15:30 Client connected from 192.168.1.52</pre>
+
+                    <h3>Viewing Database Statistics</h3>
+                    <p>Above the Server Log, view QSO statistics:</p>
+                    <ul>
+                        <li><strong>Total QSOs:</strong> All QSOs in database</li>
+                        <li><strong>New QSOs:</strong> Not yet exported</li>
+                        <li><strong>Exported QSOs:</strong> Already exported</li>
+                        <li><strong>Last Export:</strong> Timestamp of last export</li>
+                    </ul>
+
+                    <h3>Detecting Problems</h3>
+                    <p><strong>Red flags to watch:</strong></p>
+                    <ul>
+                        <li>🔴 Client not connecting (troubleshoot network/firewall)</li>
+                        <li>🔴 No QSOs arriving despite loggers running (check UDP listeners)</li>
+                        <li>🔴 QSO count not increasing (verify client transmission)</li>
+                        <li>🔴 Server Log showing errors (see Troubleshooting section)</li>
+                    </ul>
+
+                    <h3>Stopping the Server</h3>
+                    <ol>
+                        <li>Click <strong>"Stop Server"</strong> button</li>
+                        <li>Existing QSOs stay in database</li>
+                        <li>Connected clients automatically switch to offline buffering</li>
+                        <li>Clients retain buffered QSOs for later transmission</li>
+                    </ol>
+
+                    <div class="info-box">
+                        <strong>💡 Tip:</strong> Don't worry about graceful shutdowns - if server crashes, restart it and clients will automatically reconnect and send any buffered QSOs.
+                    </div>
+                </div>
+            </section>
+
+            <!-- CLIENT OPERATIONS -->
+            <section id="client-operations" class="section">
+                <h2>Client Operations</h2>
+                <div class="content-box">
+                    <h3>Daily Client Workflow</h3>
+                    <ol>
+                        <li><strong>Before Logger Starts:</strong> Start QSOCollector client</li>
+                        <li><strong>Verify Connection:</strong> Check "Connected" status</li>
+                        <li><strong>Throughout Operating:</strong> Monitor activity in logs</li>
+                        <li><strong>After Logger Stops:</strong> Can stop client (optional - can leave running)</li>
+                        <li><strong>Monitor Statistics:</strong> Track received, sent, buffered QSOs</li>
+                    </ol>
+
+                    <h3>Starting the Client</h3>
+                    <ol>
+                        <li>Launch QSOCollector.exe</li>
+                        <li>Click <strong>"Client"</strong> tab</li>
+                        <li>Verify Server IP and Port are correct</li>
+                        <li>Verify UDP Listeners are configured</li>
+                        <li>Click <strong>"Start Client"</strong></li>
+                        <li>Status should show <span style="color: green;">🟢 Connected</span> within 5-10 seconds</li>
+                    </ol>
+
+                    <h3>Normal Operation</h3>
+                    <p><strong>When everything works correctly:</strong></p>
+                    <ul>
+                        <li>✅ Server Status shows <span style="color: green;">🟢 Connected</span></li>
+                        <li>✅ Client Log shows no errors</li>
+                        <li>✅ "Sent to Server" counter increases with each QSO</li>
+                        <li>✅ "Temporary Saved" counter stays at 0</li>
+                        <li>✅ Logger runs without issues</li>
+                    </ul>
+
+                    <h3>What If Server Becomes Unavailable?</h3>
+                    <p><strong>Automatic Offline Handling:</strong></p>
+                    <ol>
+                        <li>Server Status changes to <span style="color: red;">🔴 Disconnected</span></li>
+                        <li>QSOs from logger continue to be received</li>
+                        <li>QSOs automatically saved to local database</li>
+                        <li>"Temporary Saved" counter increases</li>
+                        <li>Client continues retrying connection automatically</li>
+                    </ol>
+
+                    <p><strong>When Server Comes Back Online:</strong></p>
+                    <ol>
+                        <li>Client automatically reconnects</li>
+                        <li>Status changes to <span style="color: green;">🟢 Connected</span></li>
+                        <li>All buffered QSOs automatically sent to server</li>
+                        <li>"Temporary Saved" counter decreases</li>
+                        <li>Normal operation resumes</li>
+                    </ol>
+
+                    <div class="success-box">
+                        <strong>✅ Zero Data Loss:</strong> No QSOs are lost even if server is unavailable for hours or days. They're cached locally and transmitted when connection restored.
+                    </div>
+
+                    <h3>Monitoring Client Statistics</h3>
+                    <table class="stats-table">
+                        <tr>
+                            <th>Statistic</th>
+                            <th>Meaning</th>
+                            <th>Normal Value</th>
+                        </tr>
+                        <tr>
+                            <td><strong>Received</strong></td>
+                            <td>QSOs received from local logger(s)</td>
+                            <td>Increases during operation</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Sent to Server</strong></td>
+                            <td>QSOs successfully sent (when connected)</td>
+                            <td>~= Received (when connected)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Temporary Saved</strong></td>
+                            <td>QSOs buffered locally (when disconnected)</td>
+                            <td>0 when connected, increases when offline</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Rejected</strong></td>
+                            <td>Invalid QSOs (format errors)</td>
+                            <td>Should be 0 (investigate if > 0)</td>
+                        </tr>
+                    </table>
+
+                    <h3>Diagnosing Client Issues</h3>
+                    <p><strong>Symptom: Server Status stays 🔴 Disconnected</strong></p>
+                    <ul>
+                        <li>Check Server IP address is correct</li>
+                        <li>Check Server Port matches server</li>
+                        <li>Ping server: <code>ping [server-ip]</code></li>
+                        <li>Test port connectivity: <code>Test-NetConnection -ComputerName [ip] -Port 5000</code></li>
+                        <li>Check Windows Firewall on both PCs</li>
+                        <li>Check router firewall/port filtering</li>
+                    </ul>
+
+                    <p><strong>Symptom: QSOs not arriving at server</strong></p>
+                    <ul>
+                        <li>Check UDP Listeners are configured correctly</li>
+                        <li>Verify logger port matches QSO Port in listener</li>
+                        <li>Verify Format (N1MM or ADIF) matches logger output</li>
+                        <li>Enable "Log details" to see UDP reception events</li>
+                        <li>Verify listener "Active" checkbox is checked</li>
+                    </ul>
+
+                    <p><strong>Symptom: "Temporary Saved" count increasing but not clearing</strong></p>
+                    <ul>
+                        <li>Server is unavailable or connection broken</li>
+                        <li>Check server is actually running</li>
+                        <li>Check network connection (test ping)</li>
+                        <li>Restart client to force reconnection attempt</li>
+                    </ul>
+
+                    <h3>Stopping the Client</h3>
+                    <ol>
+                        <li>Click <strong>"Stop Client"</strong> button</li>
+                        <li>UDP listeners stop</li>
+                        <li>Connection to server closes gracefully</li>
+                        <li>Any buffered QSOs stay in local database for next startup</li>
+                    </ol>
+
+                    <h3>Autostart Configuration</h3>
+                    <p>To ensure client never misses QSOs:</p>
+                    <ol>
+                        <li>Check <strong>"Start automatically"</strong> checkbox</li>
+                        <li>Client will start with Windows automatically</li>
+                        <li>Minimized to tray (can double-click tray icon to restore)</li>
+                        <li>Configuration retained from previous session</li>
+                    </ol>
+
+                    <div class="info-box">
+                        <strong>💡 Best Practice:</strong> Always enable "Start automatically" on client PCs so QSOs are captured even if PC is rebooted.
+                    </div>
+                </div>
+            </section>
+
+            <!-- IMPORT & EXPORT -->
+            <section id="import-export" class="section">
+                <h2>Import & Export Operations</h2>
+                <div class="content-box">
+                    <h3>Export Overview</h3>
+                    <p>Export QSOs from database to ADIF format for uploading to ClubLog or other services.</p>
+
+                    <h3>Export Steps</h3>
+                    <ol>
+                        <li>Click <strong>"Server"</strong> tab</li>
+                        <li>Click <strong>"QSO Export"</strong> button</li>
+                        <li>Export dialog opens</li>
+                        <li>Select filter (see below)</li>
+                        <li>Configure secondary filters (optional)</li>
+                        <li>Click <strong>"Export"</strong></li>
+                        <li>Choose filename and location</li>
+                        <li>Review export results</li>
+                        <li>Mark as exported (recommended)</li>
+                    </ol>
+
+                    <h3>Export Filter Options</h3>
+                    <table class="export-filters">
+                        <tr>
+                            <th>Filter</th>
+                            <th>When to Use</th>
+                            <th>Example</th>
+                        </tr>
+                        <tr>
+                            <td><strong>"New QSOs"</strong></td>
+                            <td>Daily export to ClubLog (most common)</td>
+                            <td>Export all QSOs since yesterday</td>
+                        </tr>
+                        <tr>
+                            <td><strong>"By Date"</strong></td>
+                            <td>Specific date range</td>
+                            <td>Export Feb 10-12 for special event</td>
+                        </tr>
+                        <tr>
+                            <td><strong>"All QSOs"</strong></td>
+                            <td>Full database export</td>
+                            <td>Export everything for backup</td>
+                        </tr>
+                    </table>
+
+                    <h3>Using "New QSOs" Filter (Recommended)</h3>
+                    <ol>
+                        <li>Click <strong>"QSO Export"</strong></li>
+                        <li>Select <strong>"New QSOs"</strong> radio button</li>
+                        <li>(Optional) Apply secondary filters (Mode Group, Band, Operator)</li>
+                        <li>Bottom shows: "Filtered: X QSOs" (number to export)</li>
+                        <li>Click <strong>"Export"</strong></li>
+                        <li>Choose filename (default: QSOs_2026-02-13_100215.adi)</li>
+                        <li>Click <strong>"Save"</strong></li>
+                        <li>Results shown (e.g., "Exported 245 QSOs")</li>
+                        <li><strong>Recommended:</strong> Click "Mark as exported" checkbox to prevent future re-export</li>
+                        <li>File opened in Explorer for upload to ClubLog</li>
+                    </ol>
+
+                    <h3>Secondary Filters</h3>
+                    <p>After selecting main filter, apply optional secondary filters:</p>
+                    <ul>
+                        <li><strong>Mode Group:</strong> CW, SSB, DATA, etc. (narrow to specific mode)</li>
+                        <li><strong>Band:</strong> 80m, 40m, 20m, etc. (narrow to specific band)</li>
+                        <li><strong>Operator:</strong> Specific operator name</li>
+                    </ul>
+                    <p>Secondary filters apply IN ADDITION TO main filter.</p>
+
+                    <h3>Export Workflow for Daily ClubLog Upload</h3>
+                    <ol>
+                        <li>Each day at fixed time (e.g., 8 PM):</li>
+                        <li>Open QSOCollector Server</li>
+                        <li>Click "QSO Export"</li>
+                        <li>Select "New QSOs"</li>
+                        <li>Click "Export"</li>
+                        <li>Use default filename (includes date/time)</li>
+                        <li>Check "Mark as exported" ← <strong>IMPORTANT!</strong></li>
+                        <li>Upload resulting ADIF file to ClubLog</li>
+                        <li>Verify in ClubLog</li>
+                        <li>Next day, repeat → only new QSOs will export</li>
+                    </ol>
+
+                    <div class="warning-box">
+                        <strong>⚠️ Critical:</strong> Always mark QSOs as exported after uploading to ClubLog. Otherwise same QSOs will re-export the next day causing duplicates!
+                    </div>
+
+                    <h3>Import Overview</h3>
+                    <p>Import QSOs from ADIF file into database (e.g., if logger logs were extracted directly).</p>
+
+                    <h3>Import Steps</h3>
+                    <ol>
+                        <li>Click <strong>"QSO Import"</strong> button</li>
+                        <li>Import dialog opens</li>
+                        <li>Click <strong>"Browse..."</strong> to select ADIF file</li>
+                        <li>Preview shows first few QSOs</li>
+                        <li>Click <strong>"Continue import"</strong></li>
+                        <li>Progress bar shows import progress</li>
+                        <li>Results: "X new QSOs saved, Y duplicates skipped"</li>
+                        <li>Database statistics auto-update</li>
+                    </ol>
+
+                    <h3>Import Use Cases</h3>
+                    <ul>
+                        <li><strong>Backup recovery:</strong> Restore from backup ADIF file</li>
+                        <li><strong>Late import:</strong> Client wasn't running early on - import logger's ADIF</li>
+                        <li><strong>Merge logs:</strong> Import QSOs from another DXpedition</li>
+                        <li><strong>Format conversion:</strong> Import ADIF from external logger</li>
+                    </ul>
+
+                    <h3>Default Folders</h3>
+                    <ul>
+                        <li><strong>Export default:</strong> <code>%UserProfile%\Documents\QSOCollector\export</code></li>
+                        <li><strong>Import default:</strong> <code>%UserProfile%\Documents\QSOCollector\import</code></li>
+                        <li>Folders created automatically on first use</li>
+                    </ul>
+
+                    <h3>ADIF Format Support</h3>
+                    <ul>
+                        <li>✅ Supports standard ADIF files</li>
+                        <li>✅ Handles common variations</li>
+                        <li>✅ Validates QSO data</li>
+                        <li>⚠️ Invalid QSOs skipped with warning</li>
+                        <li>❌ Non-ADIF formats not supported</li>
+                    </ul>
+
+                    <h3>Troubleshooting Import/Export</h3>
+                    <p><strong>Import fails with "Invalid ADIF file"</strong></p>
+                    <ul>
+                        <li>Verify file is actually ADIF format</li>
+                        <li>Open in text editor - should contain ADIF tags (&lt;call&gt;, &lt;qso_date&gt;, etc.)</li>
+                        <li>Try opening file in another ADIF reader first</li>
+                        <li>Check file not corrupted</li>
+                    </ul>
+
+                    <p><strong>Export creates empty file</strong></p>
+                    <ul>
+                        <li>Verify "Filtered" count shows QSOs at bottom</li>
+                        <li>May have selected date range with no QSOs</li>
+                        <li>Try "All QSOs" filter instead</li>
+                    </ul>
+
+                    <p><strong>Duplicate QSOs appearing in ClubLog</strong></p>
+                    <ul>
+                        <li>Did NOT mark QSOs as exported after previous export</li>
+                        <li>Solution: Mark as exported immediately after future exports</li>
+                    </ul>
+
+                    <div class="info-box">
+                        <strong>💡 Tip:</strong> Save all export ADIF files with descriptive names including dates. Useful for backup and audit trail.
+                    </div>
+                </div>
+            </section>
+
+            <!-- QSO SEARCH -->
+            <section id="qso-search" class="section">
+                <h2>QSO Search Feature</h2>
+                <div class="content-box">
+                    <h3>Overview</h3>
+                    <p>Search for specific QSO records in the database by callsign, band, or mode. Perfect for verifying QSOs or finding duplicate records.</p>
+
+                    <h3>Opening QSO Search</h3>
+                    <ol>
+                        <li>Click <strong>"Server"</strong> tab</li>
+                        <li>Click <strong>"Search QSOs"</strong> button</li>
+                        <li>QSO Search modal dialog opens</li>
+                    </ol>
+
+                    <h3>Basic Search</h3>
+                    <ol>
+                        <li>Enter callsign in search box (e.g., "N0CALL")</li>
+                        <li>Minimum 3 alphanumeric characters required</li>
+                        <li>Text auto-converts to UPPERCASE</li>
+                        <li>Press <strong>Enter</strong> or click <strong>"Search"</strong> button</li>
+                        <li>Results appear in grid (max 200)</li>
+                    </ol>
+
+                    <h3>Search Patterns & Wildcards</h3>
+                    <table class="search-patterns">
+                        <tr>
+                            <th>Pattern</th>
+                            <th>Example</th>
+                            <th>Result</th>
+                        </tr>
+                        <tr>
+                            <td>Simple callsign</td>
+                            <td>N0CALL</td>
+                            <td>Contains "N0CALL" (searches: %N0CALL%)</td>
+                        </tr>
+                        <tr>
+                            <td>Start with</td>
+                            <td>N0%</td>
+                            <td>Starts with "N0" (N0CALL, N0XYZ, etc.)</td>
+                        </tr>
+                        <tr>
+                            <td>End with</td>
+                            <td>%CALL</td>
+                            <td>Ends with "CALL" (N0CALL, W5CALL, etc.)</td>
+                        </tr>
+                        <tr>
+                            <td>One char wildcard</td>
+                            <td>N_CALL</td>
+                            <td>N + any char + CALL (N0CALL, NXCALL, etc.)</td>
+                        </tr>
+                    </table>
+
+                    <h3>Using Filters</h3>
+                    <ol>
+                        <li>After search results appear, filters are auto-populated</li>
+                        <li><strong>Mode Group:</strong> Select CW, SSB, DATA, etc.</li>
+                        <li><strong>Band:</strong> Select 80m, 40m, 20m, etc.</li>
+                        <li>Results filtered to match criteria</li>
+                        <li>Can combine both filters</li>
+                    </ol>
+
+                    <h3>Results Table</h3>
+                    <p>Results display in a table with columns:</p>
+                    <ul>
+                        <li><strong>Callsign:</strong> QSO partner's call</li>
+                        <li><strong>QSO Time:</strong> Date and time (YYYY-MM-DD HH:MM:SS)</li>
+                        <li><strong>Mode Group:</strong> CW, SSB, DATA (category)</li>
+                        <li><strong>Mode:</strong> Specific mode (CW, USB, PSK31, etc.)</li>
+                        <li><strong>Band:</strong> Frequency band (80m, 40m, etc.)</li>
+                        <li><strong>Frequency:</strong> Exact frequency (MHz)</li>
+                        <li><strong>Operator:</strong> Which operator (4-7 char call)</li>
+                        <li><strong>Source IP:</strong> Which client sent this QSO</li>
+                    </ul>
+
+                    <h3>Sorting Results</h3>
+                    <ul>
+                        <li>Click any column header to sort by that column</li>
+                        <li>Click again to reverse sort direction</li>
+                        <li>Default sort: QSO Time (newest first)</li>
+                        <li>Active sort column shown with indicator</li>
+                    </ul>
+
+                    <h3>Search Examples</h3>
+                    <ul>
+                        <li><strong>"W5"</strong> → Find all W5 region stations</li>
+                        <li><strong>"K0%"</strong> → Find all K0 calls</li>
+                        <li><strong>"%2"</strong> → Find all calls ending in digit 2</li>
+                        <li><strong>"N0CALL"</strong> → Exact call search</li>
+                        <li><strong>"VE3"</strong> → Canadian calls starting with VE3</li>
+                    </ul>
+
+                    <div class="info-box">
+                        <strong>💡 Tip:</strong> Use % (percent) wildcard liberally. "N0%" finds all N0 stations, "W5%" finds all W5 calls, etc.
+                    </div>
+
+                    <h3>Using Search for QA</h3>
+                    <p>Examples of how to verify data quality:</p>
+                    <ul>
+                        <li><strong>Verify station worked:</strong> Search for other station's call</li>
+                        <li><strong>Find duplicates:</strong> Search and check for identical QSO times</li>
+                        <li><strong>Check band activity:</strong> Search "%" then filter by Band</li>
+                        <li><strong>Verify operator:</strong> Search operator name in Operator column</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- NETWORKING -->
+            <section id="networking" class="section">
+                <h2>Network Architecture & Advanced Setup</h2>
+                <div class="content-box">
+                    <h3>Network Communication Model</h3>
+                    <p>QSOCollector uses two types of network communication:</p>
+                    <ul>
+                        <li><strong>UDP (Local):</strong> Logger → Client (same PC, no network)</li>
+                        <li><strong>TCP (Network):</strong> Client → Server (over LAN/WiFi)</li>
+                    </ul>
+
+                    <h3>Network Flow Diagram</h3>
+                    <pre style="background: #f5f5f5; padding: 15px; border-radius: 5px; overflow-x: auto;">
+    ┌─────────────────────────────────────────────────────┐
+    │  Server PC (192.168.1.50)                           │
+    │  ┌──────────────────────────────────────────────┐  │
+    │  │ QSOCollector Server                          │  │
+    │  │ • TCP Listen: 0.0.0.0:5000                  │  │
+    │  │ • Central SQLite Database                    │  │
+    │  └──────────────────────────────────────────────┘  │
+    │           ↑              ↑              ↑            │
+    │           │              │              │            │
+    │      TCP  │         TCP  │         TCP  │            │
+    │      5000 │         5000 │         5000 │            │
+    │           │              │              │            │
+    │  Client PC #1      Client PC #2    Client PC #3     │
+    │  (192.168.1.51)    (192.168.1.52)  (192.168.1.53)   │
+    │      ↑                  ↑               ↑             │
+    │      │ UDP              │ UDP           │ UDP         │
+    │      │ 12060            │ 10001         │ 12060       │
+    │      │                  │               │             │
+    │    Logger1           Logger2         Logger3          │
+    │    N1MM              DXLog           N1MM             │
+    │                                                       │
+    └─────────────────────────────────────────────────────┘
+    </pre>
+
+                    <h3>Network Reliability Features</h3>
+                    <p><strong>TCP Advantages over UDP:</strong></p>
+                    <ul>
+                        <li>✅ <strong>Guaranteed delivery:</strong> TCP ensures QSOs arrive in order</li>
+                        <li>✅ <strong>Automatic retransmission:</strong> Failed packets resent automatically</li>
+                        <li>✅ <strong>No duplication:</strong> TCP handles duplicate elimination</li>
+                        <li>✅ <strong>Connection-based:</strong> Clear state (connected/disconnected)</li>
+                        <li>✅ <strong>Flow control:</strong> Sender adapts to receiver speed</li>
+                    </ul>
+
+                    <p><strong>UDP (logger-to-client) is acceptable because:</strong></p>
+                    <ul>
+                        <li>Local network (same PC or LAN segment) is reliable</li>
+                        <li>Client can retry QSOs locally</li>
+                        <li>Lower latency than TCP</li>
+                        <li>Logger broadcast standard for compatibility</li>
+                    </ul>
+
+                    <h3>Offline Caching Mechanism</h3>
+                    <p>When server unavailable, client automatically buffers QSOs:</p>
+                    <ol>
+                        <li>Client receives QSO from logger (via UDP)</li>
+                        <li>Attempts to send to server (TCP)</li>
+                        <li>If TCP fails, saves to local SQLite database</li>
+                        <li>Continues receiving and buffering QSOs</li>
+                        <li>When server comes back online, resends all buffered QSOs</li>
+                        <li>Clears buffer once confirmed by server</li>
+                    </ol>
+
+                    <h3>Bandwidth Requirements</h3>
+                    <ul>
+                        <li><strong>Per QSO:</strong> ~150 bytes typical</li>
+                        <li><strong>1000 QSOs/hour:</strong> ~150 KB/hour (~0.042 MB/sec)</li>
+                        <li><strong>Very low bandwidth:</strong> Works on any home WiFi or 4G</li>
+                        <li><strong>Typical DXpedition:</strong> &lt;1 MB/day per PC</li>
+                    </ul>
+
+                    <h3>Latency Tolerance</h3>
+                    <ul>
+                        <li><strong>Typical LAN:</strong> &lt;5ms latency (imperceptible)</li>
+                        <li><strong>WiFi:</strong> 5-50ms (acceptable)</li>
+                        <li><strong>Internet WAN:</strong> 50-200ms (still works)</li>
+                        <li><strong>Buffer timeout:</strong> 30 seconds (very tolerant)</li>
+                    </ul>
+
+                    <h3>Multi-PC Scalability</h3>
+                    <ul>
+                        <li>Server handles unlimited client connections</li>
+                        <li>Typical DXpedition: 2-8 client PCs</li>
+                        <li>Load tested up to 50+ concurrent connections</li>
+                        <li>CPU usage minimal (&lt;5% per client on typical server)</li>
+                    </ul>
+
+                    <h3>Advanced: DHCP vs Static IP</h3>
+                    <p><strong>Recommended: Static IP for Server PC</strong></p>
+                    <ul>
+                        <li>Ensures clients always find server</li>
+                        <li>Prevents connection issues if IP changes</li>
+                    </ul>
+
+                    <p><strong>How to set static IP on Windows:</strong></p>
+                    <ol>
+                        <li>Settings → Network → Advanced network settings</li>
+                        <li>IP settings → Edit</li>
+                        <li>Select "Manual" → IPv4</li>
+                        <li>Enter IP (e.g., 192.168.1.50)</li>
+                        <li>Enter Gateway (usually 192.168.1.1)</li>
+                        <li>Enter DNS (e.g., 8.8.8.8)</li>
+                    </ol>
+
+                    <p><strong>Alternative: DHCP Reservation</strong></p>
+                    <ul>
+                        <li>Configure router to always assign same IP to server PC</li>
+                        <li>Easier than manual static IP</li>
+                        <li>Check your router manual for how to set DHCP reservation</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- DATABASE -->
+            <section id="database" class="section">
+                <h2>Database Management</h2>
+                <div class="content-box">
+                    <h3>Database Location</h3>
+                    <p>QSOCollector uses SQLite database stored at:</p>
+                    <pre style="background: #f5f5f5; padding: 10px; border-radius: 5px;">%AppData%\QSOCollector\qso.db</pre>
+                    <p>Typical path: <code>C:\Users\[YourUsername]\AppData\Roaming\QSOCollector\qso.db</code></p>
+
+                    <h3>Database Size</h3>
+                    <ul>
+                        <li><strong>Empty database:</strong> ~100 KB</li>
+                        <li><strong>Per QSO:</strong> ~200 bytes</li>
+                        <li><strong>10,000 QSOs:</strong> ~2 MB</li>
+                        <li><strong>100,000 QSOs:</strong> ~20 MB</li>
+                        <li><strong>Indices:</strong> Additional ~10-20% overhead</li>
+                    </ul>
+
+                    <h3>Backup & Recovery</h3>
+                    <p><strong>Regular Backups (Recommended):</strong></p>
+                    <ol>
+                        <li>Locate database file (see path above)</li>
+                        <li>Copy qso.db to backup location</li>
+                        <li>Recommended: Daily backup</li>
+                        <li>Store backup on external drive or cloud</li>
+                    </ol>
+
+                    <p><strong>Restore from Backup:</strong></p>
+                    <ol>
+                        <li>Close QSOCollector application</li>
+                        <li>Delete current qso.db file</li>
+                        <li>Copy backup file to original location</li>
+                        <li>Reopen QSOCollector</li>
+                    </ol>
+
+                    <h3>Database Performance</h3>
+                    <p><strong>Optimizations:</strong></p>
+                    <ul>
+                        <li>Index on "call" column for fast searching</li>
+                        <li>Index on "qso_time" for date filtering</li>
+                        <li>Optimized queries for common operations</li>
+                        <li>Automatic database maintenance</li>
+                    </ul>
+
+                    <p><strong>Performance Characteristics:</strong></p>
+                    <ul>
+                        <li>Search speed: &lt;100ms for 100,000 QSOs</li>
+                        <li>Export speed: ~1000 QSOs/second</li>
+                        <li>Import speed: ~500 QSOs/second</li>
+                    </ul>
+
+                    <h3>Database Maintenance</h3>
+                    <p><strong>Automatic:</strong></p>
+                    <ul>
+                        <li>QSOCollector automatically maintains database</li>
+                        <li>No manual maintenance required</li>
+                        <li>Database optimized on startup</li>
+                    </ul>
+
+                    <p><strong>Manual Cleanup (if needed):</strong></p>
+                    <ol>
+                        <li>Close QSOCollector</li>
+                        <li>Delete %AppData%\QSOCollector\qso.db</li>
+                        <li>Reopen QSOCollector (new database created)</li>
+                        <li><strong>Warning: Deletes ALL QSOs!</strong></li>
+                    </ol>
+
+                    <h3>Database Corruption Recovery</h3>
+                    <p><strong>Signs of corruption:</strong></p>
+                    <ul>
+                        <li>Error messages when opening QSOCollector</li>
+                        <li>Export/import fails with database error</li>
+                        <li>Search returns incorrect results</li>
+                    </ul>
+
+                    <p><strong>Recovery steps:</strong></p>
+                    <ol>
+                        <li>Close application</li>
+                        <li>Restore from recent backup if available</li>
+                        <li>If no backup, delete qso.db and start fresh</li>
+                        <li>Import previously exported ADIF files if needed</li>
+                    </ol>
+
+                    <div class="warning-box">
+                        <strong>⚠️ Important:</strong> Back up your database regularly! A corrupted or lost database cannot be recovered without a backup.
+                    </div>
+
+                    <h3>Database Schema (Advanced)</h3>
+                    <p>Main table: <code>qsodata</code></p>
+                    <ul>
+                        <li>call - Callsign of QSO partner</li>
+                        <li>qso_time - Date/time of QSO</li>
+                        <li>qso_date - Date in YYYYMMDD format</li>
+                        <li>freq - Frequency in MHz</li>
+                        <li>mode - Mode (CW, SSB, etc.)</li>
+                        <li>mode_group - Mode category (CW, SSB, DATA)</li>
+                        <li>band - Band (80m, 40m, etc.)</li>
+                        <li>name - Station name (if available)</li>
+                        <li>operator - Operator call</li>
+                        <li>source_ip_address - Client IP that submitted QSO</li>
+                        <li>is_exported - Boolean (marked for export)</li>
+                        <li>is_temporary - Boolean (not yet sent to server)</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- AUTOSTART -->
+            <section id="autostart" class="section">
+                <h2>Autostart & System Tray</h2>
+                <div class="content-box">
+                    <h3>Why Enable Autostart?</h3>
+                    <p><strong>Critical for DXpeditions:</strong> QSOCollector MUST be running when loggers start operating, or QSOs will be lost!</p>
+                    <ul>
+                        <li>✅ Ensures no QSOs missed if PC rebooted</li>
+                        <li>✅ Application starts automatically with Windows</li>
+                        <li>✅ Runs with previous configuration</li>
+                        <li>✅ Minimized to tray (not obtrusive)</li>
+                    </ul>
+
+                    <h3>Enabling Autostart</h3>
+                    <ol>
+                        <li>In QSOCollector, check <strong>"Start automatically"</strong> checkbox (top-right)</li>
+                        <li>Application will now:
+                            <ul>
+                                <li>Start automatically when Windows boots</li>
+                                <li>Load previous configuration</li>
+                                <li>Minimize to system tray (not visible on desktop)</li>
+                                <li>Continue operation in background</li>
+                            </ul>
+                        </li>
+                    </ol>
+
+                    <h3>System Tray Integration</h3>
+                    <p><strong>When minimized to tray:</strong></p>
+                    <ul>
+                        <li>Application icon appears in system tray (bottom-right)</li>
+                        <li>Double-click tray icon to restore window</li>
+                        <li>Right-click tray icon for menu options</li>
+                        <li>Application continues collecting QSOs in background</li>
+                    </ul>
+
+                    <h3>Disabling Autostart</h3>
+                    <ol>
+                        <li>Uncheck <strong>"Start automatically"</strong> checkbox</li>
+                        <li>Application will no longer auto-start</li>
+                        <li>Must be launched manually next time</li>
+                    </ol>
+
+                    <h3>Advanced: Manual Autostart Configuration</h3>
+                    <p>If checkbox doesn't work, configure Windows Task Scheduler:</p>
+                    <ol>
+                        <li>Open <strong>Task Scheduler</strong> (search in Windows)</li>
+                        <li>Click <strong>"Create Basic Task"</strong></li>
+                        <li><strong>Name:</strong> "QSOCollector"</li>
+                        <li><strong>Trigger:</strong> "At log on"</li>
+                        <li><strong>Action:</strong> "Start a program"</li>
+                        <li><strong>Program:</strong> Browse to QSOCollector.exe</li>
+                        <li>Click <strong>"Finish"</strong></li>
+                        <li>Test: Restart PC, verify QSOCollector starts</li>
+                    </ol>
+
+                    <h3>Startup Behavior</h3>
+                    <p><strong>On first startup after enabling autostart:</strong></p>
+                    <ul>
+                        <li>Application loads current settings</li>
+                        <li>Server or Client mode starts based on last configuration</li>
+                        <li>Connection attempts begin automatically</li>
+                        <li>Window minimized to tray</li>
+                        <li>All activity continues in background</li>
+                    </ul>
+
+                    <div class="info-box">
+                        <strong>💡 Tip:</strong> For server PC, enable autostart so server starts automatically after power loss. For client PCs, enable to ensure QSOs always captured.
+                    </div>
+
+                    <h3>Troubleshooting Autostart</h3>
+                    <p><strong>Application not autostarting:</strong></p>
+                    <ul>
+                        <li>Verify "Start automatically" checkbox is checked</li>
+                        <li>Try Task Scheduler method (see above)</li>
+                        <li>Check Windows startup programs (Settings → Apps → Startup)</li>
+                        <li>Verify .NET 10 runtime installed (required for startup)</li>
+                    </ul>
+
+                    <p><strong>Want to prevent autostart temporarily:</strong></p>
+                    <ul>
+                        <li>Uncheck "Start automatically" before shutdown</li>
+                        <li>Or disable in Task Scheduler</li>
+                        <li>Re-enable after maintenance</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- LOGGING & DEBUGGING -->
+            <section id="logging" class="section">
+                <h2>Logging & Debugging</h2>
+                <div class="content-box">
+                    <h3>Understanding QSOCollector Logs</h3>
+                    <p>Logs help troubleshoot issues and track application behavior.</p>
+
+                    <h3>Accessing Logs</h3>
+                    <p><strong>In-Application Logs:</strong></p>
+                    <ul>
+                        <li><strong>Server Log:</strong> Visible in Server tab</li>
+                        <li><strong>Client Log:</strong> Visible in Client tab</li>
+                        <li><strong>"Log details" checkbox:</strong> Enable verbose logging</li>
+                    </ul>
+
+                    <p><strong>File-Based Logs:</strong></p>
+                    <pre style="background: #f5f5f5; padding: 10px; border-radius: 5px;">%AppData%\QSOCollector\logs\</pre>
+                    <p>Typical path: <code>C:\Users\[YourUsername]\AppData\Roaming\QSOCollector\logs\</code></p>
+
+                    <h3>Log File Names</h3>
+                    <ul>
+                        <li><strong>Server logs:</strong> QSOCollector-20260213.log</li>
+                        <li><strong>Dated filename:</strong> Includes date rolled daily</li>
+                        <li><strong>Multiple files:</strong> Keep last 7 days</li>
+                    </ul>
+
+                    <h3>Log Format</h3>
+                    <pre style="background: #f5f5f5; padding: 10px; border-radius: 5px;">2026-02-13 10:00:15.123 [INF] Server started on port 5000
+2026-02-13 10:01:22.456 [INF] Client 192.168.1.51 connected
+2026-02-13 10:01:45.789 [ERR] Database error: connection failed</pre>
+                    <ul>
+                        <li><strong>Timestamp:</strong> Date, time, milliseconds</li>
+                        <li><strong>Level:</strong> [INF] Info, [WRN] Warning, [ERR] Error</li>
+                        <li><strong>Message:</strong> Descriptive text</li>
+                    </ul>
+
+                    <h3>Enabling Verbose Logging</h3>
+                    <ol>
+                        <li>Check <strong>"Log details"</strong> checkbox</li>
+                        <li>More detailed messages appear in log</li>
+                        <li><strong>Impacts performance:</strong> Slightly increases CPU/disk usage</li>
+                        <li>Recommended only for troubleshooting</li>
+                    </ol>
+
+                    <p><strong>Example verbose logging:</strong></p>
+                    <pre style="background: #f5f5f5; padding: 10px; border-radius: 5px; font-size: 12px;">2026-02-13 10:00:15 [DBG] TCP listener bound to 0.0.0.0:5000
+2026-02-13 10:01:22 [DBG] Incoming TCP connection from 192.168.1.51
+2026-02-13 10:01:23 [DBG] Parsed N1MM QSO: call=N0CALL freq=14.272
+2026-02-13 10:01:24 [DBG] Inserted QSO into database
+2026-02-13 10:01:25 [DBG] Sent ACK to client</pre>
+
+                    <h3>Common Log Messages</h3>
+                    <table class="log-messages">
+                        <tr>
+                            <th>Message</th>
+                            <th>Meaning</th>
+                            <th>Action</th>
+                        </tr>
+                        <tr>
+                            <td>Server started on port 5000</td>
+                            <td>Server listening for connections</td>
+                            <td>✅ Normal</td>
+                        </tr>
+                        <tr>
+                            <td>Client connected from 192.168.1.51</td>
+                            <td>Client successfully connected</td>
+                            <td>✅ Normal</td>
+                        </tr>
+                        <tr>
+                            <td>Received QSO: N0CALL</td>
+                            <td>QSO received and stored</td>
+                            <td>✅ Normal</td>
+                        </tr>
+                        <tr>
+                            <td>Client disconnected</td>
+                            <td>Client lost connection</td>
+                            <td>⚠️ Check network</td>
+                        </tr>
+                        <tr>
+                            <td>Database error: locked</td>
+                            <td>Database file in use</td>
+                            <td>❌ Restart app</td>
+                        </tr>
+                        <tr>
+                            <td>Port already in use</td>
+                            <td>TCP port unavailable</td>
+                            <td>❌ Use different port</td>
+                        </tr>
+                    </table>
+
+                    <h3>Log Analysis for Troubleshooting</h3>
+                    <p><strong>Problem: Server not receiving QSOs</strong></p>
+                    <ul>
+                        <li>Check for "Client connected" messages</li>
+                        <li>Look for "Received QSO" messages</li>
+                        <li>If missing, client may not be sending data</li>
+                        <li>Enable verbose logging on client to see UDP reception</li>
+                    </ul>
+
+                    <p><strong>Problem: High CPU usage</strong></p>
+                    <ul>
+                        <li>Disable "Log details" (reduces overhead)</li>
+                        <li>Check for error loops in log</li>
+                        <li>Monitor database queries performance</li>
+                    </ul>
+
+                    <p><strong>Problem: Disconnections</strong></p>
+                    <ul>
+                        <li>Look for "Client disconnected" messages</li>
+                        <li>Check timestamps and frequency</li>
+                        <li>May indicate network issues</li>
+                        <li>Review firewall logs on both PCs</li>
+                    </ul>
+
+                    <h3>Sharing Logs for Support</h3>
+                    <p>When reporting issues, include:</p>
+                    <ul>
+                        <li>Log file from %AppData%\QSOCollector\logs\</li>
+                        <li>Time period of the issue</li>
+                        <li>Screen screenshot if applicable</li>
+                        <li>Exact error message</li>
+                        <li>What were you doing when error occurred?</li>
+                    </ul>
+
+                    <div class="info-box">
+                        <strong>💡 Tip:</strong> Keep logs for post-DXpedition review. They help identify patterns and optimize setup for next time.
+                    </div>
+                </div>
+            </section>
+
+            <!-- TROUBLESHOOTING -->
+            <section id="troubleshooting" class="section">
+                <h2>Troubleshooting Guide</h2>
+                <div class="content-box">
+                    <h3>Common Issues & Solutions</h3>
+
+                    <h4>Server Won't Start</h4>
+                    <p><strong>Symptoms:</strong> Click "Start Server" but nothing happens, or error message appears</p>
+                    <p><strong>Solutions:</strong></p>
+                    <ol>
+                        <li>Check if port 5000 is already in use:
+                            <pre><code>netstat -ano | findstr :5000</code></pre>
+                        </li>
+                        <li>If port in use, try different port (5001, 5002, etc.)</li>
+                        <li>Check Windows Firewall allows QSOCollector</li>
+                        <li>Check disk space (at least 100 MB free)</li>
+                        <li>Verify .NET 10 runtime installed:
+                            <pre><code>dotnet --version</code></pre>
+                        </li>
+                        <li>Restart application</li>
+                        <li>Restart Windows</li>
+                    </ol>
+
+                    <h4>Client Shows "Disconnected" / Server Unavailable</h4>
+                    <p><strong>Symptoms:</strong> Client status shows 🔴 Disconnected even though server running</p>
+                    <p><strong>Solutions:</strong></p>
+                    <ol>
+                        <li>Verify Server IP address is correct (don't use "localhost")</li>
+                        <li>Verify Server Port matches server configuration</li>
+                        <li>Test connectivity from client PC:
+                            <pre><code>ping [server-ip]</code></pre>
+                        </li>
+                        <li>Test port connectivity:
+                            <pre><code>Test-NetConnection -ComputerName [server-ip] -Port 5000</code></pre>
+                        </li>
+                        <li>Check Windows Firewall on both PCs</li>
+                        <li>Check router allows traffic on port 5000</li>
+                        <li>Restart both server and client</li>
+                    </ol>
+
+                    <h4>QSOs Not Arriving at Server</h4>
+                    <p><strong>Symptoms:</strong> Logger running, client shows "Connected" but no QSOs in server</p>
+                    <p><strong>Solutions:</strong></p>
+                    <ol>
+                        <li>Verify UDP Listeners are configured:
+                            <ul>
+                                <li>Listener Name: Any name</li>
+                                <li>QSO Port: Must match logger broadcast port</li>
+                                <li>Format: Must match logger format (N1MM or ADIF)</li>
+                                <li>Active: Must be checked ✓</li>
+                            </ul>
+                        </li>
+                        <li>Check logger is broadcasting (verify in logger settings)</li>
+                        <li>Enable "Log details" on client to see UDP reception</li>
+                        <li>Test logger UDP broadcast directly:
+                            <pre><code>netstat -ano | findstr UDP</code></pre>
+                        </li>
+                        <li>Restart logger</li>
+                        <li>Restart client</li>
+                    </ol>
+
+                    <h4>Duplicate QSOs in ClubLog</h4>
+                    <p><strong>Symptoms:</strong> Same QSOs appearing twice in ClubLog after export/upload</p>
+                    <p><strong>Solutions:</strong></p>
+                    <ol>
+                        <li><strong>Most likely cause:</strong> Did NOT mark QSOs as exported after previous upload</li>
+                        <li>When exporting, ALWAYS check "Mark as exported" checkbox before upload</li>
+                        <li>Use "New QSOs" filter for daily exports (prevents re-exporting)</li>
+                        <li>To fix existing duplicates in ClubLog, contact ClubLog support</li>
+                        <li>Next time, mark after each export to prevent repeat</li>
+                    </ol>
+
+                    <h4>High Memory or CPU Usage</h4>
+                    <p><strong>Symptoms:</strong> Application uses lots of resources, PC sluggish</p>
+                    <p><strong>Solutions:</strong></p>
+                    <ol>
+                        <li>Disable "Log details" checkbox (reduces verbose logging)</li>
+                        <li>Check database size isn't huge (database grows over time)</li>
+                        <li>Reduce number of connected clients if many</li>
+                        <li>Restart application to clear memory</li>
+                        <li>Ensure no multiple instances running</li>
+                        <li>Monitor Task Manager to verify it's QSOCollector using resources</li>
+                    </ol>
+
+                    <h4>Database Corruption Error</h4>
+                    <p><strong>Symptoms:</strong> Error messages about "database locked", "disk I/O error", or similar</p>
+                    <p><strong>Solutions:</strong></p>
+                    <ol>
+                        <li>Close QSOCollector application completely</li>
+                        <li>Wait 10 seconds</li>
+                        <li>Reopen QSOCollector</li>
+                        <li>If error persists:
+                            <ol>
+                                <li>Backup database file from %AppData%\QSOCollector\qso.db</li>
+                                <li>Delete qso.db</li>
+                                <li>Reopen QSOCollector (new database created)</li>
+                                <li>Import from backup ADIF file if needed</li>
+                            </ol>
+                        </li>
+                    </ol>
+
+                    <h4>Import/Export Errors</h4>
+                    <p><strong>Symptom: "Invalid ADIF file" error during import</strong></p>
+                    <ul>
+                        <li>Verify file is actually ADIF format</li>
+                        <li>Open in text editor - should contain ADIF tags (&lt;call&gt;, &lt;qso_date&gt;)</li>
+                        <li>Check file not corrupted or truncated</li>
+                        <li>Try opening in another ADIF reader first</li>
+                    </ul>
+
+                    <p><strong>Symptom: Export creates empty or very small file</strong></p>
+                    <ul>
+                        <li>Check "Filtered" count at bottom of export dialog</li>
+                        <li>If 0, try different filter (All QSOs, different date range)</li>
+                        <li>Verify database has QSOs (check Server stats)</li>
+                    </ul>
+
+                    <h4>QSO Search Not Working</h4>
+                    <p><strong>Symptom: Search button disabled or no results</strong></p>
+                    <ul>
+                        <li>Ensure at least 3 alphanumeric characters entered</li>
+                        <li>Invalid characters rejected - only A-Z0-9/_%$ allowed</li>
+                        <li>Click "Search" button or press Enter</li>
+                        <li>If no results, try wider pattern (e.g., "N0%" instead of "N0CALL")</li>
+                    </ul>
+
+                    <h3>Network Diagnostics</h3>
+                    <p><strong>Quick network tests in PowerShell:</strong></p>
+                    <pre style="background: #f5f5f5; padding: 10px; border-radius: 5px;">
+# Test connectivity to server
+ping 192.168.1.50
+
+# Test port is open
+Test-NetConnection -ComputerName 192.168.1.50 -Port 5000
+
+# View active connections
+netstat -ano | findstr :5000
+
+# View UDP listeners
+netstat -ano | findstr UDP</pre>
+
+                    <h3>Getting Help</h3>
+                    <ul>
+                        <li>📖 Review this manual for detailed feature information</li>
+                        <li>🔍 Check troubleshooting section below</li>
+                        <li>📋 Collect log files from %AppData%\QSOCollector\logs\</li>
+                        <li>🐛 Report on GitHub: https://github.com/OZhuravlov/QSOCollector/issues</li>
+                        <li>💬 Include: error message, logs, steps to reproduce, network setup</li>
+                    </ul>
+
+                    <div class="info-box">
+                        <strong>💡 Before Reporting Issue:</strong> Try restarting both server and client PCs. Many issues resolve automatically.
+                    </div>
+                </div>
+            </section>
+
+            <!-- FAQ -->
+            <section id="faq" class="section">
+                <h2>Frequently Asked Questions</h2>
+                <div class="content-box">
+                    <h3>General Questions</h3>
+
+                    <h4>Q: Is QSOCollector free?</h4>
+                    <p>A: Yes! QSOCollector is open-source and free to use. Source code available on GitHub.</p>
+
+                    <h4>Q: Can I run multiple servers?</h4>
+                    <p>A: No. Only ONE server per DXpedition. All clients must connect to the same server. Multiple servers would cause database conflicts.</p>
+
+                    <h4>Q: Can I upgrade from version X to Y without losing QSOs?</h4>
+                    <p>A: Yes. Database is backward compatible. QSOs are preserved during upgrade. Backup before upgrading (always good practice).</p>
+
+                    <h4>Q: Does QSOCollector work on Mac/Linux?</h4>
+                    <p>A: Currently Windows only (requires Windows Forms). Cross-platform support would require major refactor.</p>
+
+                    <h4>Q: Can I use QSOCollector for contests (not just DXpeditions)?</h4>
+                    <p>A: Yes! Any multi-station operation where you want centralized QSO collection. Works great for club contests, multi-station setups, etc.</p>
+
+                    <h3>Setup & Configuration</h3>
+
+                    <h4>Q: How do I find my PC's IP address?</h4>
+                    <p>A: Open Command Prompt, type <code>ipconfig</code>, look for "IPv4 Address" (typically starts with 192.168 or 10.)</p>
+
+                    <h4>Q: What if Server PC's IP address changes?</h4>
+                    <p>A: Clients will lose connection. Set Server PC to static IP (not DHCP) or use DHCP reservation. See Network Setup section.</p>
+
+                    <h4>Q: Can I access QSOCollector from another building/location?</h4>
+                    <p>A: Only if connected via VPN. Do NOT expose port 5000 directly to Internet (security risk). Use VPN for secure remote access.</p>
+
+                    <h4>Q: What port numbers should I use?</h4>
+                    <p>A: Recommended: Server TCP 5000, UDP Logger ports 12000+. Any available ports work. Check with <code>netstat</code>.</p>
+
+                    <h3>Operation & QSOs</h3>
+
+                    <h4>Q: QSOCollector running but logger not connecting. What's wrong?</h4>
+                    <p>A: Verify in logger settings that it's broadcasting on correct port. Check QSOCollector UDP Listener configured for that port. Enable verbose logging to debug.</p>
+
+                    <h4>Q: Can I mix N1MM and ADIF loggers on same network?</h4>
+                    <p>A: Yes! Configure multiple UDP Listeners - one set to N1MM format, another to ADIF. They coexist fine.</p>
+
+                    <h4>Q: What if logger sends duplicate QSOs?</h4>
+                    <p>A: QSOCollector detects duplicates by call/time and rejects them. Database won't have duplicate entries.</p>
+
+                    <h4>Q: How often should I export QSOs to ClubLog?</h4>
+                    <p>A: Daily is recommended. Export before midnight, mark as exported, upload to ClubLog. Repeat next day.</p>
+
+                    <h4>Q: Can I edit QSOs in the database?</h4>
+                    <p>A: Not directly through QSOCollector UI. If errors found, delete incorrect QSO by exporting to ADIF, editing, then re-importing. Better: verify at logger stage.</p>
+
+                    <h3>Troubleshooting</h3>
+
+                    <h4>Q: Server running but clients can't connect. Firewall issue?</h4>
+                    <p>A: Possibly. Add QSOCollector.exe to Windows Firewall exceptions. Also check router firewall if applicable. Test with <code>Test-NetConnection</code>.</p>
+
+                    <h4>Q: How do I know if QSOs are being received?</h4>
+                    <p>A: Check Server Log for "Received QSO" messages. Check QSO statistics (should increase). Enable "Log details" for more verbose output.</p>
+
+                    <h4>Q: QSOs appearing in database but wrong time zone?</h4>
+                    <p>A: QSOCollector uses PC system time. Set all PCs to UTC or same timezone. Don't mix timezones.</p>
+
+                    <h4>Q: Database growing very large, performance degrading. What to do?</h4>
+                    <p>A: Export QSOs to ADIF for archival. Delete old QSOs from active database. Or split into separate databases by DXpedition event.</p>
+
+                    <h4>Q: Connection keeps dropping between server and client.</h4>
+                    <p>A: Check network stability. WiFi issues? Try Ethernet if possible. Enable verbose logging to see exact disconnect times. May be IP address changing (use static IP).</p>
+
+                    <h3>Best Practices</h3>
+
+                    <h4>Q: What's the best way to set up for a major DXpedition?</h4>
+                    <p>A: 
+                        <ol>
+                            <li>Set up server PC well before operation starts</li>
+                            <li>Test with loggers on each client PC</li>
+                            <li>Verify all clients connecting and QSOs arriving</li>
+                            <li>Enable autostart on all PCs</li>
+                            <li>Set up daily export schedule</li>
+                            <li>Back up database daily</li>
+                        </ol>
+                    </p>
+
+                    <h4>Q: Should I enable "Log details" all the time?</h4>
+                    <p>A: No. Only when troubleshooting. It increases CPU/disk usage. Disable for normal operation.</p>
+
+                    <h4>Q: How often should I back up the database?</h4>
+                    <p>A: Daily at minimum. After major operations (import/export). Before upgrades. Database is critical - don't lose it!</p>
+
+                    <h4>Q: Can I run server and client on same PC?</h4>
+                    <p>A: Yes, but not recommended. Server needs to be always available and reliable. Client may have logger failures. Better to separate.</p>
+
+                    <h4>Q: After DXpedition ends, how long to keep the database?</h4>
+                    <p>A: Export to ADIF file and archive. Keep database backup for ~6 months in case issues found. Then can delete to free space.</p>
+
+                    <div class="success-box">
+                        <strong>✅ Still Have Questions?</strong> Check the full manual sections or visit GitHub Issues for community support.
+                    </div>
+                </div>
+            </section>
+
+            <!-- GLOSSARY -->
+            <section id="glossary" class="section">
+                <h2>Glossary</h2>
+                <div class="content-box">
+                    <table class="glossary-table">
+                        <tr>
+                            <td><strong>ADIF</strong></td>
+                            <td>Amateur Data Interchange Format - Standard text format for QSO records</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Band</strong></td>
+                            <td>Amateur radio frequency band (80m, 40m, 20m, etc.)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Buffer</strong></td>
+                            <td>Temporary storage of QSOs when server unavailable</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Callsign</strong></td>
+                            <td>Amateur radio license identifier (e.g., N0CALL, W5XYZ)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Client</strong></td>
+                            <td>QSOCollector mode running on logger PC, sends QSOs to Server</td>
+                        </tr>
+                        <tr>
+                            <td><strong>ClubLog</strong></td>
+                            <td>Online service for QSO uploading and awards tracking</td>
+                        </tr>
+                        <tr>
+                            <td><strong>CW</strong></td>
+                            <td>Morse Code (Continuous Wave)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Database</strong></td>
+                            <td>SQLite file storing all QSOs (qso.db)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>DHCP</strong></td>
+                            <td>Dynamic Host Configuration Protocol - Automatic IP assignment</td>
+                        </tr>
+                        <tr>
+                            <td><strong>DXpedition</strong></td>
+                            <td>Expedition to remote location to activate rare amateur radio call</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Frequency</strong></td>
+                            <td>Radio transmission frequency in MHz</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Heartbeat</strong></td>
+                            <td>Keep-alive message from logger to verify it's running</td>
+                        </tr>
+                        <tr>
+                            <td><strong>IP Address</strong></td>
+                            <td>Network identifier for PC (e.g., 192.168.1.50)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Logger</strong></td>
+                            <td>Amateur radio software that records QSOs</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Mode</strong></td>
+                            <td>Transmission mode (CW, SSB, PSK31, etc.)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Mode Group</strong></td>
+                            <td>Category of modes (CW, SSB, DATA)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>N1MM</strong></td>
+                            <td>Popular amateur radio logging software</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Port</strong></td>
+                            <td>Network endpoint (TCP port 5000, UDP port 12060, etc.)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>QSO</strong></td>
+                            <td>Amateur radio contact/communication</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Server</strong></td>
+                            <td>QSOCollector mode collecting QSOs from all Clients</td>
+                        </tr>
+                        <tr>
+                            <td><strong>SQLite</strong></td>
+                            <td>Lightweight database engine used by QSOCollector</td>
+                        </tr>
+                        <tr>
+                            <td><strong>SSB</strong></td>
+                            <td>Single Sideband (voice transmission)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Static IP</strong></td>
+                            <td>Fixed IP address (doesn't change)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>TCP</strong></td>
+                            <td>Transmission Control Protocol - Reliable network protocol</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Temporary QSO</strong></td>
+                            <td>QSO buffered locally waiting to send to Server</td>
+                        </tr>
+                        <tr>
+                            <td><strong>UDP</strong></td>
+                            <td>User Datagram Protocol - Fast but unreliable network protocol</td>
+                        </tr>
+                        <tr>
+                            <td><strong>UDP Listener</strong></td>
+                            <td>QSOCollector component listening for logger broadcasts</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Wildcard</strong></td>
+                            <td>Search pattern character (% for any chars, _ for single char)</td>
+                        </tr>
+                    </table>
+                </div>
+            </section>
+
+            <!-- FOOTER -->
+            <div class="footer" style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; text-align: center; font-size: 12px; color: #666;">
+                <p><strong>QSOCollector User Manual - Version 1.0</strong></p>
+                <p>.NET 10 | Windows 10/11 | Open Source</p>
+                <p>Last Updated: February 2026</p>
+                <p><a href="https://github.com/OZhuravlov/QSOCollector" target="_blank">GitHub Repository</a> | 
+                   <a href="https://github.com/OZhuravlov/QSOCollector/issues" target="_blank">Report Issues</a></p>
+            </div>
+        </main>
+    </div>
+
+    <footer class="global-footer">
+        <p>&copy; 2026 QSOCollector Project. All rights reserved.</p>
+    </footer>
+
+    <script>
+        // Toggle submenu
+        function toggleMenu(element) {
+            const submenu = element.nextElementSibling;
+            submenu.style.display = submenu.style.display === 'none' ? 'block' : 'none';
+        }
+
+        // Load section
+        function loadSection(sectionId) {
+            const sections = document.querySelectorAll('.section');
+            sections.forEach(section => section.classList.remove('active'));
+            document.getElementById(sectionId).classList.add('active');
+            window.scrollTo(0, 0);
+        }
+
+        // Go to top
+        function goToTop() {
+            window.scrollTo(0, 0);
+        }
+
+        // Smooth navigation
+        document.addEventListener('DOMContentLoaded', function() {
+            const sectionLinks = document.querySelectorAll('a[onclick^="loadSection"]');
+            sectionLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                });
+            });
+        });
+    </script>
+</body>
+</html>

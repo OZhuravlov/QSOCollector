@@ -5,10 +5,13 @@ namespace QSOCollector
 {
     public partial class ServerClientMonitoringForm : Form
     {
-        private const int InactivityTimeoutMinutes = 5;
+        private const int InactivityBeforeUnknownInMinutes = 1;
+        private const int InactivityBeforeDisconnectedInMinutes = 5;
+        private const int InactivityBeforeRemoveFromListInMinutes = 10;
 
         private readonly ConcurrentDictionary<string, ClientMonitoringInfo> clientsMonitoring;
         private System.Windows.Forms.Timer refreshTimer;
+        private Label statusLabel;
         private DataGridView clientDataGridView;
 
         public ServerClientMonitoringForm(ConcurrentDictionary<string, ClientMonitoringInfo> clientsMonitoring)
@@ -21,98 +24,84 @@ namespace QSOCollector
 
         private void InitializeComponent()
         {
-            this.Text = "Server Client Monitoring";
-            this.Size = new Size(900, 500);
-            this.StartPosition = FormStartPosition.CenterParent;
-            this.ShowInTaskbar = false;
-            this.FormBorderStyle = FormBorderStyle.SizableToolWindow;
-
-            // Create DataGridView
-            clientDataGridView = new DataGridView
-            {
-                Dock = DockStyle.Fill,
-                AutoGenerateColumns = false,
-                ReadOnly = true,
-                AllowUserToAddRows = false,
-                AllowUserToDeleteRows = false,
-                AllowUserToResizeRows = false,
-                AllowUserToOrderColumns = true,
-                RowHeadersVisible = false,
-                BackgroundColor = SystemColors.Window,
-                GridColor = SystemColors.Control
-            };
-
-            this.Controls.Add(clientDataGridView);
+            clientDataGridView = new DataGridView();
+            statusLabel = new Label();
+            ((System.ComponentModel.ISupportInitialize)clientDataGridView).BeginInit();
+            SuspendLayout();
+            // 
+            // clientDataGridView
+            // 
+            clientDataGridView.AllowUserToAddRows = false;
+            clientDataGridView.AllowUserToDeleteRows = false;
+            clientDataGridView.AllowUserToResizeColumns = false;
+            clientDataGridView.AllowUserToResizeRows = false;
+            clientDataGridView.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
+            clientDataGridView.Location = new Point(4, 4);
+            clientDataGridView.Name = "clientDataGridView";
+            clientDataGridView.ReadOnly = true;
+            clientDataGridView.SelectionMode = DataGridViewSelectionMode.CellSelect;
+            clientDataGridView.Size = new Size(975, 394);
+            clientDataGridView.TabIndex = 0;
+            // 
+            // statusLabel
+            // 
+            statusLabel.AutoSize = true;
+            statusLabel.Location = new Point(12, 417);
+            statusLabel.Name = "statusLabel";
+            statusLabel.Size = new Size(0, 15);
+            statusLabel.TabIndex = 1;
+            // 
+            // ServerClientMonitoringForm
+            // 
+            ClientSize = new Size(980, 456);
+            Controls.Add(statusLabel);
+            Controls.Add(clientDataGridView);
+            FormBorderStyle = FormBorderStyle.Fixed3D;
+            Name = "ServerClientMonitoringForm";
+            ShowInTaskbar = false;
+            StartPosition = FormStartPosition.CenterParent;
+            Text = "Server Client Monitoring";
+            ((System.ComponentModel.ISupportInitialize)clientDataGridView).EndInit();
+            ResumeLayout(false);
+            PerformLayout();
         }
 
         private void SetupDataGridView()
         {
             clientDataGridView.Columns.Clear();
-
             // IP Address Column
-            clientDataGridView.Columns.Add(new DataGridViewTextBoxColumn
-            {
-                DataPropertyName = "IpAddress",
-                HeaderText = "IP Address",
-                AutoSizeMode = DataGridViewAutoSizeColumnMode.None,
-                Width = 140,
-                DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter }
-            });
-
+            AddDataGridViewColumn("IP Address", "IpAddress", 180);
             // Status Column
-            var statusColumn = new DataGridViewTextBoxColumn
-            {
-                DataPropertyName = "Status",
-                HeaderText = "Status",
-                AutoSizeMode = DataGridViewAutoSizeColumnMode.None,
-                Width = 120,
-                DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter }
-            };
-            clientDataGridView.Columns.Add(statusColumn);
-
+            AddDataGridViewColumn("Status", "Status", 140);
             // Connection Time Column
-            clientDataGridView.Columns.Add(new DataGridViewTextBoxColumn
-            {
-                DataPropertyName = "ConnectionTime",
-                HeaderText = "Connected At",
-                AutoSizeMode = DataGridViewAutoSizeColumnMode.None,
-                Width = 170,
-                DefaultCellStyle = new DataGridViewCellStyle 
-                { 
-                    Alignment = DataGridViewContentAlignment.MiddleCenter,
-                    Format = "yyyy-MM-dd HH:mm:ss"
-                }
-            });
-
+            AddDataGridViewColumn("Connected At", "ConnectionTime", 200, "yyyy-MM-dd HH:mm:ss");
             // Last Activity Column
-            clientDataGridView.Columns.Add(new DataGridViewTextBoxColumn
-            {
-                DataPropertyName = "LastActivityTime",
-                HeaderText = "Last Activity",
-                AutoSizeMode = DataGridViewAutoSizeColumnMode.None,
-                Width = 170,
-                DefaultCellStyle = new DataGridViewCellStyle 
-                { 
-                    Alignment = DataGridViewContentAlignment.MiddleCenter,
-                    Format = "yyyy-MM-dd HH:mm:ss"
-                }
-            });
-
+            AddDataGridViewColumn("Last Activity", "LastActivityTime", 200, "yyyy-MM-dd HH:mm:ss");
             // QSOs Received Column
-            clientDataGridView.Columns.Add(new DataGridViewTextBoxColumn
-            {
-                DataPropertyName = "QsosReceived",
-                HeaderText = "QSOs Received",
-                AutoSizeMode = DataGridViewAutoSizeColumnMode.None,
-                Width = 120,
-                DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter }
-            });
+            AddDataGridViewColumn("QSOs Received", "QsosReceived", 120);
 
-            // Center align all column headers
+            // Center align headers
             foreach (DataGridViewColumn column in clientDataGridView.Columns)
             {
                 column.HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter;
             }
+        }
+
+        private void AddDataGridViewColumn(string headerText, string dataPropertyName, int width, string? format = null)
+        {
+            var column = new DataGridViewTextBoxColumn
+            {
+                HeaderText = headerText,
+                DataPropertyName = dataPropertyName,
+                AutoSizeMode = DataGridViewAutoSizeColumnMode.None,
+                Width = width,
+                DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter }
+            };
+            if (format != null)
+            {
+                column.DefaultCellStyle.Format = format;
+            }
+            clientDataGridView.Columns.Add(column);
         }
 
         private void SetupTimer()
@@ -142,22 +131,45 @@ namespace QSOCollector
             UpdateClientStatusByActivityTimeout();
 
             var clientList = clientsMonitoring.Values
-                .OrderByDescending(c => c.Status == ClientStatus.Connected)
-                .ThenByDescending(c => c.LastActivityTime)
+                .OrderByDescending(c => c.IpAddress)
                 .ToList();
 
+            int totalCount = clientList.Count;
+            int connectedCount = clientList.Count(c => c.Status == ClientStatus.Connected);
+            int disconnectedCount = clientList.Count(c => c.Status == ClientStatus.Disconnected);
+            int unknownCount = clientList.Count(c => c.Status == ClientStatus.Unknown);
+
+            statusLabel.Text = $"Total Clients: {totalCount} | Connected: {connectedCount} | Disconnected: {disconnectedCount} | Unknown: {unknownCount}. Last refreshed at {DateTime.UtcNow:dd-MMM HH:mm:ss}Z";
+
             clientDataGridView.DataSource = null;
+            SetupDataGridView();
             clientDataGridView.DataSource = clientList;
         }
 
         private void UpdateClientStatusByActivityTimeout()
         {
-            var timeoutThreshold = DateTime.UtcNow.AddMinutes(-InactivityTimeoutMinutes);
+            var now = DateTime.UtcNow;
+            
+            var inactivityRemoveThresholdTime = now.AddMinutes(-InactivityBeforeRemoveFromListInMinutes);
+            clientsMonitoring.Where(kvp => kvp.Value.LastActivityTime < inactivityRemoveThresholdTime)
+                .Select(kvp => kvp.Key)
+                .ToList()
+                .ForEach(ip => clientsMonitoring.TryRemove(ip, out _));
+
+            var inactivityDisconnectedThresholdTime = now.AddMinutes(-InactivityBeforeDisconnectedInMinutes);
+            var inactivityUnknownThresholdTime = now.AddMinutes(-InactivityBeforeUnknownInMinutes);
 
             foreach (var clientInfo in clientsMonitoring.Values)
             {
+                var lastActivityTime = clientInfo.LastActivityTime;
+                if (clientInfo.Status != ClientStatus.Disconnected && lastActivityTime < inactivityDisconnectedThresholdTime)
+                {
+                    clientInfo.Status = ClientStatus.Disconnected;
+                    continue;
+                }
+
                 if (clientInfo.Status == ClientStatus.Connected && 
-                    clientInfo.LastActivityTime < timeoutThreshold)
+                    clientInfo.LastActivityTime < inactivityUnknownThresholdTime)
                 {
                     clientInfo.Status = ClientStatus.Unknown;
                 }

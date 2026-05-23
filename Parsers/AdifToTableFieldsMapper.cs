@@ -150,7 +150,7 @@ namespace QSOCollector.Parsers
             {
                 "CW" => "CW",
                 "SSB" or "USB" or "LSB" or "AM" or "FM" => "PHONE",
-                "FT8" or "FT4" or "RTTY" or "PSK31" or "PSK63" or "JT65" or "JT9" => "DATA",
+                "FT8" or "FT4" or "RTTY" or "PSK31" or "PSK63" or "JT65" or "JT9" or "DIGU" => "DATA",
                 "SAT" => "SAT",
                 _ => "OTHER"
             };

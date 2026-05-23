@@ -751,9 +751,9 @@ namespace QSOCollector.Data
                 int atIndex = commandText.IndexOf('@', index);
                 if (atIndex == -1) break;
                 atIndex++; // move past '@'
-                int endIndex = commandText.IndexOfAny(new char[] { ' ', ',', ')' }, atIndex);
+                int endIndex = commandText.IndexOfAny([' ', ',', ')'], atIndex);
                 if (endIndex == -1) endIndex = commandText.Length;
-                string parameterKey = commandText.Substring(atIndex, endIndex - atIndex);
+                string parameterKey = commandText[atIndex..endIndex];
                 if (!parameterkeys.Contains(parameterKey))
                 {
                     parameterkeys.Add(parameterKey);
@@ -827,6 +827,122 @@ namespace QSOCollector.Data
                 results.Add(item);
             }
             return results;
+        }
+
+        public List<Dictionary<string, object?>> SearchQsosByCall(string callPattern, string? modeGroup = null, string? band = null, int maxResults = 200)
+        {
+            log.Debug("Searching QSOs by call pattern: {pattern}, modeGroup: {modeGroup}, band: {band}", callPattern, modeGroup, band);
+            var results = new List<Dictionary<string, object?>>();
+
+            try
+            {
+                using var connection = new SqliteConnection(connectionString);
+                connection.Open();
+                using var command = connection.CreateCommand();
+
+                var sb = new StringBuilder();
+                sb.Append("SELECT call, qso_time, mode_group, mode, band, freq, operator, source_ip_address ");
+                sb.Append("FROM qsodata ");
+                sb.Append("WHERE call LIKE @callPattern ");
+                sb.Append("AND is_temporary = false ");
+
+                command.Parameters.Add(new SqliteParameter("@callPattern", callPattern));
+
+                if (!string.IsNullOrEmpty(modeGroup))
+                {
+                    sb.Append("AND mode_group = @modeGroup ");
+                    command.Parameters.Add(new SqliteParameter("@modeGroup", modeGroup));
+                }
+
+                if (!string.IsNullOrEmpty(band))
+                {
+                    sb.Append("AND band = @band ");
+                    command.Parameters.Add(new SqliteParameter("@band", band));
+                }
+
+                sb.Append("ORDER BY qso_time DESC ");
+                sb.Append($"LIMIT {maxResults}");
+
+                command.CommandText = sb.ToString();
+
+                using var reader = command.ExecuteReader();
+                while (reader.Read())
+                {
+                    var row = new Dictionary<string, object?>
+                    {
+                        { "call", reader["call"] },
+                        { "qso_time", reader["qso_time"] },
+                        { "mode_group", reader["mode_group"] },
+                        { "mode", reader["mode"] },
+                        { "band", reader["band"] },
+                        { "freq", reader["freq"] },
+                        { "operator", reader["operator"] },
+                        { "source_ip_address", reader["source_ip_address"] }
+                    };
+                    results.Add(row);
+                }
+            }
+            catch (SqliteException ex)
+            {
+                log.Error(ex, "Error searching QSOs by call");
+                throw;
+            }
+
+            return results;
+        }
+
+        public List<string> GetDistinctModeGroups()
+        {
+            log.Debug("Getting distinct mode groups");
+            var modeGroups = new List<string>();
+
+            try
+            {
+                using var connection = new SqliteConnection(connectionString);
+                connection.Open();
+                using var command = connection.CreateCommand();
+                command.CommandText = "SELECT DISTINCT mode_group FROM qsodata WHERE is_temporary = false AND mode_group IS NOT NULL ORDER BY mode_group";
+
+                using var reader = command.ExecuteReader();
+                while (reader.Read())
+                {
+                    modeGroups.Add(reader.GetString(0));
+                }
+            }
+            catch (SqliteException ex)
+            {
+                log.Error(ex, "Error getting distinct mode groups");
+                throw;
+            }
+
+            return modeGroups;
+        }
+
+        public List<string> GetDistinctBands()
+        {
+            log.Debug("Getting distinct bands");
+            var bands = new List<string>();
+
+            try
+            {
+                using var connection = new SqliteConnection(connectionString);
+                connection.Open();
+                using var command = connection.CreateCommand();
+                command.CommandText = "SELECT DISTINCT band FROM qsodata WHERE is_temporary = false AND band IS NOT NULL ORDER BY band";
+
+                using var reader = command.ExecuteReader();
+                while (reader.Read())
+                {
+                    bands.Add(reader.GetString(0));
+                }
+            }
+            catch (SqliteException ex)
+            {
+                log.Error(ex, "Error getting distinct bands");
+                throw;
+            }
+
+            return bands;
         }
     }
 }

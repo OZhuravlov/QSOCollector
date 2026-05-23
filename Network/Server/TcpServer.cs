@@ -57,7 +57,7 @@ namespace QSOCollector.Network.Server
                 CancellationTokenSource clientCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cts.Token);
                 try
                 {
-                    serverProgressUpdater.UpdateLog("Waiting for incoming TCP client connection...");
+                    serverProgressUpdater.UpdateLog("Waiting for incoming TCP client connection...", true);
                     TcpClient tcpClient = await listener.AcceptTcpClientAsync(cts.Token);
                     Socket socket = tcpClient.Client;
                     /*
@@ -122,7 +122,14 @@ namespace QSOCollector.Network.Server
         }
     }
 
-    internal class AcceptedClient(TcpClient client, CancellationTokenSource clientCancellationTokenSource, ServerProgressUpdater serverProgressUpdater, IDbRepository dbRepository, string clientIPAddress, ConcurrentDictionary<string, ClientMonitoringInfo> clientsMonitoring)
+    internal class AcceptedClient(
+        TcpClient client, 
+        CancellationTokenSource clientCancellationTokenSource, 
+        ServerProgressUpdater serverProgressUpdater, 
+        IDbRepository dbRepository, 
+        string clientIPAddress, 
+        ConcurrentDictionary<string, ClientMonitoringInfo> clientsMonitoring
+        )
     {
         private readonly ILogger log = Log.ForContext<AcceptedClient>();
 
@@ -161,6 +168,7 @@ namespace QSOCollector.Network.Server
                     if (clientsMonitoring.TryGetValue(clientIPAddress, out var clientInfo))
                     {
                         clientInfo.LastActivityTime = DateTime.UtcNow;
+                        clientInfo.Status = ClientStatus.Connected; // In case it was marked as Disconnected due to a previous error, mark it as Connected again on new message
                     }
 
                     qsoMessage = JsonSerializer.Deserialize<QsoMessage>(qsoMessageJson);
@@ -254,6 +262,7 @@ namespace QSOCollector.Network.Server
                 {
                     log.Warning("Unknown error while while sending response to client {clientIPAddress}: {message}", clientIPAddress, ex.Message);
                     serverProgressUpdater.UpdateLog($"Client {clientIPAddress} looks disconnected: other error");
+                    serverProgressUpdater.UpdateLog("Reason: other error", true);
                     if (clientsMonitoring.TryGetValue(clientIPAddress, out var clientInfo))
                     {
                         clientInfo.Status = ClientStatus.Disconnected;
