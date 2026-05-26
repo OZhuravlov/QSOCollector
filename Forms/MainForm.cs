@@ -64,6 +64,24 @@ namespace QSOCollector
                 .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
                 ?.InformationalVersion ?? "Unknown";
             aboutInfoLabel.Text = $"QSOCollector v{version}\r\n\r\nDXpedition QSO management tool for collecting, managing, and exporting QSO logs.\r\n\r\nFor full documentation, open the User Manual or visit the GitHub project.";
+
+            // Ensure button is visible
+            openManualButton.Visible = true;
+            openManualButton.Enabled = true;
+            openManualButton.BringToFront();
+
+            // Debug logging
+            log.Information("PopulateAboutTab called");
+            log.Information("aboutInfoLabel visible: {visible}, enabled: {enabled}", aboutInfoLabel.Visible, aboutInfoLabel.Enabled);
+            log.Information("openManualButton visible: {visible}, enabled: {enabled}, location: {location}, size: {size}, parent: {parent}", 
+                openManualButton.Visible, openManualButton.Enabled, openManualButton.Location, openManualButton.Size, openManualButton.Parent?.Name ?? "null");
+            log.Information("githubLinkLabel visible: {visible}, enabled: {enabled}", githubLinkLabel.Visible, githubLinkLabel.Enabled);
+            log.Information("aboutTab has {count} controls", aboutTab.Controls.Count);
+            foreach (Control control in aboutTab.Controls)
+            {
+                log.Information("  Control: {name} ({type}) visible: {visible}, location: {location}, size: {size}", 
+                    control.Name, control.GetType().Name, control.Visible, control.Location, control.Size);
+            }
         }
 
         private void openManualButton_Click(object sender, EventArgs e)
@@ -958,16 +976,18 @@ namespace QSOCollector
         {
             try
             {
-                string url = e.Link.LinkData.ToString();
+                // Use hardcoded URL instead of LinkData which may be null
+                const string githubUrl = "https://github.com/OZhuravlov/QSOCollector";
                 System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
                 {
-                    FileName = url,
+                    FileName = githubUrl,
                     UseShellExecute = true
                 });
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Unable to open link: " + ex.Message);
+                log.Error(ex, "Failed to open GitHub link");
+                MessageBox.Show("Unable to open link: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
     }

@@ -127,6 +127,25 @@ header .version {
 .toc .menu-toggle {
     font-weight: 600;
     user-select: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.toc .menu-arrow {
+    display: inline-block;
+    width: 12px;
+    text-align: center;
+    transition: transform 0.2s ease;
+    font-size: 0.8em;
+}
+
+.toc .menu-toggle.expanded .menu-arrow {
+    transform: rotate(0deg);
+}
+
+.toc .menu-toggle:not(.expanded) .menu-arrow {
+    transform: rotate(-90deg);
 }
 
 .sidebar-footer {

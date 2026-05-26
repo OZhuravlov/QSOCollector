@@ -76,7 +76,7 @@ namespace QSOCollector
             // Connection Time Column
             AddDataGridViewColumn("Connected At", "ConnectionTime", 200, "yyyy-MM-dd HH:mm:ss");
             // Last Activity Column
-            AddDataGridViewColumn("Last Activity", "LastActivityTime", 200, "yyyy-MM-dd HH:mm:ss");
+            AddDataGridViewColumn("Last Activite at", "LastActivityTime", 200, "yyyy-MM-dd HH:mm:ss");
             // QSOs Received Column
             AddDataGridViewColumn("QSOs Received", "QsosReceived", 120);
 

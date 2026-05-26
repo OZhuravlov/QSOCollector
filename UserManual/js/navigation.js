@@ -2,12 +2,26 @@
 
 /**
  * Toggle submenu visibility
+ * @param {HTMLElement} element - The menu-toggle element that was clicked
  */
-function toggleMenu(element) {
+function toggleMenu(element, e) {
+    // Prevent default behavior if this is called from an event
+    if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
     const submenu = element.nextElementSibling;
     if (submenu && submenu.classList.contains('submenu')) {
         const isVisible = submenu.style.display !== 'none';
         submenu.style.display = isVisible ? 'none' : 'block';
+
+        // Update toggle state class
+        if (isVisible) {
+            element.classList.remove('expanded');
+        } else {
+            element.classList.add('expanded');
+        }
 
         // Update arrow icon if present
         const arrow = element.querySelector('.menu-arrow');
@@ -68,22 +82,23 @@ function goToTop() {
  * Initialize event listeners
  */
 document.addEventListener('DOMContentLoaded', function() {
-    // Prevent default link behavior for section links
-    const sectionLinks = document.querySelectorAll('a[onclick]');
-    sectionLinks.forEach(link => {
-        link.addEventListener('click', function(e) {
-            if (this.getAttribute('onclick').includes('loadSection')) {
-                e.preventDefault();
-            }
-        });
-    });
-
-    // Setup menu toggle handlers
+    // Setup menu toggle handlers (remove duplicate event listeners)
+    // The toggleMenu is already called via inline onclick in HTML
+    // Here we just ensure proper behavior
     const menuToggles = document.querySelectorAll('.menu-toggle');
     menuToggles.forEach(toggle => {
-        toggle.addEventListener('click', function(e) {
-            e.preventDefault();
-            toggleMenu(this);
+        // Set cursor to pointer
+        toggle.style.cursor = 'pointer';
+        // Add accessible role
+        toggle.setAttribute('role', 'button');
+        toggle.setAttribute('tabindex', '0');
+
+        // Handle Enter/Space key for keyboard accessibility
+        toggle.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                toggleMenu(this, e);
+            }
         });
     });
 
@@ -173,8 +188,14 @@ function setupPrintSupport() {
  */
 function expandAllMenus() {
     const submenus = document.querySelectorAll('.submenu');
+    const toggles = document.querySelectorAll('.menu-toggle');
+
     submenus.forEach(submenu => {
         submenu.style.display = 'block';
+    });
+
+    toggles.forEach(toggle => {
+        toggle.classList.add('expanded');
     });
 }
 
@@ -183,8 +204,14 @@ function expandAllMenus() {
  */
 function collapseAllMenus() {
     const submenus = document.querySelectorAll('.submenu');
+    const toggles = document.querySelectorAll('.menu-toggle');
+
     submenus.forEach(submenu => {
         submenu.style.display = 'none';
+    });
+
+    toggles.forEach(toggle => {
+        toggle.classList.remove('expanded');
     });
 }
 
