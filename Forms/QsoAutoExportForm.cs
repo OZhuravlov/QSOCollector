@@ -102,6 +102,7 @@ namespace QSOCollector.Forms
             dbRepository.SaveExportHours(hours);
             savedHours = [.. hours];
             dbRepository.SaveSetting("AutoExportFolder", mainFolder);
+            this.DialogResult = DialogResult.OK;
             this.Close();
         }
 
@@ -119,6 +120,7 @@ namespace QSOCollector.Forms
         {
             if (HandleCancelEditExportScheduler())
             {
+                this.DialogResult = DialogResult.Cancel;
                 this.Close();
             }
         }

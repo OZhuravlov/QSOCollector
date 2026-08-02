@@ -1,5 +1,4 @@
 using QSOCollector.Models;
-using System.Xml.Serialization;
 
 namespace QSOCollector.Parsers
 {
@@ -12,6 +11,10 @@ namespace QSOCollector.Parsers
             if (string.IsNullOrEmpty(qsoMessage.AdifQsoData))
             {
                 qsoMessage.AdifQsoData = DeserializeN1mmContactInfoAndMapToAdif(qsoMessage, out contactInfoId);
+                if (contactInfoId != null)
+                {
+                    qsoMessage.ExternalId = contactInfoId;
+                }
             }
 
             return AdifToTableFieldsMapper.Map(qsoMessage, externalId: contactInfoId, sourceIpAddress: sourceIpAddress);
@@ -20,12 +23,7 @@ namespace QSOCollector.Parsers
         private static string DeserializeN1mmContactInfoAndMapToAdif(QsoMessage qsoMessage, out string? id)
         {
             string rootName = qsoMessage.Replace ? "contactreplace" : "contactinfo";
-            var serializer = new XmlSerializer(typeof(N1mmContactInfo), new XmlRootAttribute(rootName));
-            N1mmContactInfo contactInfo;
-            using (var reader = new StringReader(qsoMessage.OriginalQsoData))
-            {
-                contactInfo = (N1mmContactInfo)serializer.Deserialize(reader)!;
-            }
+            N1mmContactInfo contactInfo = N1mmContactInfoSerializer.Deserialize(qsoMessage.OriginalQsoData, rootName);
             id = contactInfo.Id;
             return N1mmContactInfoToAdifQsoMessageMapper.Map(contactInfo);
         }

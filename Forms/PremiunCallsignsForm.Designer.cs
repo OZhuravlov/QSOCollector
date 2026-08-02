@@ -32,6 +32,7 @@ namespace QSOCollector.Forms
         {
             components = new System.ComponentModel.Container();
             DataGridViewCellStyle dataGridViewCellStyle1 = new DataGridViewCellStyle();
+            DataGridViewCellStyle dataGridViewCellStyle2 = new DataGridViewCellStyle();
             premiumCallsignsBindingSource = new BindingSource(components);
             premiumCallsignsDataGridView = new DataGridView();
             Id = new DataGridViewTextBoxColumn();
@@ -52,24 +53,33 @@ namespace QSOCollector.Forms
             // premiumCallsignsDataGridView
             // 
             dataGridViewCellStyle1.Alignment = DataGridViewContentAlignment.MiddleCenter;
-            dataGridViewCellStyle1.BackColor = SystemColors.Control;
+            dataGridViewCellStyle1.BackColor = SystemColors.Window;
             dataGridViewCellStyle1.Font = new Font("Segoe UI", 9F);
             dataGridViewCellStyle1.ForeColor = SystemColors.WindowText;
-            dataGridViewCellStyle1.SelectionBackColor = SystemColors.Highlight;
-            dataGridViewCellStyle1.SelectionForeColor = SystemColors.HighlightText;
+            dataGridViewCellStyle1.SelectionBackColor = Color.LightGray;
+            dataGridViewCellStyle1.SelectionForeColor = SystemColors.WindowText;
             dataGridViewCellStyle1.WrapMode = DataGridViewTriState.True;
             premiumCallsignsDataGridView.ColumnHeadersDefaultCellStyle = dataGridViewCellStyle1;
             premiumCallsignsDataGridView.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             premiumCallsignsDataGridView.Columns.AddRange(new DataGridViewColumn[] { Id, callsign, club, donated_amount_usd, comment });
+            dataGridViewCellStyle2.Alignment = DataGridViewContentAlignment.MiddleLeft;
+            dataGridViewCellStyle2.BackColor = SystemColors.Window;
+            dataGridViewCellStyle2.Font = new Font("Segoe UI", 9F);
+            dataGridViewCellStyle2.ForeColor = SystemColors.WindowText;
+            dataGridViewCellStyle2.SelectionBackColor = Color.LightGray;
+            dataGridViewCellStyle2.SelectionForeColor = SystemColors.WindowText;
+            dataGridViewCellStyle2.WrapMode = DataGridViewTriState.False;
+            premiumCallsignsDataGridView.DefaultCellStyle = dataGridViewCellStyle2;
+            premiumCallsignsDataGridView.EditMode = DataGridViewEditMode.EditProgrammatically;
             premiumCallsignsDataGridView.Location = new Point(12, 47);
             premiumCallsignsDataGridView.Name = "premiumCallsignsDataGridView";
             premiumCallsignsDataGridView.Size = new Size(746, 393);
             premiumCallsignsDataGridView.StandardTab = true;
             premiumCallsignsDataGridView.TabIndex = 0;
-            premiumCallsignsDataGridView.CellBeginEdit += premiumCallsignsDataGridView_CellBeginEdit;
-            premiumCallsignsDataGridView.CellValidating += premiumCallsignsDataGridView_CellValidating;
-            premiumCallsignsDataGridView.EditingControlShowing += premiumCallsignsDataGridView_EditingControlShowing;
-            premiumCallsignsDataGridView.RowValidating += premiumCallsignsDataGridView_RowValidating;
+            premiumCallsignsDataGridView.CellBeginEdit += PremiumCallsignsDataGridView_CellBeginEdit;
+            premiumCallsignsDataGridView.CellValidating += PremiumCallsignsDataGridView_CellValidating;
+            premiumCallsignsDataGridView.EditingControlShowing += PremiumCallsignsDataGridView_EditingControlShowing;
+            premiumCallsignsDataGridView.RowValidating += PremiumCallsignsDataGridView_RowValidating;
             // 
             // Id
             // 
@@ -124,7 +134,7 @@ namespace QSOCollector.Forms
             searchTextBox.Name = "searchTextBox";
             searchTextBox.Size = new Size(214, 23);
             searchTextBox.TabIndex = 2;
-            searchTextBox.TextChanged += searchTextBox_TextChanged;
+            searchTextBox.TextChanged += SearchTextBox_TextChanged;
             // 
             // saveButton
             // 
@@ -135,7 +145,7 @@ namespace QSOCollector.Forms
             saveButton.TabIndex = 6;
             saveButton.Text = "Save";
             saveButton.UseVisualStyleBackColor = true;
-            saveButton.Click += saveButton_Click;
+            saveButton.Click += SaveButton_Click;
             // 
             // cancelEditButton
             // 
@@ -146,7 +156,7 @@ namespace QSOCollector.Forms
             cancelEditButton.TabIndex = 5;
             cancelEditButton.Text = "Close";
             cancelEditButton.UseVisualStyleBackColor = true;
-            cancelEditButton.Click += cancelEditButton_Click;
+            cancelEditButton.Click += CancelEditButton_Click;
             // 
             // deleteSelectedRowsButton
             // 
@@ -157,7 +167,7 @@ namespace QSOCollector.Forms
             deleteSelectedRowsButton.TabIndex = 4;
             deleteSelectedRowsButton.Text = "Delete Selected Rows";
             deleteSelectedRowsButton.UseVisualStyleBackColor = true;
-            deleteSelectedRowsButton.Click += deleteSelectedRowsButton_Click;
+            deleteSelectedRowsButton.Click += DeleteSelectedRowsButton_Click;
             // 
             // uploadPremiumCallsignsButton
             // 
@@ -167,7 +177,7 @@ namespace QSOCollector.Forms
             uploadPremiumCallsignsButton.TabIndex = 7;
             uploadPremiumCallsignsButton.Text = "Upload from file";
             uploadPremiumCallsignsButton.UseVisualStyleBackColor = true;
-            uploadPremiumCallsignsButton.Click += uploadPremiumCallsignsButton_Click;
+            uploadPremiumCallsignsButton.Click += UploadPremiumCallsignsButton_Click;
             // 
             // PremiunCallsignsForm
             // 

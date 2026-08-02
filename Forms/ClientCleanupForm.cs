@@ -53,6 +53,7 @@ namespace QSOCollector
         private void cancelButton_Click(object sender, EventArgs e)
         {
             log.Information("Client cleanup. User cancelled cleanup");
+            this.DialogResult = DialogResult.Cancel;
             Close();
         }
 
@@ -83,7 +84,7 @@ namespace QSOCollector
                 dbRepository.SaveSetting("ClientServerNameIp", string.Empty);
                 dbRepository.SaveSetting("ClientServerPort", string.Empty);
             }
-
+            this.DialogResult = DialogResult.OK;
             Close();
         }
     }

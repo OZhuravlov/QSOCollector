@@ -1,7 +1,9 @@
 using QSOCollector.Helpers;
 using QSOCollector.Models;
+using QSOCollector.Parsers;
 using Serilog;
 using System.Collections.Concurrent;
+using System.Data;
 using System.Net.Sockets;
 using System.Text;
 
@@ -12,6 +14,8 @@ namespace QSOCollector.Network.Client
         private readonly ILogger log = Log.ForContext<UdpClientListener>();
 
         private readonly ListenerConfig listenerConfig;
+        private readonly List<SatRule> satRules;
+        private readonly List<Band> bands;
         private readonly UdpClient? forwardUdpClient;
         private readonly BlockingCollection<QsoMessage> qsoMessageQueue;
         private readonly ClientProgressUpdater progressUpdater;
@@ -19,14 +23,37 @@ namespace QSOCollector.Network.Client
         private UdpClient qsoUdpClient;
         private UdpClient heartbeatUdpClient;
 
-        public UdpClientListener(ListenerConfig listenerConfig, UdpClient? forwardUdpClient, BlockingCollection<QsoMessage> qsoMessageQueue,
-                                 ClientProgressUpdater progressUpdater, CancellationTokenSource cancellationTokenSource)
+        public UdpClientListener(
+            ListenerConfig listenerConfig, 
+            List<SatRule> satRules,
+            List<Band> bands,
+            UdpClient? forwardUdpClient, 
+            BlockingCollection<QsoMessage> qsoMessageQueue,
+            ClientProgressUpdater progressUpdater, 
+            CancellationTokenSource cancellationTokenSource
+            )
         {
             this.listenerConfig = listenerConfig;
+            this.satRules = satRules;
+            this.bands = bands;
             this.forwardUdpClient = forwardUdpClient;
             this.qsoMessageQueue = qsoMessageQueue;
             this.progressUpdater = progressUpdater;
             this.cancellationTokenSource = cancellationTokenSource;
+        }
+
+        public void UpdateSatRules(List<SatRule> newSatRules) {
+            this.satRules.Clear();
+
+            if (newSatRules == null) {
+                return;
+            }
+
+            List<SatRule> activeNewSatRules = [.. newSatRules.Where<SatRule>(r => r.IsActive)];
+            if (activeNewSatRules.Count != 0)
+            {
+                this.satRules.AddRange(activeNewSatRules);
+            }
         }
 
         public async Task Start()
@@ -53,26 +80,36 @@ namespace QSOCollector.Network.Client
                     
                     log.Debug("UDP message received on port {Port} ({ListenerName}:{Format}), length: {Length} bytes", 
                         qsoPort, listenerConfig.Name, listenerConfig.MessageFormat, receivedBytes.Length);
+                    string receivedData = Encoding.UTF8.GetString(receivedBytes);
+                    log.Debug("UDP message received on port {Port} ({ListenerName}:{Format}): {ReceivedData}",
+                        qsoPort, listenerConfig.Name, listenerConfig.MessageFormat, receivedData);
+                    QsoMessage qsoMessage = new()
+                    {
+                        Source = listenerConfig.Name,
+                        OriginalFormat = listenerConfig.MessageFormat,
+                        OriginalQsoData = receivedData,
+                        Replace = receivedData.Contains("<contactreplace>", StringComparison.OrdinalIgnoreCase)
+                    };
+
+                    QsoMessageEnricher.EnrichMessage(qsoMessage, satRules, bands, out string? newQsoData);
+                    if (newQsoData != null)
+                    {
+                        log.Debug("UDP message on port {Port} ({ListenerName}:{Format}) was enriched with new QSO data",
+                            qsoPort, listenerConfig.Name, listenerConfig.MessageFormat);
+                        progressUpdater.UpdateLog($"UDP message on port {qsoPort} ({listenerConfig.Name}:{listenerConfig.MessageFormat}) was enriched with new QSO data", true);
+                        receivedBytes = Encoding.UTF8.GetBytes(newQsoData);
+                    }
+
                     if (forwardUdpClient != null)
                     {
                         log.Debug("Forwarding UDP message from port {Port} ({ListenerName}:{Format}) to port {ForwardPort}, length: {Length} bytes", 
                             qsoPort, listenerConfig.Name, listenerConfig.MessageFormat, listenerConfig.ForwardPort.Value, receivedBytes.Length);
-                    
+
                         await forwardUdpClient.SendAsync(receivedBytes, receivedBytes.Length);
                         string forwardLogMessage = $"QSO info from {listenerConfig.Name} forwarded to port {listenerConfig.ForwardPort.Value}";
                         log.Debug(forwardLogMessage);
                         progressUpdater.UpdateLog(forwardLogMessage);
                     }
-                    string receivedData = Encoding.UTF8.GetString(receivedBytes);
-                    log.Debug("UDP message received on port {Port} ({ListenerName}:{Format}): {ReceivedData}", 
-                        qsoPort, listenerConfig.Name, listenerConfig.MessageFormat, receivedData);
-
-                    QsoMessage qsoMessage = new() { 
-                        Source = listenerConfig.Name, 
-                        OriginalFormat = listenerConfig.MessageFormat, 
-                        OriginalQsoData = receivedData,
-                        Replace = receivedData.Contains("<contactreplace>", StringComparison.OrdinalIgnoreCase)
-                    };
 
                     if (!IsExpectedMessageFormat(qsoMessage)) {
                         continue;
@@ -113,21 +150,12 @@ namespace QSOCollector.Network.Client
 
         private bool IsExpectedMessageFormat(QsoMessage qsoMessage)
         {
-            string[] requiredTexts = listenerConfig.MessageFormat switch
+            if (!QsoMessageEnricher.IsExpectedMessageFormat(qsoMessage))
             {
-                "ADIF" => ["<EOR>", "<QSO_DATE:"],
-                "N1MM" => qsoMessage.Replace ? ["<contactreplace>", "</contactreplace>"] : ["<contactinfo>", "</contactinfo>"],
-                _ => []
-            };
-            foreach (string text in requiredTexts)
-            {
-                if (!qsoMessage.OriginalQsoData.Contains(text, StringComparison.OrdinalIgnoreCase))
-                {
-                    string logMessage = $"Warning: Received QSO message does not appear to be in expected format ({listenerConfig.MessageFormat}). Ignoring";
-                    log.Warning("{logMessage}: {origQsoData}", logMessage, qsoMessage.OriginalQsoData);
-                    progressUpdater.UpdateLog(logMessage);
-                    return false;
-                }
+                string logMessage = $"Warning: Received QSO message does not appear to be in expected format ({listenerConfig.MessageFormat}). Ignoring";
+                log.Warning("{logMessage}: {origQsoData}", logMessage, qsoMessage.OriginalQsoData);
+                progressUpdater.UpdateLog(logMessage);
+                return false;
             }
             return true;
         }

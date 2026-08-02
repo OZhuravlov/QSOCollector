@@ -14,6 +14,9 @@ namespace QSOCollector.Models
         [XmlElement("contestnr")]
         public int? ContestNr { get; set; }
 
+        [XmlIgnore]
+        public bool ContestNrSpecified;
+
         [XmlElement("timestamp")]
         public string TimestampStr
         {

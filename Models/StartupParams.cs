@@ -6,5 +6,6 @@
         public bool StartServer { get; set; } = false;
         public bool StartClient { get; set; } = false;
         public bool Debug { get; set; } = false;
+        public bool Force { get; set; } = false;
     }
 }

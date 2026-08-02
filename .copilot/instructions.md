@@ -16,6 +16,21 @@
 - Automated daily export scheduling
 - System tray autostart capability
 - Comprehensive logging via Serilog
+- **Message enrichment pipeline** with satellite rule engine and band frequency mapping
+
+### Documentation Standards
+The project maintains comprehensive documentation for users and developers:
+- **User Documentation**: README.md (navigation) and UserManual/index.html (complete guide)
+- **Quick Reference**: QUICK_REFERENCE.md for field operators
+- **Developer Instructions**: This file + code comments
+- **Analysis Documents**: Documentation gap analysis and implementation details (in root directory)
+
+All documentation should be:
+1. Clear and accessible to both technical and non-technical users
+2. Supported by real-world examples (ISS operations, Field Day, etc.)
+3. Cross-referenced appropriately
+4. Updated when new features are added
+5. Consistent in terminology and formatting
 
 ---
 
@@ -188,11 +203,51 @@ QSOCollector.Tests/
 
 ### 5. Format Parsers
 - **N1MM Format** (N1mmContactInfoToTableFieldsMapper, N1mmContactInfoToAdifQsoMessageMapper):
-  - Parses N1MM/DxLog UDP broadcasts
-  - Maps to standardized QSO model, then to ADIF
-  
+   - Parses N1MM/DxLog UDP broadcasts
+   - Maps to standardized QSO model, then to ADIF
+
 - **ADIF Format** (AdifToTableFieldsMapper):
-  - Imports/exports standard ADIF QSO records
+   - Imports/exports standard ADIF QSO records
+
+### 6. Message Enrichment Pipeline (QsoMessageEnricher.cs)
+- **Purpose**: Enhance QSO messages with metadata based on frequency-matching rules
+- **4-Stage Processing**:
+  1. **Format Validation** - Verify N1MM or ADIF format compliance
+  2. **Deserialization** - Parse message to extract fields
+  3. **Satellite Rule Application** - Match frequency against configured rules
+  4. **Output Generation** - Return enriched message in original format
+
+- **Format-Specific Handling**:
+  - **N1MM Path**: Deserialize XML → Apply rules → Re-serialize with enrichment
+  - **ADIF Path**: Parse headers/body → Apply rules → Return enriched dictionary
+
+- **Satellite Rule Engine** (SatRuleApplier.cs):
+  - Frequency-range-based enrichment rules
+  - Rules configured via Server → Database → Satellite Rules
+  - First matching rule applied (priority-based)
+  - Supports dual-band QSOs (TX/RX frequency matching)
+  - Change tracking indicates if original message modified
+
+- **Band Frequency Mapping**:
+  - Automatic band assignment from frequency
+  - Coverage: 160m through 23cm (17 bands)
+  - Used when band name missing or for rule matching
+  - Fallback if frequency outside known bands
+
+- **User-Facing Documentation**:
+  - README.md: "🔧 Message Processing Pipeline" section explains 4-stage flow
+  - UserManual: "🛰️ Satellite Rules Configuration" for rule setup
+  - UserManual: "📡 Band Frequency Mapping" for frequency reference
+  - UserManual: Logging section includes enrichment-specific debug logs
+  - QUICK_REFERENCE.md: "🔄 Message Enrichment During Operation" for field reference
+  - README.md FAQ: 10 enrichment-related Q&A entries
+
+- **Development Notes**:
+  - Enrichment happens transparently to user
+  - Performance impact negligible (<1ms per QSO)
+  - All processing is logged at DEBUG level when "Log details" enabled
+  - Enriched data persists in database for export/analysis
+  - Format conversion and enrichment are independent processes
 
 ### 6. UI Forms
 - **MainForm.cs**: Tabbed interface (Server/Client tabs), real-time status display
@@ -442,6 +497,71 @@ Located in `Program.cs`, configured with **context-aware file outputs**:
 
 ---
 
+## Documentation Standards & Guidelines
+
+### User-Facing Documentation
+
+**Locations**:
+- `README.md` - Main user guide with quick navigation, features, and troubleshooting
+- `UserManual/index.html` - Complete interactive guide (recommended for full details)
+- `QUICK_REFERENCE.md` - Field reference for operators during DXpeditions
+- `UserManual/README.md` - Instructions for using the interactive manual
+
+**Documentation Requirements**:
+1. **Feature Documentation**: Every feature must have:
+   - Clear explanation of what it does and why
+   - Step-by-step usage instructions
+   - At least one real-world example
+   - Troubleshooting section if applicable
+   - Cross-references to related features
+
+2. **Message Processing & Enrichment** (Critical for new developers):
+   - User documentation: README.md "🔧 Message Processing Pipeline"
+   - Advanced configuration: UserManual → "Satellite Rules Configuration"
+   - Technical details: UserManual → "Format Conversion"
+   - Field reference: QUICK_REFERENCE.md → "Enrichment Examples"
+
+3. **Quality Standards**:
+   - Clear, accessible language (avoid jargon; explain when necessary)
+   - Real-world examples (ISS operations, Field Day, EMCOMM)
+   - Accurate to current code behavior
+   - Consistent terminology across all docs
+   - Proper cross-linking between sections
+   - Tables for reference material
+   - Troubleshooting before support tickets
+
+4. **Maintenance**:
+   - Update documentation when features change
+   - Add FAQ entries for common support questions
+   - Link new sections from existing docs
+   - Maintain version numbers in documentation
+   - Review annually for accuracy
+
+### Code Documentation
+
+1. **XML Comments**: Use on public methods/classes:
+   ```csharp
+   /// <summary>Enriches QSO message with metadata based on satellite rules</summary>
+   /// <param name="qsoMessage">The QSO to enrich</param>
+   /// <param name="satRules">List of satellite rules to apply</param>
+   public static void EnrichMessage(QsoMessage qsoMessage, List<SatRule> satRules)
+   ```
+
+2. **Complex Logic Comments**: Explain the "why", not just "what":
+   ```csharp
+   // Dual-band support: Check TX freq first (primary), fall back to RX if missing
+   // This handles both terrestrial QSOs (single freq) and satellite (TX/RX pair)
+   double? freq = txFreq ?? rxFreq;
+   ```
+
+3. **Logging**: Use Serilog with context:
+   ```csharp
+   log.Debug("Rule {RuleName} applied to QSO message from {Format}", rule.Name, format);
+   log.Error("Invalid ADIF qso log: Freq or Band must be specified");
+   ```
+
+---
+
 ## Tips for Contributors
 1. **Always use Serilog**: `Log.ForContext<ClassName>()` for context-aware logging
 2. **Respect Network Resilience**: Design for WiFi failures; implement local fallbacks
@@ -452,4 +572,8 @@ Located in `Program.cs`, configured with **context-aware file outputs**:
 7. **Async Cancellation**: Always pass CancellationToken to long-running tasks
 8. **Settings Management**: Use `DbRepository.LoadSettings()` / `SaveSetting()` for persistence; avoid hardcoded values
 9. **Service Initialization**: Services load their dependencies (e.g., settings) during `Init()`, not constructor
+10. **Document Features**: New features require user documentation; add to README.md and/or UserManual
+11. **Test Enrichment**: If message processing changes, test with satellite rules, band mapping, and format conversion
+12. **Verify Logging**: Debug logs help users troubleshoot; ensure enrichment steps are logged
+
 

@@ -1,4 +1,5 @@
 using QSOCollector.Models;
+using System.Globalization;
 using System.Text;
 
 namespace QSOCollector.Parsers
@@ -8,10 +9,9 @@ namespace QSOCollector.Parsers
         private static readonly string adifEndOfRecord = "<EOR>";
 
         // Parses massage from N1MM-format contactinfo and returns QsoMessage containing QsoData in ADIF format
-        public static string Map(N1mmContactInfo contactInfo)
+        public static string Map(N1mmContactInfo contactInfo, Dictionary<string, string>? extraFields = null)
         {
             StringBuilder adif = new();
-            AddToAdif(adif, "PROGRAMID", contactInfo.App);
             AddToAdif(adif, "STATION_CALLSIGN", contactInfo.MyCall);
             AddToAdif(adif, "OPERATOR", contactInfo.Operator);
             AddToAdif(adif, "CALL", contactInfo.Call);
@@ -22,11 +22,11 @@ namespace QSOCollector.Parsers
             AddToAdif(adif, "BAND", MapToAdifBand(band));
             if (contactInfo.TxFreq != null && contactInfo.TxFreq > 0)
             {
-                AddToAdif(adif, "FREQ", GetFormattedFreq(contactInfo.TxFreq.Value, band));
+                AddToAdif(adif, "FREQ", GetFormattedFreq(contactInfo.TxFreq.Value));
             }
             if (contactInfo.RxFreq != null && contactInfo.RxFreq > 0)
             {
-                AddToAdif(adif, "FREQ_RX", GetFormattedFreq(contactInfo.RxFreq.Value, band));
+                AddToAdif(adif, "FREQ_RX", GetFormattedFreq(contactInfo.RxFreq.Value));
             }
 
             AddToAdif(adif, "MODE", contactInfo.Mode);
@@ -44,25 +44,21 @@ namespace QSOCollector.Parsers
             AddToAdif(adif, "QTH", contactInfo.Qth);
             AddToAdif(adif, "TX_PWR", contactInfo.Power);
             AddToAdif(adif, "GRIDSQUARE", contactInfo.Gridsquare);
+            if (extraFields != null)
+            {
+                foreach (var kvp in extraFields)
+                {
+                    AddToAdif(adif, kvp.Key, kvp.Value);
+                }
+            }
             adif.Append(adifEndOfRecord);
             return adif.ToString();
         }
 
-        private static string? GetFormattedFreq(int origFreq, string origBand)
+        private static string GetFormattedFreq(int origFreq)
         {
-            if (origBand.EndsWith("GHz", StringComparison.OrdinalIgnoreCase))
-            {
-                return null;
-            }
-
-            char delimiter = '.';
-            int pointPosition = origBand.IndexOf(delimiter);
-            if (pointPosition == -1)
-            {
-                pointPosition = origBand.Length;
-            }
-            string freq = origFreq.ToString();
-            return freq[..pointPosition] + delimiter + freq[pointPosition..];
+            double freqInMhz = FreqConverter.toMhz(origFreq).Value;
+            return freqInMhz.ToString(CultureInfo.InvariantCulture);
         }
 
         private static string MapToAdifBand(string origBand)
@@ -90,8 +86,12 @@ namespace QSOCollector.Parsers
                 "144" => "2M",
                 "432" => "70CM",
                 "1.2GHz" => "23CM",
+                "2400" => "13CM",
                 "2.4GHz" => "13CM",
                 "5.6GHz" => "6CM",
+                "10GHz" => "3CM",
+                "24GHz" => "1.2CM",
+                "47GHz" => "6MM",
                 _ => throw new NotImplementedException()
             };
         }
@@ -102,7 +102,7 @@ namespace QSOCollector.Parsers
             value = value.Trim();
             if (value == string.Empty) return;
 
-            adif.Append($"<{tagName}:{value.Length}>{value} ");
+            adif.Append($"<{tagName}:{value.Length}>{value}");
         }
 
     }

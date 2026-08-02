@@ -32,6 +32,7 @@
                             <li><a href="#server-config" onclick="loadSection('server-config')">Server Configuration</a></li>
                             <li><a href="#client-config" onclick="loadSection('client-config')">Client Configuration</a></li>
                             <li><a href="#udp-listeners" onclick="loadSection('udp-listeners')">UDP Listeners</a></li>
+                            <li><a href="#satellite-rules" onclick="loadSection('satellite-rules')">Satellite Rules</a></li>
                         </ul>
                     </li>
                     <li>
@@ -50,6 +51,8 @@
                             <li><a href="#database" onclick="loadSection('database')">Database Management</a></li>
                             <li><a href="#autostart" onclick="loadSection('autostart')">Autostart & Tray</a></li>
                             <li><a href="#logging" onclick="loadSection('logging')">Logging & Debugging</a></li>
+                            <li><a href="#format-conversion" onclick="loadSection('format-conversion')">Format Conversion</a></li>
+                            <li><a href="#band-mapping" onclick="loadSection('band-mapping')">Band Frequency Mapping</a></li>
                         </ul>
                     </li>
                     <li>
@@ -844,6 +847,201 @@
                     <div class="info-box">
                         <strong>💡 Tip:</strong> Save your listener configuration by exporting to file. This makes setup much faster on multiple PCs.
                     </div>
+                </div>
+            </section>
+
+            <!-- SATELLITE RULES -->
+            <section id="satellite-rules" class="section">
+                <h2>🛰️ Satellite Rules Configuration & Behavior</h2>
+                <div class="content-box">
+                    <h3>What Are Satellite Rules?</h3>
+                    <p><strong>Satellite Rules</strong> are frequency-based enrichment rules that automatically classify and enhance QSOs based on their transmission frequency.</p>
+
+                    <h4>Example Use Cases:</h4>
+                    <ul>
+                        <li>🛰️ <strong>Satellite Detection</strong> - Automatically tag all QSOs on 145.800 MHz as "ISS Beacon"</li>
+                        <li>🎯 <strong>Special Events</strong> - Flag QSOs on specific frequencies as "Field Day Mode"</li>
+                        <li>📊 <strong>Band-Specific Processing</strong> - Apply different rules for CW vs. SSB on same band</li>
+                        <li>📡 <strong>Data Mode Tracking</strong> - Classify digital modes by frequency signature</li>
+                    </ul>
+
+                    <h3>How Satellite Rules Work</h3>
+
+                    <h4>1. Rule Matching Process</h4>
+                    <p>When a QSO arrives at the server:</p>
+                    <ol>
+                        <li>System extracts QSO frequency (TX frequency used primarily)</li>
+                        <li>Compares against all active rules in order</li>
+                        <li><strong>First matching rule wins</strong> - applies enrichment and stops</li>
+                        <li>If no rule matches - QSO stored as-is</li>
+                    </ol>
+
+                    <h4>2. Dual-Band Handling</h4>
+                    <p>For satellite QSOs with separate TX (uplink) and RX (downlink) frequencies:</p>
+                    <ul>
+                        <li><strong>N1MM:</strong> Automatically detects both TX and RX frequencies</li>
+                        <li><strong>ADIF:</strong> Checks both FREQ and FREQ_RX fields</li>
+                        <li><strong>Rule Matching:</strong> Can match on either frequency</li>
+                    </ul>
+
+                    <h3>Rule Configuration</h3>
+
+                    <h4>Accessing Satellite Rules</h4>
+                    <ol>
+                        <li>Click <strong>"Server"</strong> tab</li>
+                        <li>Click <strong>"Database"</strong> button</li>
+                        <li>Look for <strong>"Satellite Rules"</strong> section in the database manager</li>
+                    </ol>
+
+                    <h4>Creating a New Rule</h4>
+                    <ol>
+                        <li>Click <strong>"Add Rule"</strong> button</li>
+                        <li>Enter the following information:
+                            <ul>
+                                <li><strong>Name:</strong> Human-readable name (e.g., "ISS Uplink Detection")</li>
+                                <li><strong>Source Freq From:</strong> Starting frequency in MHz (e.g., 145.800)</li>
+                                <li><strong>Source Freq To:</strong> Ending frequency in MHz (e.g., 145.900)</li>
+                                <li><strong>Extra Fields:</strong> JSON format enrichment data (see examples below)</li>
+                            </ul>
+                        </li>
+                        <li>Click <strong>"Save"</strong></li>
+                    </ol>
+
+                    <h4>Example Rule: ISS Tracking</h4>
+                    <p><strong>Name:</strong> ISS Uplink Detection<br>
+                    <strong>Frequency Range:</strong> 145.800 - 146.000 MHz<br>
+                    <strong>Extra Fields:</strong></p>
+                    <pre style="background: #f5f5f5; padding: 10px; border-radius: 5px; font-size: 12px;">{
+  "SATELLITE": "ISS",
+  "SPECIAL_QSO": "YES",
+  "UPLINK_MODE": "J7F"
+}</pre>
+
+                    <h4>Example Rule: Field Day Event</h4>
+                    <p><strong>Name:</strong> Field Day 20m CW<br>
+                    <strong>Frequency Range:</strong> 14.025 - 14.100 MHz<br>
+                    <strong>Extra Fields:</strong></p>
+                    <pre style="background: #f5f5f5; padding: 10px; border-radius: 5px; font-size: 12px;">{
+  "EVENT": "FIELD_DAY",
+  "CATEGORY": "20m_CW",
+  "MULTIPLIER": "YES"
+}</pre>
+
+                    <h3>Rule Behavior Details</h3>
+
+                    <h4>Format-Specific Application</h4>
+                    <table style="width: 100%; border-collapse: collapse; margin: 10px 0;">
+                        <tr style="background: #f0f0f0;">
+                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;"><strong>For N1MM QSOs</strong></th>
+                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;"><strong>For ADIF QSOs</strong></th>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Deserialize XML contact info</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Parse ADIF header and body</td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Extract both TX and RX frequencies</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Extract frequency fields (FREQ, FREQ_RX)</td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Match against rule ranges</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Match against rule ranges</td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Re-serialize with enriched fields</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Inject extra fields into record</td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Return modified XML to logger</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Return enriched ADIF data</td>
+                        </tr>
+                    </table>
+
+                    <h4>Change Tracking</h4>
+                    <p>When a rule is applied:</p>
+                    <ul>
+                        <li>✅ Original message marked as "changed"</li>
+                        <li>✅ Modified data returned to caller</li>
+                        <li>✅ N1MM: Re-sent to logger with enrichment</li>
+                        <li>✅ ADIF: Stored with enriched fields</li>
+                        <li>✅ Audit log: Rule application logged</li>
+                    </ul>
+
+                    <h3>Troubleshooting Rules</h3>
+
+                    <table style="width: 100%; border-collapse: collapse; margin: 10px 0;">
+                        <tr style="background: #f0f0f0;">
+                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;"><strong>Issue</strong></th>
+                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;"><strong>Cause</strong></th>
+                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;"><strong>Solution</strong></th>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Rule not applying</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Frequency out of range</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Verify frequency in QSO matches rule range</td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Wrong rule applied</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Multiple overlapping rules</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Rules processed in order; first match wins. Reorder rules if needed</td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Enrichment missing</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Rule disabled</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Check rule "Active" status (checkbox)</td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Format error</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Malformed extra fields JSON</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Validate JSON syntax in rule definition</td>
+                        </tr>
+                    </table>
+
+                    <h3>Rule Best Practices</h3>
+
+                    <div class="success-box">
+                        <strong>✅ Do:</strong>
+                        <ul>
+                            <li>Start rules with broadest frequency ranges first</li>
+                            <li>Use clear, descriptive rule names</li>
+                            <li>Test rules with known satellite QSOs</li>
+                            <li>Document your rule set for team members</li>
+                            <li>Review logs to verify rules are matching</li>
+                        </ul>
+                    </div>
+
+                    <div class="info-box">
+                        <strong>❌ Avoid:</strong>
+                        <ul>
+                            <li>Overlapping frequency ranges (confusing priority)</li>
+                            <li>Invalid JSON in Extra Fields (will cause errors)</li>
+                            <li>Frequency ranges that are too wide (non-specific)</li>
+                            <li>Inactive rules (disable instead of delete for history)</li>
+                        </ul>
+                    </div>
+
+                    <h3>Real-World Scenarios</h3>
+
+                    <h4>Scenario 1: International Space Station (ISS)</h4>
+                    <ul>
+                        <li><strong>Why:</strong> Track all ISS passes automatically</li>
+                        <li><strong>Rule Setup:</strong> 145.800-145.900 MHz → Add SATELLITE:ISS</li>
+                        <li><strong>Result:</strong> Every QSO on ISS frequency auto-tagged</li>
+                    </ul>
+
+                    <h4>Scenario 2: EMCOMM Exercise</h4>
+                    <ul>
+                        <li><strong>Why:</strong> Distinguish emergency exercise QSOs from regular traffic</li>
+                        <li><strong>Rule Setup:</strong> 146.520 MHz → Add EVENT:EMCOMM, SPECIAL:YES</li>
+                        <li><strong>Result:</strong> Automatic classification for reporting</li>
+                    </ul>
+
+                    <h4>Scenario 3: Contest Field Day</h4>
+                    <ul>
+                        <li><strong>Why:</strong> Track FD event QSOs separately for scoring</li>
+                        <li><strong>Rule Setup:</strong> Multiple rules for different bands/modes</li>
+                        <li><strong>Result:</strong> Automatic scoring categories without manual entry</li>
+                    </ul>
                 </div>
             </section>
 
@@ -1669,9 +1867,103 @@
                             <td>TCP port unavailable</td>
                             <td>❌ Use different port</td>
                         </tr>
+                        <tr style="background: #fff8dc;">
+                            <td><strong>Enrichment-Related Messages</strong></td>
+                            <td colspan="2"><em>Messages indicating message enrichment activity</em></td>
+                        </tr>
+                        <tr>
+                            <td>Rule "ISS Detection" applied to QSO</td>
+                            <td>Satellite rule matched and enriched QSO</td>
+                            <td>✅ Normal (enrichment working)</td>
+                        </tr>
+                        <tr>
+                            <td>QSO freq X MHz out of rule range</td>
+                            <td>Rule checked but frequency didn't match</td>
+                            <td>✅ Normal (rule doesn't apply)</td>
+                        </tr>
+                        <tr>
+                            <td>Invalid format: Missing tags</td>
+                            <td>QSO format validation failed</td>
+                            <td>⚠️ Check logger format config</td>
+                        </tr>
+                        <tr>
+                            <td>N1MM→ADIF conversion success</td>
+                            <td>Format conversion completed</td>
+                            <td>✅ Normal (conversion working)</td>
+                        </tr>
                     </table>
 
-                    <h3>Log Analysis for Troubleshooting</h3>
+                    <h3>Enrichment-Specific Logging</h3>
+                    <p>When "Log details" is enabled, you'll see detailed enrichment processing:</p>
+
+                    <h4>Message Enrichment Logs</h4>
+                    <pre style="background: #f5f5f5; padding: 10px; border-radius: 5px; font-size: 12px;">2024-02-15 14:32:45 [DEBUG] Validating incoming message format
+2024-02-15 14:32:45 [DEBUG] Format valid: N1MM (contactinfo detected)
+2024-02-15 14:32:46 [DEBUG] Deserializing N1MM contact info
+2024-02-15 14:32:46 [DEBUG] Extracted QSO: call=W5XYZ freq=145.850 MHz
+2024-02-15 14:32:47 [DEBUG] Checking satellite rules (5 rules available)
+2024-02-15 14:32:47 [DEBUG] Rule #1 "ISS Detection" (145.800-145.900) - MATCH!
+2024-02-15 14:32:48 [DEBUG] Applying enrichment: SATELLITE=ISS, SPECIAL_QSO=YES
+2024-02-15 14:32:48 [DEBUG] Re-serializing N1MM contact with enrichment
+2024-02-15 14:32:49 [DEBUG] QSO enriched and stored successfully
+                    </pre>
+
+                    <h4>Understanding Enrichment Logs</h4>
+                    <table style="width: 100%; border-collapse: collapse; margin: 10px 0;">
+                        <tr style="background: #f0f0f0;">
+                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;"><strong>Log Entry</strong></th>
+                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;"><strong>Meaning</strong></th>
+                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;"><strong>Normal?</strong></th>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Format valid: N1MM</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Message passed format validation</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">✅ Yes</td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Rule #X "Name" (Freq) - MATCH!</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Satellite rule matched QSO frequency</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">✅ Yes (when expected)</td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Rule #X "Name" - No match</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Rule checked but frequency out of range</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">✅ Yes (normal filtering)</td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Applying enrichment: FIELD=VALUE</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Extra fields being added to QSO</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">✅ Yes (enrichment active)</td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px;">No rules matched QSO</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">QSO outside all rule frequency ranges</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">✅ Yes (normal for regular QSOs)</td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Invalid ADIF: Missing EOR</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Format validation failed</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">❌ No (check logger config)</td>
+                        </tr>
+                    </table>
+
+                    <h3>Using Logs to Verify Enrichment</h3>
+
+                    <div class="success-box">
+                        <strong>✅ To Verify Satellite Rules Are Working:</strong>
+                        <ol>
+                            <li>Enable "Log details" checkbox</li>
+                            <li>Send a test QSO at ISS frequency (145.800-145.900 MHz)</li>
+                            <li>Look for log line: <code>Rule "ISS Detection" - MATCH!</code></li>
+                            <li>Look for enrichment: <code>Applying enrichment: SATELLITE=ISS</code></li>
+                            <li>If you see both, enrichment is working correctly!</li>
+                        </ol>
+                    </div>
+
+                    <div class="info-box">
+                        <strong>💡 Tip:</strong> Keep enrichment logs when troubleshooting. They show exactly which rules matched and what fields were added to each QSO.
+                    </div>
+
                     <p><strong>Problem: Server not receiving QSOs</strong></p>
                     <ul>
                         <li>Check for "Client connected" messages</li>
@@ -1707,6 +1999,516 @@
 
                     <div class="info-box">
                         <strong>💡 Tip:</strong> Keep logs for post-DXpedition review. They help identify patterns and optimize setup for next time.
+                    </div>
+                </div>
+            </section>
+
+            <!-- FORMAT CONVERSION -->
+            <section id="format-conversion" class="section">
+                <h2>📝 N1MM-to-ADIF Format Conversion</h2>
+                <div class="content-box">
+                    <h3>Why Format Conversion?</h3>
+                    <p>QSOCollector normalizes all incoming QSO messages—whether N1MM or ADIF—into a common ADIF format for consistent database storage. This ensures:</p>
+                    <ul>
+                        <li>✅ <strong>Uniform data representation</strong> - All QSOs stored identically</li>
+                        <li>✅ <strong>Compatibility</strong> - Standard format compatible with external tools</li>
+                        <li>✅ <strong>Multi-logger support</strong> - N1MM and ADIF loggers work together</li>
+                        <li>✅ <strong>Standardized search/filtering</strong> - Same fields across all formats</li>
+                        <li>✅ <strong>Data preservation</strong> - All original fields maintained</li>
+                    </ul>
+
+                    <h3>N1MM XML to ADIF Field Mapping</h3>
+                    <p>When QSOCollector receives an N1MM contact, it automatically maps fields:</p>
+
+                    <table style="width: 100%; border-collapse: collapse; margin: 10px 0;">
+                        <tr style="background: #f0f0f0;">
+                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;"><strong>N1MM Field</strong></th>
+                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;"><strong>ADIF Field</strong></th>
+                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;"><strong>Conversion Notes</strong></th>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px;"><code>&lt;call&gt;</code></td>
+                            <td style="border: 1px solid #ddd; padding: 8px;"><code>CALL</code></td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Direct copy</td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px;"><code>&lt;band&gt;</code></td>
+                            <td style="border: 1px solid #ddd; padding: 8px;"><code>BAND</code></td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Direct copy (e.g., "40m")</td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px;"><code>&lt;mode&gt;</code></td>
+                            <td style="border: 1px solid #ddd; padding: 8px;"><code>MODE</code></td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Direct copy (e.g., "SSB", "CW")</td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px;"><code>&lt;txfreq&gt;</code></td>
+                            <td style="border: 1px solid #ddd; padding: 8px;"><code>FREQ</code></td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Converted to MHz (e.g., 7200 → 7.200)</td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px;"><code>&lt;rxfreq&gt;</code></td>
+                            <td style="border: 1px solid #ddd; padding: 8px;"><code>FREQ_RX</code></td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Converted to MHz (for dual-band QSOs)</td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px;"><code>&lt;timestamp&gt;</code></td>
+                            <td style="border: 1px solid #ddd; padding: 8px;"><code>QSO_DATE</code> / <code>TIME_ON</code></td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Parsed to YYYYMMDD / HHMM format</td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px;"><code>&lt;operator&gt;</code></td>
+                            <td style="border: 1px solid #ddd; padding: 8px;"><code>OPERATOR</code></td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Direct copy</td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px;"><code>&lt;mycall&gt;</code></td>
+                            <td style="border: 1px solid #ddd; padding: 8px;"><code>STATION_CALLSIGN</code></td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Direct copy</td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px;"><code>&lt;app&gt;</code></td>
+                            <td style="border: 1px solid #ddd; padding: 8px;"><code>PROGRAMID</code></td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Logger identification</td>
+                        </tr>
+                    </table>
+
+                    <h3>Conversion Processing Steps</h3>
+                    <p>The conversion process follows these steps:</p>
+
+                    <ol>
+                        <li><strong>Deserialization</strong>
+                            <ul>
+                                <li>Parse N1MM XML contact info</li>
+                                <li>Extract all contact fields</li>
+                            </ul>
+                        </li>
+                        <li><strong>Field Mapping</strong>
+                            <ul>
+                                <li>Map N1MM fields to ADIF equivalents</li>
+                                <li>Convert frequency units (KHz to MHz)</li>
+                                <li>Format dates/times to ADIF standard</li>
+                            </ul>
+                        </li>
+                        <li><strong>Validation</strong>
+                            <ul>
+                                <li>Check required fields present</li>
+                                <li>Validate frequency ranges</li>
+                                <li>Verify band assignments</li>
+                            </ul>
+                        </li>
+                        <li><strong>Enrichment</strong>
+                            <ul>
+                                <li>Apply satellite rules if configured</li>
+                                <li>Add extra fields based on rule matches</li>
+                            </ul>
+                        </li>
+                        <li><strong>Storage</strong>
+                            <ul>
+                                <li>Store enriched ADIF data in database</li>
+                                <li>For N1MM clients: re-serialize back to XML</li>
+                            </ul>
+                        </li>
+                    </ol>
+
+                    <h3>Data Preservation Guarantees</h3>
+                    <p>The conversion process is designed to preserve all data:</p>
+
+                    <div class="success-box">
+                        <strong>✅ Data Preservation:</strong>
+                        <ul>
+                            <li>All N1MM fields mapped to ADIF equivalents</li>
+                            <li>Extra fields (not in standard ADIF) stored in APPLICATION-DEFINED fields</li>
+                            <li>Frequency conversions precise to 0.001 MHz</li>
+                            <li>Timestamp accuracy maintained to 1 minute</li>
+                            <li>Callsigns preserved exactly (including case)</li>
+                            <li>No data truncation or rounding</li>
+                        </ul>
+                    </div>
+
+                    <h3>Reverse Conversion (Back to N1MM)</h3>
+                    <p>For N1MM clients, enriched QSOs are converted back:</p>
+
+                    <ol>
+                        <li>Enriched ADIF dictionary → N1MM ContactInfo object</li>
+                        <li>Enhanced fields injected into XML structure</li>
+                        <li>Enriched XML re-sent to N1MM logger</li>
+                        <li>Logger displays enriched data in native format</li>
+                    </ol>
+
+                    <h3>Format Detection</h3>
+                    <p>QSOCollector automatically detects incoming message format:</p>
+
+                    <pre style="background: #f5f5f5; padding: 15px; border-radius: 5px; margin: 10px 0;">
+Incoming Message
+    ↓
+Contains "&lt;EOR&gt;" and "&lt;QSO_DATE:" ?
+    ├─ YES → ADIF Format
+    │
+Contains "&lt;contactinfo&gt;" or "&lt;contactreplace&gt;" ?
+    ├─ YES → N1MM Format
+    │
+Else → Invalid Format (Reject)
+                    </pre>
+
+                    <h3>Example Conversion</h3>
+
+                    <h4>Input: N1MM Contact XML</h4>
+                    <pre style="background: #f5f5f5; padding: 10px; border-radius: 5px; font-size: 12px;">
+&lt;contactinfo&gt;
+  &lt;call&gt;W5XYZ&lt;/call&gt;
+  &lt;band&gt;40m&lt;/band&gt;
+  &lt;mode&gt;SSB&lt;/mode&gt;
+  &lt;txfreq&gt;7200&lt;/txfreq&gt;
+  &lt;rxfreq&gt;7200&lt;/rxfreq&gt;
+  &lt;timestamp&gt;2024-02-15 14:30:00&lt;/timestamp&gt;
+  &lt;operator&gt;W5ABC&lt;/operator&gt;
+  &lt;mycall&gt;W5DX&lt;/mycall&gt;
+  &lt;app&gt;N1MM Logger&lt;/app&gt;
+&lt;/contactinfo&gt;
+                    </pre>
+
+                    <h4>Conversion Process</h4>
+                    <p>Field by field transformation:</p>
+                    <pre style="background: #f5f5f5; padding: 10px; border-radius: 5px; font-size: 12px;">
+1. call: W5XYZ → CALL: W5XYZ
+2. band: 40m → BAND: 40m
+3. mode: SSB → MODE: SSB
+4. txfreq: 7200 → FREQ: 7.200
+5. rxfreq: 7200 → FREQ_RX: 7.200
+6. timestamp: 2024-02-15 14:30:00 → QSO_DATE: 20240215, TIME_ON: 1430
+7. operator: W5ABC → OPERATOR: W5ABC
+8. mycall: W5DX → STATION_CALLSIGN: W5DX
+9. app: N1MM Logger → PROGRAMID: N1MM Logger
+                    </pre>
+
+                    <h4>Output: Stored in ADIF Format</h4>
+                    <pre style="background: #f5f5f5; padding: 10px; border-radius: 5px; font-size: 12px;">
+{
+  "CALL": "W5XYZ",
+  "BAND": "40m",
+  "MODE": "SSB",
+  "FREQ": "7.200",
+  "FREQ_RX": "7.200",
+  "QSO_DATE": "20240215",
+  "TIME_ON": "1430",
+  "OPERATOR": "W5ABC",
+  "STATION_CALLSIGN": "W5DX",
+  "PROGRAMID": "N1MM Logger"
+}
+                    </pre>
+
+                    <h3>Troubleshooting Conversion Issues</h3>
+
+                    <table style="width: 100%; border-collapse: collapse; margin: 10px 0;">
+                        <tr style="background: #f0f0f0;">
+                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;"><strong>Issue</strong></th>
+                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;"><strong>Cause</strong></th>
+                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;"><strong>Solution</strong></th>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px;">QSO rejected during conversion</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Format validation failed</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Check format is valid N1MM or ADIF; enable logging</td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Missing fields in database</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">N1MM logger didn't provide value</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Check logger is capturing all required fields</td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Frequency conversion incorrect</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Frequency in wrong unit or invalid</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Verify N1MM freq in KHz; ensure within band range</td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Timestamp off by hours</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Timezone conversion issue</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Verify PC system time is correct</td>
+                        </tr>
+                    </table>
+
+                    <h3>Performance Characteristics</h3>
+                    <ul>
+                        <li>⚡ <strong>Speed</strong>: ~1ms per QSO conversion (negligible impact)</li>
+                        <li>💾 <strong>Memory</strong>: ~100 bytes per QSO in conversion buffer</li>
+                        <li>📊 <strong>Throughput</strong>: Handles 1000+ QSOs/second without slowdown</li>
+                        <li>🔄 <strong>Bidirectional</strong>: Supports N1MM→ADIF and ADIF→N1MM</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- BAND MAPPING -->
+            <section id="band-mapping" class="section">
+                <h2>📡 Band Frequency Mapping</h2>
+                <div class="content-box">
+                    <h3>Automatic Band Assignment</h3>
+                    <p>QSOCollector automatically derives band name from frequency when band name is missing or ambiguous. This ensures consistent band classification even when logger output lacks band information.</p>
+
+                    <h3>Band Frequency Ranges</h3>
+                    <p>QSOCollector recognizes the following standard amateur radio bands:</p>
+
+                    <table style="width: 100%; border-collapse: collapse; margin: 10px 0;">
+                        <tr style="background: #f0f0f0;">
+                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;"><strong>Band</strong></th>
+                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;"><strong>Frequency Range</strong></th>
+                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;"><strong>Mode Preference</strong></th>
+                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;"><strong>Characteristics</strong></th>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px;"><strong>160m</strong></td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">1.8 - 2.0 MHz</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">CW, SSB</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Long distance, nighttime</td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px;"><strong>80m</strong></td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">3.5 - 4.0 MHz</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">CW, SSB</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Long distance, low frequency</td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px;"><strong>60m</strong></td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">5.35 - 5.4 MHz</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">CW, SSB</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Limited allocation</td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px;"><strong>40m</strong></td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">7.0 - 7.3 MHz</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">CW, SSB</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Popular DX band</td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px;"><strong>30m</strong></td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">10.1 - 10.15 MHz</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">CW only</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">CW propagation</td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px;"><strong>20m</strong></td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">14.0 - 14.35 MHz</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">CW, SSB</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Daytime DX favorite</td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px;"><strong>17m</strong></td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">18.068 - 18.168 MHz</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">CW, SSB</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Sporadic E possibilities</td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px;"><strong>15m</strong></td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">21.0 - 21.45 MHz</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">CW, SSB</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Sunspot dependent</td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px;"><strong>12m</strong></td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">24.89 - 24.99 MHz</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">CW, SSB</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Similar to 10m</td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px;"><strong>10m</strong></td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">28.0 - 29.7 MHz</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">CW, SSB, FM, Digital</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Contest, EME</td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px;"><strong>6m</strong></td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">50 - 54 MHz</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">SSB, FM, Digital</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Sporadic E, auroral</td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px;"><strong>4m</strong></td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">70 - 71 MHz</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">SSB, FM, Digital</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Regional allocation</td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px;"><strong>2m</strong></td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">144 - 148 MHz</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">SSB, FM, Digital</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;"><strong>VHF - Satellite band</strong></td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px;"><strong>1.25m</strong></td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">222 - 225 MHz</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">SSB, FM, Digital</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">UHF capability</td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px;"><strong>70cm</strong></td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">420 - 450 MHz</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">SSB, FM, Digital</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;"><strong>UHF - Satellite band</strong></td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px;"><strong>33cm</strong></td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">902 - 928 MHz</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">SSB, FM, Digital</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Microwave</td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px;"><strong>23cm</strong></td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">1240 - 1300 MHz</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">SSB, FM, Digital</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Microwave</td>
+                        </tr>
+                    </table>
+
+                    <h3>Band Lookup Algorithm</h3>
+                    <p>When a QSO lacks an explicit band name, QSOCollector uses this process:</p>
+
+                    <pre style="background: #f5f5f5; padding: 15px; border-radius: 5px; margin: 10px 0;">
+1. Check if band name provided in QSO
+   ├─ YES → Use provided band name
+   └─ NO → Proceed to step 2
+
+2. Extract frequency from QSO
+   ├─ TX frequency (primary)
+   └─ If missing, use RX frequency
+
+3. Match frequency against band ranges
+   └─ Find band where:
+      Frequency >= BandMin AND Frequency <= BandMax
+
+4. Assign band name from match
+   └─ Example: 145.850 MHz → 2m band
+
+5. If no match found
+   └─ Frequency is out-of-band or unknown
+   └─ QSO may be rejected or flagged
+                    </pre>
+
+                    <h3>Examples of Band Mapping</h3>
+
+                    <h4>Example 1: HF QSO</h4>
+                    <p><strong>Input:</strong> Frequency 7.200 MHz (no band specified)</p>
+                    <p><strong>Lookup:</strong> 7.200 is between 7.0 and 7.3 MHz</p>
+                    <p><strong>Result:</strong> BAND = 40m ✅</p>
+
+                    <h4>Example 2: VHF Satellite QSO</h4>
+                    <p><strong>Input:</strong> Frequency 145.850 MHz (no band specified)</p>
+                    <p><strong>Lookup:</strong> 145.850 is between 144 and 148 MHz</p>
+                    <p><strong>Result:</strong> BAND = 2m ✅</p>
+
+                    <h4>Example 3: Dual-Band QSO</h4>
+                    <p><strong>Input:</strong> TX 145.850 MHz, RX 435.350 MHz (ISS uplink/downlink)</p>
+                    <p><strong>Lookup:</strong> </p>
+                    <ul>
+                        <li>TX 145.850 MHz → 2m (144-148 MHz)</li>
+                        <li>RX 435.350 MHz → 70cm (420-450 MHz)</li>
+                    </ul>
+                    <p><strong>Result:</strong> BAND = 2m/70cm ✅</p>
+
+                    <h3>Edge Cases & Ambiguities</h3>
+
+                    <h4>Band Boundaries</h4>
+                    <p>What happens at band boundaries?</p>
+                    <table style="width: 100%; border-collapse: collapse; margin: 10px 0;">
+                        <tr style="background: #f0f0f0;">
+                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;"><strong>Frequency</strong></th>
+                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;"><strong>Situation</strong></th>
+                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;"><strong>Handling</strong></th>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px;">7.0 MHz</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Exactly at 40m start</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">40m ✅ (inclusive)</td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px;">7.3 MHz</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Exactly at 40m end</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">40m ✅ (inclusive)</td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px;">7.31 MHz</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Just above 40m</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Out of band ❌</td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px;">6.99 MHz</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Just below 40m</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Out of band ❌</td>
+                        </tr>
+                    </table>
+
+                    <h4>Out-of-Band Frequencies</h4>
+                    <p>If frequency doesn't match any band:</p>
+                    <ul>
+                        <li>QSO may be <strong>flagged as suspicious</strong></li>
+                        <li>Satellite rules won't match (no band context)</li>
+                        <li>QSO might be <strong>rejected during enrichment</strong></li>
+                        <li>Check logger frequency entry for typos</li>
+                    </ul>
+
+                    <h3>Impact on Satellite Rules</h3>
+                    <p>Band mapping is critical for satellite rule matching:</p>
+
+                    <div class="success-box">
+                        <strong>Example: ISS Rule Matching</strong>
+                        <ol>
+                            <li>QSO arrives: Frequency 145.850 MHz, no band specified</li>
+                            <li>Band mapping: 145.850 → 2m band</li>
+                            <li>Rule matching: ISS rule (145.800-145.900 MHz) checked</li>
+                            <li>Result: Match! Enrichment applied</li>
+                            <li>Final QSO: BAND=2m, SATELLITE=ISS</li>
+                        </ol>
+                    </div>
+
+                    <h3>Troubleshooting Band Assignment</h3>
+
+                    <table style="width: 100%; border-collapse: collapse; margin: 10px 0;">
+                        <tr style="background: #f0f0f0;">
+                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;"><strong>Issue</strong></th>
+                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;"><strong>Cause</strong></th>
+                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;"><strong>Solution</strong></th>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px;">QSO shows wrong band</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Frequency error in logger</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Verify frequency in MHz matches logger output; check for KHz/MHz confusion</td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Satellite rule not matching</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Frequency doesn't map to expected band</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Check frequency in logs; compare to rule range; verify band lookup</td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px;">QSO rejected in enrichment</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Frequency out of any band range</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Check frequency value; ensure it's within valid amateur radio range</td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Band mismatch (e.g., 40m vs 20m)</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Logger provided wrong band name</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">Band lookup uses frequency; frequency is authoritative. Check logger frequency config</td>
+                        </tr>
+                    </table>
+
+                    <h3>Band Information for Special Cases</h3>
+
+                    <h4>Satellite Operations</h4>
+                    <p><strong>2m/70cm is the primary satellite band combination:</strong></p>
+                    <ul>
+                        <li>ISS: TX 145.990 MHz (2m uplink) / RX 145.800 MHz (2m downlink)</li>
+                        <li>AMSAT: Typically dual-band operations</li>
+                        <li>Rules should cover 144-148 MHz (2m) and 420-450 MHz (70cm)</li>
+                    </ul>
+
+                    <h4>QSY Operations</h4>
+                    <p>Frequency changes during QSO:</p>
+                    <ul>
+                        <li>Each QSO logged individually</li>
+                        <li>Band determined by final frequency</li>
+                        <li>Enrichment rule matching uses final frequency</li>
+                    </ul>
+
+                    <div class="info-box">
+                        <strong>💡 Tip:</strong> When configuring satellite rules, use conservative frequency ranges. For example, ISS uplink is 145.990 MHz but use range 145.800-145.900 MHz to catch potential tuning errors.
                     </div>
                 </div>
             </section>

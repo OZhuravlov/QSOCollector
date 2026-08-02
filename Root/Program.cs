@@ -191,6 +191,11 @@ namespace QSOCollector.Root
                     case "/d":
                         startupParams.Debug = true;
                         break;
+                    case "--force":
+                    case "-f":
+                    case "/f":
+                        startupParams.Force = true;
+                        break;
                 }
             }
             return startupParams;

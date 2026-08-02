@@ -102,7 +102,7 @@ namespace QSOCollector
             exportFilters.SourceIp = null;
             ResetSecondaryFilter(modeGroupComboBox, GetFilteredAmounts(exportFilters).Select(r => r.ModeGroup).Distinct().OrderBy(r => r));
             ResetSecondaryFilter(modeComboBox, GetFilteredAmounts(exportFilters).Select(r => r.Mode).Distinct().OrderBy(r => r));
-            ResetSecondaryFilter(bandComboBox, GetFilteredAmounts(exportFilters).Select(r => r.Band).Distinct().OrderByDescending(r => Int32.Parse(r.TrimEnd('M'))));
+            ResetSecondaryFilter(bandComboBox, GetFilteredAmounts(exportFilters).Select(r => r.Band).Distinct().OrderByDescending(r => Int32.Parse(r.Replace("MM","").Replace("CM", "00").Replace("DM", "0000").Replace("M", "000000"))));
             ResetSecondaryFilter(sourceNameComboBox, GetFilteredAmounts(exportFilters).Select(r => r.SourceName).Distinct().OrderBy(r => r == "<UNKNOWN>").ThenBy(r => r));
             ResetSecondaryFilter(operatorComboBox, GetFilteredAmounts(exportFilters).Select(r => r.Operator).Distinct().OrderBy(r => r == "<UNKNOWN>").ThenBy(r => r));
             ResetSecondaryFilter(sourceIpComboBox, GetFilteredAmounts(exportFilters).Select(r => r.SourceIp).Distinct().OrderBy(r => r == "<UNKNOWN>").ThenBy(r => r));

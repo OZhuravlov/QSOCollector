@@ -1,9 +1,11 @@
 using Microsoft.Data.Sqlite;
 using QSOCollector.Models;
 using Serilog;
+using System.Data;
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
+using Band = QSOCollector.Models.Band;
 
 namespace QSOCollector.Data
 {
@@ -16,14 +18,15 @@ namespace QSOCollector.Data
         private const string selectSettingsSql = "SELECT key, value FROM settings";
         private const string insertSettingsSql = "INSERT OR REPLACE INTO settings (key, value) VALUES (@key, @value)";
         private const string getListenerConfigsSql = "SELECT name as Name, id as Id, qso_port as QsoPort, forward_port as ForwardPort, acknowledge_port as AcknowledgePort, message_format as MessageFormat, is_active IsActive FROM listeners WHERE is_active = true";
+        private const string getBandsSql = "SELECT id Id, name BandName, alt_name AltBandName, name || '(' || alt_name || ')' FullBandName, n1mm_name N1mmBandName, freq_mhz_from FreqFrom, freq_mhz_to FreqTo, designator Designator, is_active IsActive FROM bands";
         private const string getExportSchedulerHoursSql = "SELECT hour FROM qso_export_scheduler order by hour";
         private const string insertListenerConfigsSql = "INSERT INTO listeners (name, qso_port, forward_port, acknowledge_port, message_format, is_active) " +
                     " VALUES (@Name, @QsoPort, @ForwardPort, @AcknowledgePort, @MessageFormat, @IsActive)";
         private const string getServerQsoAmountsSql = "SELECT q.mode QsoAmountMode, COUNT(CASE WHEN q.qso_time >= current_date THEN 1 END) TodayQsoAmount, count(*) TotalQsoAmount, COUNT(e.id) ExportedQsoAmount, MAX(q.qso_time) LastQsoTime, MAX(e.end_time) LastExportedQsoTime FROM qsodata q LEFT JOIN adif_export e ON q.export_id = e.id AND e.is_confirmed = true WHERE q.is_temporary = false GROUP BY q.mode UNION ALL SELECT 'Total', COUNT(CASE WHEN q.qso_time >= current_date THEN 1 END), COUNT(*), COUNT(e.id), MAX(q.qso_time), MAX(e.end_time) FROM qsodata q LEFT JOIN adif_export e ON q.export_id = e.id AND e.is_confirmed = true WHERE q.is_temporary = false";
         private const string getQsoAmountsForExportSql = "SELECT COALESCE(q.source_name, '<UNKNOWN>') SourceName, e.id IS NOT NULL IsExported, DATE(q.qso_time) QsoDate, q.mode_group ModeGroup, q.mode Mode, q.band Band, COALESCE(q.operator, '<UNKNOWN>') Operator, COALESCE(q.source_ip_address, '<UNKNOWN>') SourceIp, count(*) Count FROM qsodata q LEFT JOIN adif_export e ON q.export_id = e.id AND e.is_confirmed = true WHERE q.is_temporary = false GROUP BY COALESCE(q.source_name, '<UNKNOWN>'), e.id IS NOT NULL, DATE(q.qso_time), q.mode_group, q.mode, q.band, COALESCE(q.operator, '<UNKNOWN>'), COALESCE(q.source_ip_address, '<UNKNOWN>')";
         private const string insertRawQsoSql = "INSERT INTO raw_qsodata (source_name, orig_format, orig_qsodata, is_replace) VALUES (@Source, @OriginalFormat, @OriginalQsoData, @Replace)";
-        private const string insertQsoSql = "INSERT INTO qsodata (is_temporary, source_name, source_ip_address, external_id, import_id, qso_time, programid, station_callsign, qso_date, qso_date_off, call, time_on, time_off, band, freq, freq_rx, mode, mode_group, contest_id, rst_sent, rst_rcvd, exch_sent, exch_rcvd, operator, my_gridsquare, gridsquare, distance, comment, pfx, dxcc_pref, cqz, ituz, cont, qslmsg, dxcc, orig_format, orig_qsodata, adif_qsodata, is_replace)" +
-                    " VALUES (@is_temporary, @source_name, @source_ip_address, @external_id, @import_id, @qso_time, @programid, @station_callsign, @qso_date, @qso_date_off, @call, @time_on, @time_off, @band, @freq, @freq_rx, @mode, @mode_group, @contest_id, @rst_sent, @rst_rcvd, @exch_sent, @exch_rcvd, @operator, @my_gridsquare, @gridsquare, @distance, @comment, @pfx, @dxcc_pref, @cqz, @ituz, @cont, @qslmsg, @dxcc, @orig_format, @orig_qsodata, @adif_qsodata, @is_replace)";
+        private const string insertQsoSql = "INSERT INTO qsodata (is_temporary, source_name, source_ip_address, external_id, import_id, qso_time, programid, station_callsign, qso_date, qso_date_off, call, time_on, time_off, band, freq, freq_rx, mode, mode_group, contest_id, rst_sent, rst_rcvd, exch_sent, exch_rcvd, operator, my_gridsquare, gridsquare, distance, comment, pfx, dxcc_pref, cqz, ituz, cont, qslmsg, dxcc, orig_format, orig_qsodata, adif_qsodata, is_replace, band_rx, prop_mode, sat_name, sat_mode)" +
+                    " VALUES (@is_temporary, @source_name, @source_ip_address, @external_id, @import_id, @qso_time, @programid, @station_callsign, @qso_date, @qso_date_off, @call, @time_on, @time_off, @band, @freq, @freq_rx, @mode, @mode_group, @contest_id, @rst_sent, @rst_rcvd, @exch_sent, @exch_rcvd, @operator, @my_gridsquare, @gridsquare, @distance, @comment, @pfx, @dxcc_pref, @cqz, @ituz, @cont, @qslmsg, @dxcc, @orig_format, @orig_qsodata, @adif_qsodata, @is_replace, @band_rx, @prop_mode, @sat_name, @sat_mode)";
         private const string getTemporaryQsoSql = "SELECT id, source_name, orig_format, orig_qsodata, adif_qsodata, is_replace " +
             "  FROM qsodata " +
             " WHERE is_temporary = 1 AND orig_format IS NOT NULL AND orig_qsodata IS NOT NULL " +
@@ -31,7 +34,7 @@ namespace QSOCollector.Data
             " LIMIT 100";
         private const string deleteQsoQsl = "DELETE FROM qsodata WHERE id = @id";
         private const string selectQsoToReplaceQsl = "SELECT id, export_id FROM qsodata WHERE external_id = @externalId AND qso_time BETWEEN @minTime AND @maxTime AND is_temporary = @isTemporary ORDER BY id DESC LIMIT 1";
-        private const int SQLITE_CONSTRAINT_UNIQUE = 2067;
+        private const string selectSatRulesSql = "SELECT id Id, name Name, orig_freq_mhz_from SourceFreqFrom, orig_freq_mhz_to SourceFreqTo, propagation_mode PropagationMode, sat_name SatName, sat_mode SatMode, band_id BandTxId, band_rx_id BandRxId, freq_mhz FreqTx, freq_mhz_rx FreqRx, is_active IsActive FROM sat_rules";
 
         private readonly string connectionString;
         private Dictionary<string, string>? qsodataColumns = null;
@@ -65,6 +68,7 @@ namespace QSOCollector.Data
 
         public void SaveSetting(string key, string? value)
         {
+            log.Debug("Saving setting to database: {key} = {value}", key, value);
             using var connection = new SqliteConnection(connectionString);
             connection.Open();
             using var transaction = connection.BeginTransaction();
@@ -90,13 +94,8 @@ namespace QSOCollector.Data
 
         public List<ListenerConfig> GetListenerConfigs()
         {
-            log.Debug("Loading listener configurations from database");
-            using var connection = new SqliteConnection(connectionString);
-            connection.Open();
-            using var command = connection.CreateCommand();
-            command.CommandText = getListenerConfigsSql;
-            using var reader = command.ExecuteReader();
-            return GetData<ListenerConfig>(reader);
+            log.Verbose("Loading listener configurations from database");
+            return GetData(getListenerConfigsSql, reader => Map<ListenerConfig>(reader));
         }
 
         public void ReplaceListenerConfigs(List<ListenerConfig> configs)
@@ -108,6 +107,167 @@ namespace QSOCollector.Data
             CleanupListenerConfigs(connection, configs);
             SaveListenerConfigs(connection, configs);
             transaction.Commit();
+        }
+
+        public string GetListenerConcatRuleNames(int listenerId) {
+            log.Verbose("Get listener concatenated rule names from database");
+            string sql = "select group_concat(sr.name, '; ') rules from listener_sat_rules lr join sat_rules sr on lr.rule_id = sr.id where lr.listener_id = @listenerId";
+            return GetData(sql, reader => MapField<string>(reader, "rules"), [new SqliteParameter("@listenerId", listenerId)])[0];
+        }
+
+        public Band GetBand(int id)
+        {
+            log.Verbose("Get band with id {id} from database", id);
+            string sql = getBandsSql + " WHERE id = @id";
+            var bands = GetData(sql, reader => Map<Band>(reader), [new SqliteParameter("@id", id)]);
+            return bands.FirstOrDefault() ?? throw new InvalidOperationException("Band not found");
+        }
+
+        public List<Band> GetBands(bool isActiveOnly = false)
+        {
+            log.Verbose("Get bands from database, isActiveOnly: {isActiveOnly}", isActiveOnly);
+            string sql = getBandsSql;
+            if (isActiveOnly)
+            {
+                sql += " WHERE is_active = 1";
+            }
+            return GetData(sql, reader => Map<Band>(reader));
+        }
+
+        public List<SatRule> GetSatRules()
+        {
+            log.Verbose("Get satellite rules from database");
+            List<SatRule> satRules = GetData(selectSatRulesSql, reader => Map<SatRule>(reader, true));
+            satRules.ForEach(EnrichSatRule);
+            return satRules;
+        }
+
+        public SatRule GetSatRule(int id)
+        {
+            log.Verbose("Get satellite rule with id {id} from database", id);
+            string sql = selectSatRulesSql + " WHERE id = @id";
+            var rules = GetData(sql, reader => Map<SatRule>(reader, true), [new SqliteParameter("@id", id)]);
+            SatRule rule = rules.FirstOrDefault() ?? throw new InvalidOperationException("Rule not found");
+            EnrichSatRule(rule);
+            return rule;
+        }
+
+        public void SaveSatRule(SatRule rule)
+        {
+            log.Information("Saving satellite rule to database: {rule}", rule);
+            using var connection = new SqliteConnection(connectionString);
+            connection.Open();
+            using var transaction = connection.BeginTransaction();
+            using var command = connection.CreateCommand();
+            if (rule.Id.HasValue)
+            {
+                command.CommandText = "UPDATE sat_rules SET name = @name, orig_freq_mhz_from = @orig_freq_mhz_from, orig_freq_mhz_to = @orig_freq_mhz_to, propagation_mode = @propagation_mode, sat_name = @sat_name, sat_mode = @sat_mode, band_id = @band_id, band_rx_id = @band_rx_id, freq_mhz = @freq_mhz, freq_mhz_rx = @freq_mhz_rx, is_active = @is_active WHERE id = @id";
+                command.Parameters.Add(new SqliteParameter("@id", rule.Id.Value));
+            }
+            else
+            {
+                command.CommandText = "INSERT INTO sat_rules (name, orig_freq_mhz_from, orig_freq_mhz_to, propagation_mode, sat_name, sat_mode, band_id, band_rx_id, freq_mhz, freq_mhz_rx, is_active) VALUES (@name, @orig_freq_mhz_from, @orig_freq_mhz_to, @propagation_mode, @sat_name, @sat_mode, @band_id, @band_rx_id, @freq_mhz, @freq_mhz_rx, @is_active)";
+            }
+            command.Parameters.Add(new SqliteParameter("@name", rule.Name));
+            command.Parameters.Add(new SqliteParameter("@orig_freq_mhz_from", rule.SourceFreqFrom));
+            command.Parameters.Add(new SqliteParameter("@orig_freq_mhz_to", rule.SourceFreqTo));
+            command.Parameters.Add(new SqliteParameter("@propagation_mode", rule.PropagationMode));
+            command.Parameters.Add(new SqliteParameter("@sat_name", rule.SatName));
+            command.Parameters.Add(new SqliteParameter("@sat_mode", rule.SatMode != null ? rule.SatMode : DBNull.Value));
+            command.Parameters.Add(new SqliteParameter("@band_id", rule.BandTxId.HasValue ? rule.BandTxId.Value : DBNull.Value));
+            command.Parameters.Add(new SqliteParameter("@band_rx_id", rule.BandRxId.HasValue ? rule.BandRxId.Value : DBNull.Value));
+            command.Parameters.Add(new SqliteParameter("@freq_mhz", rule.FreqTx.HasValue ? rule.FreqTx.Value : DBNull.Value));
+            command.Parameters.Add(new SqliteParameter("@freq_mhz_rx", rule.FreqRx.HasValue ? rule.FreqRx.Value : DBNull.Value));
+            command.Parameters.Add(new SqliteParameter("@is_active", rule.IsActive ? 1 : 0));
+            command.ExecuteNonQuery();
+            transaction.Commit();
+        }
+
+        public void DeleteSatRule(int id)
+        {
+            log.Information("Deleting satellite rule from database: {id}", id);
+            using var connection = new SqliteConnection(connectionString);
+            connection.Open();
+            using var transaction = connection.BeginTransaction();
+            using var command = connection.CreateCommand();
+            command.CommandText = "DELETE FROM sat_rules WHERE id = @id";
+            command.Parameters.Add(new SqliteParameter("@id", id));
+            command.ExecuteNonQuery();
+            transaction.Commit();
+        }
+
+        public void DeactivateSatRule(int id)
+        {
+            log.Information("Deactivating satellite rule in database: {id}", id);
+            using var connection = new SqliteConnection(connectionString);
+            connection.Open();
+            using var transaction = connection.BeginTransaction();
+            using var command = connection.CreateCommand();
+            command.CommandText = "UPDATE sat_rules SET is_active = 0 WHERE id = @id and is_active = 1";
+            command.Parameters.Add(new SqliteParameter("@id", id));
+            command.ExecuteNonQuery();
+            transaction.Commit();
+        }
+
+        public void ActivateSatRule(int id)
+        {
+            log.Information("Activating satellite rule in database: {id}", id);
+            using var connection = new SqliteConnection(connectionString);
+            connection.Open();
+            using var transaction = connection.BeginTransaction();
+            using var command = connection.CreateCommand();
+            command.CommandText = "UPDATE sat_rules SET is_active = 1 WHERE id = @id and is_active = 0";
+            command.Parameters.Add(new SqliteParameter("@id", id));
+            command.ExecuteNonQuery();
+            transaction.Commit();
+        }
+
+        public void RemoveRulesFromListener(int listenerId, List<int> selectedRuleIds)
+        {
+            log.Information("Removing satellite rules from listener: {listenerId}", listenerId);
+            using var connection = new SqliteConnection(connectionString);
+            connection.Open();
+            using var transaction = connection.BeginTransaction();
+            using var command = connection.CreateCommand();
+            command.Parameters.Add(new SqliteParameter("@listenerId", listenerId));
+
+            string[] paramArray = [.. selectedRuleIds.Select((id, i) => "@ruleId" + i)];
+            string paramList = string.Join(",", paramArray);
+            string sql = "DELETE FROM listener_sat_rules WHERE listener_id = @listenerId AND rule_id IN ({0})";
+            command.CommandText = string.Format(sql, paramList);
+            for (int i = 0; i < selectedRuleIds.Count; ++i)
+            {
+                command.Parameters.Add(new SqliteParameter("@ruleId" + i, selectedRuleIds[i]));
+            }
+
+            command.ExecuteNonQuery();
+            transaction.Commit();
+        }
+
+        public void AssignRuleToListener(int listenerId, int ruleId) { 
+            log.Information("Assigning satellite rule to listener: {listenerId}, {ruleId}", listenerId, ruleId);
+            using var connection = new SqliteConnection(connectionString);
+            connection.Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = "INSERT INTO listener_sat_rules (listener_id, rule_id) VALUES (@listenerId, @ruleId)";
+            command.Parameters.Add(new SqliteParameter("@listenerId", listenerId));
+            command.Parameters.Add(new SqliteParameter("@ruleId", ruleId));
+            command.ExecuteNonQuery();
+        }
+
+        public List<SatRule> GetListenerSatRules(int listenerId) {
+            log.Verbose("Getting satellite rules for listener: {listenerId}", listenerId);
+            string sql = "SELECT sr.id Id, sr.name Name, sr.orig_freq_mhz_from SourceFreqFrom, sr.orig_freq_mhz_to SourceFreqTo, sr.propagation_mode PropagationMode, sr.sat_name SatName, sr.sat_mode SatMode, sr.band_id BandTxId, sr.band_rx_id BandRxId, sr.freq_mhz FreqTx, sr.freq_mhz_rx FreqRx, sr.is_active IsActive FROM listener_sat_rules lr JOIN sat_rules sr ON lr.rule_id = sr.id WHERE lr.listener_id = @listenerId";
+            List<SatRule> satRules = GetData(sql, reader => Map<SatRule>(reader, true), [new SqliteParameter("@listenerId", listenerId)]);
+            satRules.ForEach(EnrichSatRule);
+            return satRules;
+        }
+
+
+        public List<string> GetSatModes()
+        {
+            log.Verbose("Getting satellite modes from database");
+            return GetData("SELECT name FROM sat_modes", reader => MapField<string>(reader, "name"));
         }
 
         public void CleanClientQsos()
@@ -152,15 +312,17 @@ namespace QSOCollector.Data
             transaction.Commit();
         }
 
-        private static void CleanupListenerConfigs(SqliteConnection connection, List<ListenerConfig> configs)
+        private void CleanupListenerConfigs(SqliteConnection connection, List<ListenerConfig> configs)
         {
+            log.Warning("Cleaning listener configurations from database");
             using var command = connection.CreateCommand();
             command.CommandText = "DELETE FROM listeners";
             command.ExecuteNonQuery();
         }
 
-        private static void SaveListenerConfigs(SqliteConnection connection, List<ListenerConfig> configs)
+        private void SaveListenerConfigs(SqliteConnection connection, List<ListenerConfig> configs)
         {
+            log.Information("Saving listener configurations to database: {count} configs", configs.Count);
             configs.ForEach(config =>
             {
                 using var command = connection.CreateCommand();
@@ -177,26 +339,19 @@ namespace QSOCollector.Data
 
         public List<ServerQsoAmount> GetServerQsoAmounts()
         {
-            using var connection = new SqliteConnection(connectionString);
-            connection.Open();
-            using var command = connection.CreateCommand();
-            command.CommandText = getServerQsoAmountsSql;
-            using var reader = command.ExecuteReader();
-            return GetData<ServerQsoAmount>(reader);
+            log.Verbose("Getting server QSO amounts from database");
+            return GetData(getServerQsoAmountsSql, reader => Map<ServerQsoAmount>(reader));
         }
 
         public List<QsoExportExpectedAmounts> GetQsoAmountsForExport()
         {
-            using var connection = new SqliteConnection(connectionString);
-            connection.Open();
-            using var command = connection.CreateCommand();
-            command.CommandText = getQsoAmountsForExportSql;
-            using var reader = command.ExecuteReader();
-            return GetData<QsoExportExpectedAmounts>(reader);
+            log.Verbose("Getting QSO amounts for export from database");
+            return GetData(getQsoAmountsForExportSql, reader => Map<QsoExportExpectedAmounts>(reader));
         }
 
         private Dictionary<string, string> GetTableColumns(string tablename)
         {
+            log.Verbose("Getting table columns for {tablename} from database", tablename);
             using var connection = new SqliteConnection(connectionString);
             connection.Open();
             using var command = connection.CreateCommand();
@@ -309,6 +464,7 @@ namespace QSOCollector.Data
 
         public void SaveQsoRecords(List<Dictionary<string, string?>> qsoRecords, int? importId = null, bool isTemporary = false)
         {
+            log.Information("Saving QSOs to database. ImportId: {importId}, IsTemporary: {isTemporary}, QSO count: {qsoCount}", importId, isTemporary, qsoRecords.Count);
             using var connection = new SqliteConnection(connectionString);
             connection.Open();
             using var transaction = connection.BeginTransaction();
@@ -384,7 +540,7 @@ namespace QSOCollector.Data
                 }
                 catch (SqliteException ex)
                 {
-                    if (ex.SqliteExtendedErrorCode != SQLITE_CONSTRAINT_UNIQUE) throw;
+                    if (ex.SqliteExtendedErrorCode != IDbRepository.SQLITE_CONSTRAINT_UNIQUE) throw;
                     dups.Add(qsoRecord);
                     dupsCount++;
                 }
@@ -456,6 +612,7 @@ namespace QSOCollector.Data
 
         public Dictionary<int, QsoMessage> GetTemporaryQsoMessages()
         {
+            log.Verbose("Getting temporary QSO messages from database");
             var qsoMessages = new Dictionary<int, QsoMessage>();
             using var connection = new SqliteConnection(connectionString);
             connection.Open();
@@ -515,6 +672,7 @@ namespace QSOCollector.Data
 
         public Dictionary<int, string> GetAdif(QsoExportFilters exportFilters)
         {
+            log.Verbose("Getting ADIF data from database with filters: {exportFilters}", exportFilters);
             using var connection = new SqliteConnection(connectionString);
             connection.Open();
             using var command = connection.CreateCommand();
@@ -531,6 +689,7 @@ namespace QSOCollector.Data
 
         public void SetQSOsExported(List<int> keys, string folder, string fileName, QsoExportFilters filter, bool isConfirmed)
         {
+            log.Information("Marking QSOs as exported in database. Folder: {folder}, File Name: {fileName}, QSO count: {qsoCount}", folder, fileName, keys.Count);
             if (keys.Count == 0)
             {
                 return;
@@ -601,12 +760,7 @@ namespace QSOCollector.Data
         public List<string> GetExportHours()
         {
             log.Debug("Loading export scheduler hours from database");
-            using var connection = new SqliteConnection(connectionString);
-            connection.Open();
-            using var command = connection.CreateCommand();
-            command.CommandText = getExportSchedulerHoursSql;
-            using var reader = command.ExecuteReader();
-            return GetSimpleData<string>(reader, "hour");
+            return GetData(getExportSchedulerHoursSql, reader => MapField<string>(reader, "hour"));
         }
 
         public void SaveExportHours(List<string> hours)
@@ -640,12 +794,8 @@ namespace QSOCollector.Data
         public DateTime GetLatestExportTaskTime()
         {
             log.Verbose("Get latest export task timestamp");
-            using var connection = new SqliteConnection(connectionString);
-            connection.Open();
-            using var command = connection.CreateCommand();
-            command.CommandText = "select max(start_time) max_start_time from adif_export where is_auto = true";
-            using var reader = command.ExecuteReader();
-            return GetSimpleData<DateTime>(reader, "max_start_time")[0];
+            string sql = "select max(start_time) max_start_time from adif_export where is_auto = true";
+            return GetData(sql, reader => MapField<DateTime>(reader, "max_start_time"))[0];
         }
 
         private static void AddAdifSqlCommandTextAndParams(SqliteCommand command, QsoExportFilters exportFilters)
@@ -787,83 +937,41 @@ namespace QSOCollector.Data
             }
         }
 
-        private static List<T> GetData<T>(SqliteDataReader reader)
-        {
-            List<T> results = [];
-            while (reader.Read())
-            {
-                Type type = typeof(T);
-                T? item = (T?)Activator.CreateInstance(type);
-                if (item == null)
-                {
-                    continue;
-                }
-                foreach (PropertyInfo prop in type.GetProperties())
-                {
-                    object value = reader[prop.Name];
-                    if (value is DBNull) continue;
-                    var propType = prop.PropertyType;
-                    propType = Nullable.GetUnderlyingType(propType) ?? propType;
-                    prop.SetValue(item, Convert.ChangeType(value, propType));
-                }
-                results.Add(item);
-            }
-            return results;
-        }
-
-        private static List<T> GetSimpleData<T>(SqliteDataReader reader, string fieldName)
-        {
-            List<T> results = [];
-            while (reader.Read())
-            {
-                Type type = typeof(T);
-                type = Nullable.GetUnderlyingType(type) ?? type;
-                object value = reader[fieldName];
-                if (value == DBNull.Value) { 
-                    results.Add(default!);
-                    continue;
-                }
-                T? item = (T?) (value == DBNull.Value ? null : Convert.ChangeType(value, type));
-                results.Add(item);
-            }
-            return results;
-        }
-
         public List<Dictionary<string, object?>> SearchQsosByCall(string callPattern, string? modeGroup = null, string? band = null, int maxResults = 200)
         {
             log.Debug("Searching QSOs by call pattern: {pattern}, modeGroup: {modeGroup}, band: {band}", callPattern, modeGroup, band);
             var results = new List<Dictionary<string, object?>>();
+            List<SqliteParameter> parameters = [];
+            var sb = new StringBuilder();
+            sb.Append("SELECT call, qso_time, mode_group, mode, band, freq, operator, source_ip_address ");
+            sb.Append("FROM qsodata ");
+            sb.Append("WHERE call LIKE @callPattern ");
+            sb.Append("AND is_temporary = false ");
+
+            parameters.Add(new SqliteParameter("@callPattern", callPattern));
+            if (!string.IsNullOrEmpty(modeGroup))
+            {
+                sb.Append("AND mode_group = @modeGroup ");
+                parameters.Add(new SqliteParameter("@modeGroup", modeGroup));
+            }
+
+            if (!string.IsNullOrEmpty(band))
+            {
+                sb.Append("AND band = @band ");
+                parameters.Add(new SqliteParameter("@band", band));
+            }
+
+            sb.Append("ORDER BY qso_time DESC ");
+            sb.Append($"LIMIT {maxResults}");
+            string sql = sb.ToString();
 
             try
             {
                 using var connection = new SqliteConnection(connectionString);
                 connection.Open();
                 using var command = connection.CreateCommand();
-
-                var sb = new StringBuilder();
-                sb.Append("SELECT call, qso_time, mode_group, mode, band, freq, operator, source_ip_address ");
-                sb.Append("FROM qsodata ");
-                sb.Append("WHERE call LIKE @callPattern ");
-                sb.Append("AND is_temporary = false ");
-
-                command.Parameters.Add(new SqliteParameter("@callPattern", callPattern));
-
-                if (!string.IsNullOrEmpty(modeGroup))
-                {
-                    sb.Append("AND mode_group = @modeGroup ");
-                    command.Parameters.Add(new SqliteParameter("@modeGroup", modeGroup));
-                }
-
-                if (!string.IsNullOrEmpty(band))
-                {
-                    sb.Append("AND band = @band ");
-                    command.Parameters.Add(new SqliteParameter("@band", band));
-                }
-
-                sb.Append("ORDER BY qso_time DESC ");
-                sb.Append($"LIMIT {maxResults}");
-
-                command.CommandText = sb.ToString();
+                command.CommandText = sql;
+                command.Parameters.AddRange(parameters);
 
                 using var reader = command.ExecuteReader();
                 while (reader.Read())
@@ -894,55 +1002,98 @@ namespace QSOCollector.Data
         public List<string> GetDistinctModeGroups()
         {
             log.Debug("Getting distinct mode groups");
-            var modeGroups = new List<string>();
-
-            try
-            {
-                using var connection = new SqliteConnection(connectionString);
-                connection.Open();
-                using var command = connection.CreateCommand();
-                command.CommandText = "SELECT DISTINCT mode_group FROM qsodata WHERE is_temporary = false AND mode_group IS NOT NULL ORDER BY mode_group";
-
-                using var reader = command.ExecuteReader();
-                while (reader.Read())
-                {
-                    modeGroups.Add(reader.GetString(0));
-                }
-            }
-            catch (SqliteException ex)
-            {
-                log.Error(ex, "Error getting distinct mode groups");
-                throw;
-            }
-
-            return modeGroups;
+            string sqlQuery = "SELECT DISTINCT mode_group FROM qsodata WHERE is_temporary = false AND mode_group IS NOT NULL ORDER BY mode_group";
+            return GetData(sqlQuery, reader => MapField<string>(reader, "mode_group"));
         }
 
         public List<string> GetDistinctBands()
         {
             log.Debug("Getting distinct bands");
-            var bands = new List<string>();
+            string sqlQuery = "SELECT DISTINCT band FROM qsodata WHERE is_temporary = false AND band IS NOT NULL ORDER BY band";
+            return GetData(sqlQuery, reader => MapField<string>(reader, "band"));
+        }
 
-            try
+        private void EnrichSatRule(SatRule rule) {
+            if (rule.BandTxId.HasValue)
             {
-                using var connection = new SqliteConnection(connectionString);
-                connection.Open();
-                using var command = connection.CreateCommand();
-                command.CommandText = "SELECT DISTINCT band FROM qsodata WHERE is_temporary = false AND band IS NOT NULL ORDER BY band";
+                rule.BandTx = GetBand(rule.BandTxId.Value);
+            }
+            if (rule.BandRxId.HasValue)
+            {
+                rule.BandRx = GetBand(rule.BandRxId.Value);
+            }
+        }
 
-                using var reader = command.ExecuteReader();
-                while (reader.Read())
+        private List<T> GetData<T>(string sqlQuery, Func<SqliteDataReader, T> mapRecord, List<SqliteParameter>? queryParams = null)
+        {
+            using var connection = new SqliteConnection(connectionString);
+            connection.Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = sqlQuery;
+            if (queryParams != null)
+            {
+                foreach (var param in queryParams)
                 {
-                    bands.Add(reader.GetString(0));
+                    command.Parameters.Add(param);
                 }
             }
-            catch (SqliteException ex)
+            using var reader = command.ExecuteReader();
+            var results = new List<T>();
+            while (reader.Read())
             {
-                log.Error(ex, "Error getting distinct bands");
-                throw;
+                results.Add(mapRecord(reader));
             }
+            return results;
+        }
 
-            return bands;
+
+        private static T MapField<T>(SqliteDataReader reader, string fieldName)
+        {
+            Type type = typeof(T);
+            type = Nullable.GetUnderlyingType(type) ?? type;
+            object value = reader[fieldName];
+            if (value == DBNull.Value)
+            {
+                return default!;
+            }
+            T? item = (T?)(value == DBNull.Value ? null : Convert.ChangeType(value, type));
+            return item ?? default!;
+        }
+
+        private T Map<T>(SqliteDataReader reader, bool skipUnknown = false)
+        {
+                Type type = typeof(T);
+                T? item = (T?)Activator.CreateInstance(type);
+                if (item == null)
+                {
+                    return default!;
+                }
+                foreach (PropertyInfo prop in type.GetProperties())
+                {
+                    object? value = null;
+                    try
+                    {
+                        value = reader[prop.Name];
+                    }
+                    catch (ArgumentOutOfRangeException ex)
+                    {
+                        if (!skipUnknown)
+                        {
+                            throw new Exception($"Error mapping property '{prop.Name}' of type '{type.Name}'", ex);
+                        }
+                        else
+                        {
+                            log.Debug(ex, "Skipping unknown property '{propName}' of type '{typeName}'", prop.Name, type.Name);
+                            continue;
+                        }
+                    }
+
+                    if (value is DBNull) continue;
+                    var propType = prop.PropertyType;
+                    propType = Nullable.GetUnderlyingType(propType) ?? propType;
+                    prop.SetValue(item, Convert.ChangeType(value, propType));
+                }
+            return item;
         }
     }
 }

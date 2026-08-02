@@ -10,7 +10,7 @@
 	<ApplicationIcon>compass_icon_185893.ico</ApplicationIcon>
 	<ApplicationHighDpiMode>SystemAware</ApplicationHighDpiMode>
 	<ForceDesignerDpiUnaware>true</ForceDesignerDpiUnaware>
-	<Version>1.6.3</Version>
+	<Version>1.7.0</Version>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -20,8 +20,8 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
 	  <DebugType>portable</DebugType>
 	  <ProduceReferenceAssembly>true</ProduceReferenceAssembly>
-	  <AssemblyVersion>1.6.3</AssemblyVersion>
-	  <AssemblyInformationalVersion>1.6.3</AssemblyInformationalVersion>
+	  <AssemblyVersion>1.7.0</AssemblyVersion>
+	  <AssemblyInformationalVersion>1.7.0</AssemblyInformationalVersion>
 	  <GenerateAssemblyFileVersionAttribute>false</GenerateAssemblyFileVersionAttribute>
 	  <Deterministic>true</Deterministic>
 	  <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
@@ -47,8 +47,9 @@
 	</ItemGroup>
 	
 	<ItemGroup>
-    <EmbeddedResource Include="Migrations\002_adifImportTable.sql" />
-    <EmbeddedResource Include="Migrations\001_adifExportTable.sql" />
+	<EmbeddedResource Include="Migrations\017_createTables-for-sat_rules.sql" />
+	<EmbeddedResource Include="Migrations\016_update-mode-group-for-digu.sql" />
+	<EmbeddedResource Include="Migrations\015_create-index-on-call-column.sql" />
     <EmbeddedResource Include="Migrations\014_add-replaced-culumn-to-qsodataTables.sql" />
     <EmbeddedResource Include="Migrations\013_createPremiumCallsignTable.sql" />
     <EmbeddedResource Include="Migrations\012_add-culumn-to-adifExportTable.sql" />
@@ -61,6 +62,8 @@
     <EmbeddedResource Include="Migrations\005_createListenersTable.sql" />
     <EmbeddedResource Include="Migrations\004_createSettingsTable.sql" />
     <EmbeddedResource Include="Migrations\003_createServerQsoTable.sql" />
+	<EmbeddedResource Include="Migrations\002_adifImportTable.sql" />
+	<EmbeddedResource Include="Migrations\001_adifExportTable.sql" />
 	<EmbeddedResource Include="README.md">
 	  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 	</EmbeddedResource>

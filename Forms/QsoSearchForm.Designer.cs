@@ -28,6 +28,9 @@ namespace QSOCollector.Forms
         /// </summary>
         private void InitializeComponent()
         {
+            DataGridViewCellStyle dataGridViewCellStyle1 = new DataGridViewCellStyle();
+            DataGridViewCellStyle dataGridViewCellStyle2 = new DataGridViewCellStyle();
+            DataGridViewCellStyle dataGridViewCellStyle3 = new DataGridViewCellStyle();
             searchGroupBox = new GroupBox();
             searchButton = new Button();
             callSearchTextBox = new TextBox();
@@ -160,11 +163,35 @@ namespace QSOCollector.Forms
             qsoSearchDataGridView.AllowUserToResizeColumns = false;
             qsoSearchDataGridView.AllowUserToResizeRows = false;
             qsoSearchDataGridView.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            dataGridViewCellStyle1.Alignment = DataGridViewContentAlignment.MiddleLeft;
+            dataGridViewCellStyle1.BackColor = SystemColors.Window;
+            dataGridViewCellStyle1.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            dataGridViewCellStyle1.ForeColor = SystemColors.WindowText;
+            dataGridViewCellStyle1.SelectionBackColor = Color.LightGray;
+            dataGridViewCellStyle1.SelectionForeColor = SystemColors.WindowText;
+            dataGridViewCellStyle1.WrapMode = DataGridViewTriState.True;
+            qsoSearchDataGridView.ColumnHeadersDefaultCellStyle = dataGridViewCellStyle1;
             qsoSearchDataGridView.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
+            dataGridViewCellStyle2.Alignment = DataGridViewContentAlignment.MiddleLeft;
+            dataGridViewCellStyle2.BackColor = SystemColors.Window;
+            dataGridViewCellStyle2.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            dataGridViewCellStyle2.ForeColor = SystemColors.WindowText;
+            dataGridViewCellStyle2.SelectionBackColor = Color.LightGray;
+            dataGridViewCellStyle2.SelectionForeColor = SystemColors.WindowText;
+            dataGridViewCellStyle2.WrapMode = DataGridViewTriState.False;
+            qsoSearchDataGridView.DefaultCellStyle = dataGridViewCellStyle2;
             qsoSearchDataGridView.Location = new Point(12, 85);
             qsoSearchDataGridView.Margin = new Padding(3, 2, 3, 2);
             qsoSearchDataGridView.Name = "qsoSearchDataGridView";
             qsoSearchDataGridView.ReadOnly = true;
+            dataGridViewCellStyle3.Alignment = DataGridViewContentAlignment.MiddleLeft;
+            dataGridViewCellStyle3.BackColor = SystemColors.Window;
+            dataGridViewCellStyle3.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            dataGridViewCellStyle3.ForeColor = SystemColors.WindowText;
+            dataGridViewCellStyle3.SelectionBackColor = Color.LightGray;
+            dataGridViewCellStyle3.SelectionForeColor = SystemColors.WindowText;
+            dataGridViewCellStyle3.WrapMode = DataGridViewTriState.True;
+            qsoSearchDataGridView.RowHeadersDefaultCellStyle = dataGridViewCellStyle3;
             qsoSearchDataGridView.RowHeadersVisible = false;
             qsoSearchDataGridView.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
             qsoSearchDataGridView.Size = new Size(773, 480);

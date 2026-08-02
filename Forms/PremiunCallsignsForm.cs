@@ -1,6 +1,5 @@
-﻿using Castle.Core.Resource;
-using FileHelpers;
-using Microsoft.VisualBasic.FileIO;
+﻿using FileHelpers;
+using Microsoft.Data.Sqlite;
 using QSOCollector.Data;
 using QSOCollector.Models;
 using QSOCollector.Root;
@@ -46,18 +45,18 @@ namespace QSOCollector.Forms
                 dataAdapter.Fill(dataTable);
                 premiumCallsignsBindingSource.DataSource = dataTable;
             }
-            catch (SQLiteException ex)
+            catch (SqliteException ex)
             {
                 MessageBox.Show($"Can't retrieve data from DB: {ex.Message}");
             }
         }
 
-        private void premiumCallsignsDataGridView_EditingControlShowing(object sender, DataGridViewEditingControlShowingEventArgs e)
+        private void PremiumCallsignsDataGridView_EditingControlShowing(object sender, DataGridViewEditingControlShowingEventArgs e)
         {
-            e.Control.KeyPress += new KeyPressEventHandler(premiumCallsignsDataGridView_KeyPress);
+            e.Control.KeyPress += new KeyPressEventHandler(PremiumCallsignsDataGridView_KeyPress);
         }
 
-        private void premiumCallsignsDataGridView_KeyPress(object sender, KeyPressEventArgs e)
+        private void PremiumCallsignsDataGridView_KeyPress(object sender, KeyPressEventArgs e)
         {
             int currentColumnIndex = premiumCallsignsDataGridView.CurrentCell.ColumnIndex;
 
@@ -92,7 +91,7 @@ namespace QSOCollector.Forms
             }
         }
 
-        private void premiumCallsignsDataGridView_RowValidating(object sender, DataGridViewCellCancelEventArgs data)
+        private void PremiumCallsignsDataGridView_RowValidating(object sender, DataGridViewCellCancelEventArgs data)
         {
             DataGridViewRow row = premiumCallsignsDataGridView.Rows[data.RowIndex];
             // skip checking new row
@@ -117,17 +116,16 @@ namespace QSOCollector.Forms
             }
         }
 
-        private void searchTextBox_TextChanged(object sender, EventArgs e)
+        private void SearchTextBox_TextChanged(object sender, EventArgs e)
         {
             dataTable.DefaultView.RowFilter = $"callsign LIKE '%{searchTextBox.Text}%' OR club LIKE '%{searchTextBox.Text}%' OR comment LIKE '%{searchTextBox.Text}%'";
         }
 
-        private void deleteSelectedRowsButton_Click(object sender, EventArgs e)
+        private void DeleteSelectedRowsButton_Click(object sender, EventArgs e)
         {
-            List<DataGridViewRow> rowsToDelete = premiumCallsignsDataGridView.SelectedRows
+            List<DataGridViewRow> rowsToDelete = [.. premiumCallsignsDataGridView.SelectedRows
                 .OfType<DataGridViewRow>()
-                .Where(r => !r.IsNewRow)
-                .ToList();
+                .Where(r => !r.IsNewRow)];
 
             if (rowsToDelete.Count == 0)
             {
@@ -140,7 +138,7 @@ namespace QSOCollector.Forms
             saveButton.Enabled = true;
         }
 
-        private void cancelEditButton_Click(object sender, EventArgs e)
+        private void CancelEditButton_Click(object sender, EventArgs e)
         {
             if (saveButton.Enabled)
             {
@@ -150,10 +148,11 @@ namespace QSOCollector.Forms
                     return;
                 }
             }
+            this.DialogResult = DialogResult.Cancel;
             this.Close();
         }
 
-        private void premiumCallsignsDataGridView_CellValidating(object sender, DataGridViewCellValidatingEventArgs e)
+        private void PremiumCallsignsDataGridView_CellValidating(object sender, DataGridViewCellValidatingEventArgs e)
         {
             DataGridViewRow currentRow = premiumCallsignsDataGridView.Rows[e.RowIndex];
             DataGridViewCell currentCell = currentRow.Cells[e.ColumnIndex];
@@ -164,18 +163,18 @@ namespace QSOCollector.Forms
             premiumCallsignsDataGridView.EndEdit();
         }
 
-        private void premiumCallsignsDataGridView_CellBeginEdit(object sender, DataGridViewCellCancelEventArgs e)
+        private void PremiumCallsignsDataGridView_CellBeginEdit(object sender, DataGridViewCellCancelEventArgs e)
         {
             cancelEditButton.Text = "Cancel";
             saveButton.Enabled = true;
         }
 
-        private void premiumCallsignsDataGridView_DefaultValuesNeeded(object sender, DataGridViewRowEventArgs e)
+        private void PremiumCallsignsDataGridView_DefaultValuesNeeded(object sender, DataGridViewRowEventArgs e)
         {
             e.Row.Cells["club"].Value = "N/A";
         }
 
-        private void saveButton_Click(object sender, EventArgs e)
+        private void SaveButton_Click(object sender, EventArgs e)
         {
             // Validate rows before saving
             foreach (DataGridViewRow row in premiumCallsignsDataGridView.Rows)
@@ -198,7 +197,7 @@ namespace QSOCollector.Forms
             saveButton.Enabled = false;
         }
 
-        private void uploadPremiumCallsignsButton_Click(object sender, EventArgs e)
+        private void UploadPremiumCallsignsButton_Click(object sender, EventArgs e)
         {
             using OpenFileDialog openFileDialog = new();
             openFileDialog.InitialDirectory = Program.configFolder;

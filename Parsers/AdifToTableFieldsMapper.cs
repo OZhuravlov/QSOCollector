@@ -1,5 +1,6 @@
 using QSOCollector.Models;
 using System.Text.RegularExpressions;
+using System.Text;
 
 namespace QSOCollector.Parsers
 {
@@ -7,6 +8,7 @@ namespace QSOCollector.Parsers
     {
         public static readonly string endOfRecord = "<EOR>";
         private static readonly string endOfHeader = "<EOH>";
+        private static readonly List<string> nonRecordTags = ["PROGRAMID", "ORIG_FORMAT", "SOURCE_IP_ADDRESS", "EXTERNAL_ID", "SOURCE_NAME", "ORIG_QSODATA", "ADIF_QSODATA", "IS_REPLACE", "QSO_TIME", "MODE_GROUP"];
 
         // Parses an ADIF message and returns a list of key-value maps for each QSO record
         public static List<Dictionary<string, string>> Map(
@@ -17,16 +19,14 @@ namespace QSOCollector.Parsers
             )
         {
             progressUpdater?.Invoke("Parsing ADIF...prepare");
-            if (qsoMessage.OriginalFormat == "ADIF")
-            {
-                qsoMessage.AdifQsoData = qsoMessage.OriginalQsoData;
-            }
-
             var result = new List<Dictionary<string, string>>();
-            var headerMap = new Dictionary<string, string>
+
+            var headerMap = GetHeader(qsoMessage.AdifQsoData);
+            headerMap["ORIG_FORMAT"] = qsoMessage.OriginalFormat;
+            if (qsoMessage.ProgramId != null)
             {
-                ["ORIG_FORMAT"] = qsoMessage.OriginalFormat,
-            };
+                headerMap["PROGRAMID"] = qsoMessage.ProgramId;
+            }
 
             if (sourceIpAddress != null)
             {
@@ -44,22 +44,7 @@ namespace QSOCollector.Parsers
                 headerMap[sourceKey] = qsoMessage.Source;
             }
 
-            string adifMessage = qsoMessage.AdifQsoData.Replace("\r\n", string.Empty).Replace("\n", string.Empty).Trim();
-
-            // Find header section (if any)
-            int headerEnd = adifMessage.IndexOf(endOfHeader, StringComparison.OrdinalIgnoreCase);
-            string headerSection = headerEnd >= 0 ? adifMessage[..(headerEnd + 5)] : string.Empty;
-            string qsoSection = headerEnd >= 0 ? adifMessage[(headerEnd + 5)..] : adifMessage;
-            qsoSection = qsoSection[..qsoSection.LastIndexOf(@endOfRecord, StringComparison.OrdinalIgnoreCase)];
-
-            // Parse header tags (ignore marker-tags)
-            if (!string.IsNullOrEmpty(headerSection))
-            {
-                foreach (var kv in ParseTags(headerSection))
-                {
-                    headerMap[kv.Key] = kv.Value;
-                }
-            }
+            string qsoSection = ExtractAdifBody(qsoMessage.AdifQsoData);
 
             // Split QSO records by <EOR>
             var qsoRecords = Regex.Split(qsoSection, @endOfRecord, RegexOptions.IgnoreCase);
@@ -75,7 +60,7 @@ namespace QSOCollector.Parsers
                 }
                 string adifRecord = record + endOfRecord;
                 qsoMap["IS_REPLACE"] = qsoMessage.Replace.ToString();
-                qsoMap["ORIG_QSODATA"] = qsoMessage.OriginalFormat == "ADIF" ? adifRecord : qsoMessage.OriginalQsoData;
+                qsoMap["ORIG_QSODATA"] = qsoMessage.OriginalQsoData;
                 qsoMap["ADIF_QSODATA"] = adifRecord;
                 qsoMap["QSO_TIME"] = GetQsoTime(qsoMap).ToString("yyyy-MM-dd HH:mm:ss");
                 if (!qsoMap.ContainsKey("STATION_CALLSIGN") && qsoMap.TryGetValue("OPERATOR", out string? qsoOperator))
@@ -89,6 +74,68 @@ namespace QSOCollector.Parsers
             }
             progressUpdater?.Invoke($"Parsed{result.Count} of {qsoRecords.Length}");
             return result;
+        }
+
+        public static Dictionary<string, string> GetHeader(string adifQsoData)
+        {
+            var headerMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            string adifMessage = adifQsoData.Replace("\r\n", string.Empty).Replace("\n", string.Empty).Trim();
+
+            // Find header section (if any)
+            int headerEnd = adifMessage.IndexOf(endOfHeader, StringComparison.OrdinalIgnoreCase);
+            string? headerSection = headerEnd >= 0 ? adifMessage[..(headerEnd + 5)] : string.Empty;
+            // Parse header tags (ignore marker-tags)
+            if (!string.IsNullOrEmpty(headerSection))
+            {
+                foreach (var kv in ParseTags(headerSection))
+                {
+                    headerMap[kv.Key] = kv.Value;
+                }
+            }
+            return headerMap;
+        }
+
+        public static string ExtractAdifBody(string adifQsoData)
+        {
+            string adifMessage = adifQsoData.Replace("\r\n", string.Empty).Replace("\n", string.Empty).Trim();
+
+            // Find header section (if any)
+            int headerEnd = adifMessage.IndexOf(endOfHeader, StringComparison.OrdinalIgnoreCase);
+            string qsoSection = headerEnd >= 0 ? adifMessage[(headerEnd + 5)..] : adifMessage;
+            qsoSection = qsoSection[..qsoSection.LastIndexOf(@endOfRecord, StringComparison.OrdinalIgnoreCase)];
+            return qsoSection;
+        }
+
+        public static string Map(List<Dictionary<string, string?>> qsoRecords, bool withHeader = false)
+        {
+            if (qsoRecords == null || qsoRecords.Count == 0) {
+                throw new ArgumentNullException("Qso record must not be null or empty");
+            }
+
+            StringBuilder adif = new();
+            if (withHeader && qsoRecords[0].TryGetValue("PROGRAMID", out string? programId))
+            {
+                adif.Append($"<PROGRAMID:{programId.Length}>{programId}");
+            }
+            adif.Append(endOfHeader);
+            qsoRecords.ForEach(qsoRecord =>
+            {
+                foreach (var (key, value) in qsoRecord)
+                {
+                    if (nonRecordTags.Contains(key))
+                    {
+                        continue;
+                    }
+
+                    if (string.IsNullOrWhiteSpace(value))
+                    {
+                        continue;
+                    }
+                    adif.Append($"<{key}:{value.Length}>{value}");
+                }
+                adif.AppendLine(endOfRecord);
+            });
+            return adif.ToString();
         }
 
         // Helper: Parses only tags with a value length from a section

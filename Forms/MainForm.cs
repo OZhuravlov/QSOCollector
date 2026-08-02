@@ -1,3 +1,4 @@
+using Microsoft.Data.Sqlite;
 using Microsoft.Win32;
 using QSOCollector.Data;
 using QSOCollector.Forms;
@@ -9,6 +10,7 @@ using QSOCollector.Service;
 using Serilog; 
 using System.Collections.Concurrent;
 using System.Data;
+using System.Data.Common;
 using System.Data.SQLite;
 using System.Diagnostics;
 using System.Globalization;
@@ -25,6 +27,7 @@ namespace QSOCollector
         private readonly IDbRepository dbRepository;
         private readonly StartupParams startupParams;
         private readonly DataTable serverQsoAmountDataTable;
+        private readonly DataTable sharedRuleDataTable;
         private CancellationTokenSource clientCancellationTokenSource = new();
         private CancellationTokenSource serverCancellationTokenSource = new();
         private ClientProgressUpdater? clientProgressUpdater;
@@ -33,12 +36,18 @@ namespace QSOCollector
         private bool isLocalClientRunning = false;
         private bool isLocalServerRunning = false;
         private AutoExportTaskService autoExportTaskService;
+        private readonly Dictionary<int, UdpClientListener> udpClientListeners = [];
 
         public QsoCollectorForm(StartupParams startupParams, IDbRepository dbRepository)
         {
             this.dbRepository = dbRepository ?? throw new ArgumentNullException(nameof(dbRepository));
 
             serverQsoAmountDataTable = new()
+            {
+                Locale = CultureInfo.InvariantCulture
+            };
+
+            sharedRuleDataTable = new()
             {
                 Locale = CultureInfo.InvariantCulture
             };
@@ -73,18 +82,18 @@ namespace QSOCollector
             // Debug logging
             log.Information("PopulateAboutTab called");
             log.Information("aboutInfoLabel visible: {visible}, enabled: {enabled}", aboutInfoLabel.Visible, aboutInfoLabel.Enabled);
-            log.Information("openManualButton visible: {visible}, enabled: {enabled}, location: {location}, size: {size}, parent: {parent}", 
+            log.Information("openManualButton visible: {visible}, enabled: {enabled}, location: {location}, size: {size}, parent: {parent}",
                 openManualButton.Visible, openManualButton.Enabled, openManualButton.Location, openManualButton.Size, openManualButton.Parent?.Name ?? "null");
             log.Information("githubLinkLabel visible: {visible}, enabled: {enabled}", githubLinkLabel.Visible, githubLinkLabel.Enabled);
             log.Information("aboutTab has {count} controls", aboutTab.Controls.Count);
             foreach (Control control in aboutTab.Controls)
             {
-                log.Information("  Control: {name} ({type}) visible: {visible}, location: {location}, size: {size}", 
+                log.Information("  Control: {name} ({type}) visible: {visible}, location: {location}, size: {size}",
                     control.Name, control.GetType().Name, control.Visible, control.Location, control.Size);
             }
         }
 
-        private void openManualButton_Click(object sender, EventArgs e)
+        private void OpenManualButton_Click(object sender, EventArgs e)
         {
             try
             {
@@ -175,9 +184,17 @@ namespace QSOCollector
 
         private void AutoStartClient()
         {
+            if (!enableClientCheckBox.Checked && !startupParams.Force)
+            {
+                string message = "Cannot auto-start client automatically because Client is not enabled";
+                log.Error(message);
+                MessageBox.Show(message, "Cannot Start Client", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
             enableClientCheckBox.Enabled = true;
+            enableClientCheckBox.Checked = true;
             HandleClientCheckBoxChanged(enableClientCheckBox);
-            clientServerPortTextBox_TextChanged(clientServerPortTextBox, EventArgs.Empty);
+            ClientServerPortTextBox_TextChanged(clientServerPortTextBox, EventArgs.Empty);
             if (startClientButton.Enabled)
             {
                 mainTabControl.SelectedTab = clientTab;
@@ -196,7 +213,7 @@ namespace QSOCollector
             }
             else
             {
-                string message = "Cannot start client automatically because Client is not enabled";
+                string message = "Cannot start client automatically because Start Client button is not enabled";
                 log.Error(message);
                 MessageBox.Show(message, "Cannot Start Client", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
@@ -204,9 +221,17 @@ namespace QSOCollector
 
         private void AutoStartServer()
         {
+            if (!enableServerCheckBox.Checked && !startupParams.Force)
+            {
+                string message = "Cannot auto-start server automatically because Server is not enabled";
+                log.Error(message);
+                MessageBox.Show(message, "Cannot Start Server", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
             enableServerCheckBox.Enabled = true;
+            enableServerCheckBox.Checked = true;
             HandleServerCheckBoxChanged(enableServerCheckBox);
-            serverPortTextBox_TextChanged(serverPortTextBox, EventArgs.Empty);
+            ServerPortTextBox_TextChanged(serverPortTextBox, EventArgs.Empty);
             if (startServerButton.Enabled)
             {
                 string logMessage = "Auto-starting server...";
@@ -220,7 +245,7 @@ namespace QSOCollector
                 }
                 catch (Exception ex)
                 {
-                    log.Error(ex, "Error while auto-staring Server");
+                    log.Error(ex, "Error while auto-starting Server");
                     throw;
                 }
 
@@ -228,7 +253,7 @@ namespace QSOCollector
             }
             else
             {
-                string message = "Cannot start server automatically because Server is not enabled";
+                string message = "Cannot start server automatically because Start Server button is not enabled";
                 log.Error(message);
                 MessageBox.Show(message, "Cannot Start Server", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
@@ -304,7 +329,7 @@ namespace QSOCollector
                 ButtonStyleHandler.Update(startServerButton, false);
                 serverPortTextBox.Focus();
             }
-            autoStartCheckbox_CheckedChanged(autoStartCheckbox, EventArgs.Empty);
+            AutoStartCheckbox_CheckedChanged(autoStartCheckbox, EventArgs.Empty);
         }
 
         private static void HandleCheckBoxChanged(CheckBox checkbox)
@@ -433,7 +458,7 @@ namespace QSOCollector
                 serverQsoAmountDataTable.PrimaryKey = [serverQsoAmountDataTable.Columns["QsoAmountMode"]];
                 serverQsoAmountsBindingSource.DataSource = serverQsoAmountDataTable;
             }
-            catch (SQLiteException ex)
+            catch (SqliteException ex)
             {
                 string message = "Can't retrieve data from DB";
                 log.Error(ex, message);
@@ -447,7 +472,7 @@ namespace QSOCollector
             serverQsoAmountDataTable?.Rows.Clear();
         }
 
-        private void serverPortTextBox_TextChanged(object sender, EventArgs e)
+        private void ServerPortTextBox_TextChanged(object sender, EventArgs e)
         {
             if (string.IsNullOrEmpty(serverPortTextBox.Text))
             {
@@ -502,7 +527,7 @@ namespace QSOCollector
                 ButtonStyleHandler.Update(startClientButton, false);
                 clientServerNameIpTextBox.Focus();
             }
-            autoStartCheckbox_CheckedChanged(autoStartCheckbox, EventArgs.Empty);
+            AutoStartCheckbox_CheckedChanged(autoStartCheckbox, EventArgs.Empty);
         }
 
         private void StartClientButton_Click(object sender, EventArgs e)
@@ -520,7 +545,7 @@ namespace QSOCollector
             }
 
             string serverIp = clientServerNameIpTextBox.Text;
-            int serverPort = Int32.Parse(clientServerPortTextBox.Text);
+            int serverPort = int.Parse(clientServerPortTextBox.Text);
             BlockingCollection<QsoMessage> qsoMessageQueue = [];
             clientProgressUpdater = new(
                 clientQsoReceivedCountLabel,
@@ -600,10 +625,12 @@ namespace QSOCollector
 
         private void StartClientUdpListeners(List<ListenerConfig> listeners, Dictionary<int, UdpClient> forwardUdpClients, BlockingCollection<QsoMessage> qsoMessageQueue, ClientProgressUpdater clientProgressUpdater)
         {
+            udpClientListeners.Clear();
+            var bands = dbRepository.GetBands();
             foreach (var listenerConfig in listeners)
             {
                 UdpClient? forwardUdpClient = listenerConfig.ForwardPort == null ? null : forwardUdpClients[listenerConfig.ForwardPort.Value];
-                StartClientUdpListener(listenerConfig, forwardUdpClient, qsoMessageQueue, clientProgressUpdater);
+                StartClientUdpListener(listenerConfig, forwardUdpClient, qsoMessageQueue, bands, clientProgressUpdater);
             }
         }
 
@@ -614,11 +641,17 @@ namespace QSOCollector
             Task.Run(() => handler.Start());
         }
 
-        private void StartClientUdpListener(ListenerConfig listenerConfig, UdpClient? forwardUdpClient, BlockingCollection<QsoMessage> qsoMessageQueue, ClientProgressUpdater clientProgressUpdater)
+        private void StartClientUdpListener(ListenerConfig listenerConfig, 
+            UdpClient? forwardUdpClient, 
+            BlockingCollection<QsoMessage> qsoMessageQueue, 
+            List<Band> bands,
+            ClientProgressUpdater clientProgressUpdater)
         {
+            List<SatRule> satRules = dbRepository.GetListenerSatRules(listenerConfig.Id);
             CancellationTokenSource clientUdpListenerCancellationTokenSource = CreateLinkedClientCancellationTokenSource();
-            var listener = new UdpClientListener(listenerConfig, forwardUdpClient, qsoMessageQueue, clientProgressUpdater, clientUdpListenerCancellationTokenSource);
-            Task.Run(() => listener.Start());
+            var udpClientListener = new UdpClientListener(listenerConfig, satRules, bands, forwardUdpClient, qsoMessageQueue, clientProgressUpdater, clientUdpListenerCancellationTokenSource);
+            udpClientListeners.Add(listenerConfig.Id, udpClientListener);
+            Task.Run(() => udpClientListener.Start());
         }
 
         private CancellationTokenSource CreateLinkedClientCancellationTokenSource()
@@ -644,6 +677,7 @@ namespace QSOCollector
         private void StopClient()
         {
             clientCancellationTokenSource = RenewToken(clientCancellationTokenSource);
+            udpClientListeners.Clear();
             clientProgressUpdater = null;
             enableClientCheckBox.Enabled = true;
             clientServerNameIpTextBox.Enabled = true;
@@ -658,13 +692,13 @@ namespace QSOCollector
             isLocalClientRunning = false;
         }
 
-        private void clientServerNameIpTextBox_TextChanged(object sender, EventArgs e)
+        private void ClientServerNameIpTextBox_TextChanged(object sender, EventArgs e)
         {
             HandleClientServerChanged();
             SaveSettingsToDB();
         }
 
-        private void clientServerPortTextBox_TextChanged(object sender, EventArgs e)
+        private void ClientServerPortTextBox_TextChanged(object sender, EventArgs e)
         {
             HandleClientServerChanged();
             SaveSettingsToDB();
@@ -719,26 +753,33 @@ namespace QSOCollector
 
         private void ListenersConfigButton_Click(object sender, EventArgs e)
         {
-            new ListenersForm(dbRepository, isLocalClientRunning).ShowDialog(this);
-        }
+            ListenersForm listenersForm = new(dbRepository, isLocalClientRunning);
+            listenersForm.ShowDialog(this);
 
-        private void clientLogDetailsCheckBox_CheckedChanged(object sender, EventArgs e)
-        {
-            if (clientProgressUpdater != null)
-            {
-                clientProgressUpdater.IsDebug = clientLogDetailsCheckBox.Checked;
+            if (udpClientListeners.Count == 0) {
+                return;
+            }
+
+            foreach (var (listenerId, config) in listenersForm.listnerRuleChanged) {
+                udpClientListeners.TryGetValue(listenerId, out var udpClientListener);
+                if (udpClientListener != null) {
+                    var satRules = dbRepository.GetListenerSatRules(listenerId);
+                    udpClientListener.UpdateSatRules(satRules);
+                }
             }
         }
 
-        private void serverShowLogDetailsCheckBox_CheckedChanged(object sender, EventArgs e)
+        private void ClientLogDetailsCheckBox_CheckedChanged(object sender, EventArgs e)
         {
-            if (serverProgressUpdater != null)
-            {
-                serverProgressUpdater.IsDebug = serverShowLogDetailsCheckBox.Checked;
-            }
+            clientProgressUpdater?.IsDebug = clientLogDetailsCheckBox.Checked;
         }
 
-        private void qsoExportButton_Click(object sender, EventArgs e)
+        private void ServerShowLogDetailsCheckBox_CheckedChanged(object sender, EventArgs e)
+        {
+            serverProgressUpdater?.IsDebug = serverShowLogDetailsCheckBox.Checked;
+        }
+
+        private void QsoExportButton_Click(object sender, EventArgs e)
         {
             List<QsoExportExpectedAmounts> expectedAmounts = dbRepository.GetQsoAmountsForExport();
             if (expectedAmounts.Count == 0)
@@ -754,7 +795,7 @@ namespace QSOCollector
             }
         }
 
-        private void qsoImportButton_Click(object sender, EventArgs e)
+        private void QsoImportButton_Click(object sender, EventArgs e)
         {
             new QsoImportForm(dbRepository).ShowDialog(this);
             if (enableServerCheckBox.Checked)
@@ -764,11 +805,11 @@ namespace QSOCollector
             }
         }
 
-        private void serverQsoAmountsDataGridView_RowsAdded(object sender, DataGridViewRowsAddedEventArgs e)
+        private void ServerQsoAmountsDataGridView_RowsAdded(object sender, DataGridViewRowsAddedEventArgs e)
         {
             HandleExportEnabled();
         }
-        private void serverQsoAmountsDataGridView_RowsRemoved(object sender, DataGridViewRowsRemovedEventArgs e)
+        private void ServerQsoAmountsDataGridView_RowsRemoved(object sender, DataGridViewRowsRemovedEventArgs e)
         {
             HandleExportEnabled();
         }
@@ -791,7 +832,7 @@ namespace QSOCollector
             this.ShowInTaskbar = true;
         }
 
-        private void trayNotifyIcon_DoubleClick(object sender, EventArgs e)
+        private void TrayNotifyIcon_DoubleClick(object sender, EventArgs e)
         {
             this.WindowState = FormWindowState.Normal;
             if (this.WindowState == FormWindowState.Normal)
@@ -816,7 +857,7 @@ namespace QSOCollector
             trayNotifyIcon.Visible = true;
         }
 
-        private void autoStartCheckbox_CheckedChanged(object sender, EventArgs e)
+        private void AutoStartCheckbox_CheckedChanged(object sender, EventArgs e)
         {
             RegistryKey? rk = Registry.CurrentUser.OpenSubKey("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", true);
             enableDebugWhenAutoStartCheckbox.Enabled = autoStartCheckbox.Checked;
@@ -865,7 +906,7 @@ namespace QSOCollector
             return sb.ToString();
         }
 
-        private void resetClientButton_Click(object sender, EventArgs e)
+        private void ResetClientButton_Click(object sender, EventArgs e)
         {
             log.Debug("Resetting Client Form called");
             SaveSettingsToDB();
@@ -874,23 +915,29 @@ namespace QSOCollector
             HandleClientServerChanged();
         }
 
-        private void enableDebugWhenAutoStartCheckbox_CheckedChanged(object sender, EventArgs e)
+        private void EnableDebugWhenAutoStartCheckbox_CheckedChanged(object sender, EventArgs e)
         {
-            autoStartCheckbox_CheckedChanged(autoStartCheckbox, EventArgs.Empty);
+            AutoStartCheckbox_CheckedChanged(autoStartCheckbox, EventArgs.Empty);
         }
 
-        private void resetServerButton_Click(object sender, EventArgs e)
+        private void ResetServerButton_Click(object sender, EventArgs e)
         {
             log.Debug("Resetting Server Form called");
             new ServerCleanupForm(dbRepository).ShowDialog(this);
             HandleServerCheckBoxChanged(enableServerCheckBox);
         }
 
-        private void mainTabControl_SelectedIndexChanged(object sender, EventArgs e)
+        private void MainTabControl_SelectedIndexChanged(object sender, EventArgs e)
         {
             var tabControl = sender as TabControl;
             TabPage? selectedTab = tabControl?.SelectedTab;
             if (selectedTab == null) return;
+
+            if (selectedTab.Name == "sharedTab")
+            {
+                PopulateSharedRuleDataGridView();
+                return;
+            }
 
             TextBox? textBox = selectedTab.Name switch
             {
@@ -899,14 +946,41 @@ namespace QSOCollector
                 _ => null
             };
 
-            if (textBox != null)
+            if (textBox == null) return;
+
+            textBox.SelectionStart = textBox.Text.Length;
+            textBox.ScrollToCaret();
+        }
+
+        private void PopulateSharedRuleDataGridView()
+        {
+            string selectCommand = "select sr.id, sr.name, sr.orig_freq_mhz_from, sr.orig_freq_mhz_to, sr.propagation_mode, sr.sat_name, sr.sat_mode, bt.name band, br.name band_rx, sr.freq_mhz_rx, sr.freq_mhz, sr.is_active from sat_rules sr left join bands bt on sr.band_id = bt.id left join bands br on sr.band_rx_id = br.id";
+            try
             {
-                textBox.SelectionStart = textBox.Text.Length;
-                textBox.ScrollToCaret();
+                log.Debug("Populate Rule table");
+                sharedRuleDataAdapter = new SQLiteDataAdapter(selectCommand, dbRepository.GetConnectionString());
+                SQLiteCommandBuilder commandBuilder = new(sharedRuleDataAdapter);
+                ClearDataForSharedRuleDataGridView();
+                sharedRuleDataAdapter.Fill(sharedRuleDataTable);
+                sharedRuleDataTable.PrimaryKey = [sharedRuleDataTable.Columns["id"]];
+                sharedRuleDataGridView.DataSource = sharedRuleBindingSource;
+                sharedRuleBindingSource.DataSource = sharedRuleDataTable;
+            }
+            catch (SqliteException ex)
+            {
+                string message = "Can't retrieve data from DB";
+                log.Error(ex, message);
+                MessageBox.Show($"{message}: {ex.Message}");
             }
         }
 
-        private void qsoAutoExportButton_Click(object sender, EventArgs e)
+        private void ClearDataForSharedRuleDataGridView()
+        {
+            log.Verbose("Clearing Shared Rule table data");
+            sharedRuleDataTable?.Rows.Clear();
+        }
+
+        private void QsoAutoExportButton_Click(object sender, EventArgs e)
         {
             new QsoAutoExportForm(dbRepository).ShowDialog(this);
             StartAutoExportTask();
@@ -951,17 +1025,17 @@ namespace QSOCollector
             return new CancellationTokenSource();
         }
 
-        private void premiumCallsignsButton_Click(object sender, EventArgs e)
+        private void PremiumCallsignsButton_Click(object sender, EventArgs e)
         {
             new PremiunCallsignsForm(dbRepository).ShowDialog(this);
         }
 
-        private void qsoSearchButton_Click(object sender, EventArgs e)
+        private void QsoSearchButton_Click(object sender, EventArgs e)
         {
             new QsoSearchForm(dbRepository).ShowDialog(this);
         }
 
-        private void serverClientMonitoringButton_Click(object sender, EventArgs e)
+        private void ServerClientMonitoringButton_Click(object sender, EventArgs e)
         {
             if (tcpServer == null)
             {
@@ -972,7 +1046,7 @@ namespace QSOCollector
             new ServerClientMonitoringForm(tcpServer.GetClientsMonitoring()).ShowDialog(this);
         }
 
-        private void githubLinkLabel_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
+        private void GithubLinkLabel_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
             try
             {
@@ -988,6 +1062,122 @@ namespace QSOCollector
             {
                 log.Error(ex, "Failed to open GitHub link");
                 MessageBox.Show("Unable to open link: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void SharedRuleBands_Click(object sender, EventArgs e)
+        {
+            new BandManagerForm(dbRepository).ShowDialog(this);
+        }
+
+        private void SharedRuleDataGridView_SelectionChanged(object sender, EventArgs e)
+        {
+            if (sharedRuleDataGridView.SelectedRows.Count == 1)
+            {
+                sharedDeleteRuleButton.Enabled = true;
+                sharedEditRuleButton.Enabled = true;
+                sharedActivateDeactivateRuleButton.Enabled = true;
+                string text = ((bool)sharedRuleDataGridView.SelectedRows[0].Cells["isActive"].Value) ? "Deactivate" : "Activate";
+                sharedActivateDeactivateRuleButton.Text = text;
+                sharedRuleEditDeleteLabel.Visible = false;
+                return;
+            }
+
+            sharedDeleteRuleButton.Enabled = false;
+            sharedEditRuleButton.Enabled = false;
+            sharedActivateDeactivateRuleButton.Enabled = false;
+            sharedActivateDeactivateRuleButton.Text = "Activate/Deactivate";
+            sharedRuleEditDeleteLabel.Visible = true;
+        }
+
+        private void SharedEditRuleButton_Click(object sender, EventArgs e)
+        {
+            int ruleId = GetSelectedRuleId();
+            SatRule rule = dbRepository.GetSatRule(ruleId);
+
+            var ruleForm = new RuleForm(dbRepository, rule);
+            var result = ruleForm.ShowDialog(this);
+            if (result == DialogResult.OK)
+            {
+                if (ruleForm.ruleChanged)
+                {
+                    UpdateUdpListenerSatRulesByRuleId(ruleId);
+                }
+            }
+            PopulateSharedRuleDataGridView();
+        }
+
+        private void SharedCreateRuleButton_Click(object sender, EventArgs e)
+        {
+            new RuleForm(dbRepository, null).ShowDialog(this);
+            PopulateSharedRuleDataGridView();
+        }
+
+        private void SharedDeleteRuleButton_Click(object sender, EventArgs e)
+        {
+            int ruleId = GetSelectedRuleId();
+            try
+            {
+                dbRepository.DeleteSatRule(ruleId);
+            }
+            catch (SqliteException ex)
+            {
+                if (ex.SqliteExtendedErrorCode == IDbRepository.SQLITE_CONSTRAINT_FOREIGN_KEY)
+                {
+                    string message = "This Rule is assigned to Client Udp Listener and can't be deleted. Unassign it first.";
+                    log.Warning("This Rule is assigned to Client Udp Listener and can't be deleted. Unassign it first");
+                    MessageBox.Show(message, "Rule deletion not allowed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+                else
+                {
+                    log.Error(ex, "Failed to delete rule with ID {ruleId}", ruleId);
+                    MessageBox.Show($"Failed to delete rule: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+
+                }
+            }
+            PopulateSharedRuleDataGridView();
+        }
+
+        private void SharedActivateDeactivateRuleButton_Click(object sender, EventArgs e)
+        {
+            DataGridViewCell isActiveCell = sharedRuleDataGridView.SelectedRows[0].Cells["isActive"];
+            int ruleId = GetSelectedRuleId();
+            if (((bool)isActiveCell.Value))
+            {
+                dbRepository.DeactivateSatRule(ruleId);
+            }
+            else
+            {
+                dbRepository.ActivateSatRule(ruleId);
+            }
+            UpdateUdpListenerSatRulesByRuleId(ruleId);
+            PopulateSharedRuleDataGridView();
+        }
+
+        private int GetSelectedRuleId()
+        {
+            if (sharedRuleDataGridView.SelectedRows.Count == 1)
+            {
+                return (int)(long)sharedRuleDataGridView.SelectedRows[0].Cells["id"].Value;
+            }
+            else
+            {
+                throw new InvalidOperationException("No rule is selected or multiple rules are selected.");
+            }
+        }
+
+        private void UpdateUdpListenerSatRulesByRuleId(int ruleId)
+        {
+            foreach (var (listinerId, udpClientListener) in udpClientListeners)
+            {
+                var rules = dbRepository.GetListenerSatRules(listinerId);
+                bool impacted = rules.Any<SatRule>(rule => rule.Id == ruleId);
+                if (impacted)
+                {
+                    udpClientListener.UpdateSatRules(dbRepository.GetListenerSatRules(listinerId));
+                }
             }
         }
     }

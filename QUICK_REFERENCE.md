@@ -316,6 +316,134 @@ netstat -ano | findstr UDP
 
 ---
 
+## 🔄 Message Enrichment During Operation
+
+### What Happens to Each QSO?
+
+1. Logger sends QSO (N1MM or ADIF format)
+2. Client receives via UDP listener
+3. Format validation - Is it valid N1MM/ADIF?
+4. Enrichment - Apply satellite rules based on frequency
+5. Storage - Save enriched QSO to database
+6. Server transmission - Send enriched QSO to server
+7. Central storage - Server stores in SQLite database
+
+### Satellite Rules in Action
+
+#### Example 1: ISS Satellite Detection
+
+```
+QSO Input:
+  Callsign: W5XYZ
+  Frequency: 145.850 MHz
+  Band: AUTO-DETECTED as 2m
+  Mode: USB
+
+Enrichment Rules Applied:
+  ✓ Rule: "ISS Detection" matches frequency 145.800-145.900 MHz
+
+Enriched QSO (Stored in Database):
+  Callsign: W5XYZ
+  Frequency: 145.850 MHz
+  Band: 2m
+  Mode: USB
+  SATELLITE: ISS           ← Added by enrichment rule
+  SPECIAL_QSO: YES         ← Added by enrichment rule
+  UPLINK_MODE: J7F         ← Added by enrichment rule
+```
+
+**Result**: Every ISS pass automatically marked for tracking and reporting
+
+#### Example 2: Field Day Event
+
+```
+QSO Input:
+  Callsign: K4ABC
+  Frequency: 7.085 MHz
+  Band: 40m
+  Mode: CW
+
+Enrichment Rules Applied:
+  ✓ Rule: "Field Day 40m CW" matches frequency 7.040-7.125 MHz
+
+Enriched QSO:
+  Callsign: K4ABC
+  Frequency: 7.085 MHz
+  Band: 40m
+  Mode: CW
+  EVENT: FIELD_DAY        ← Added by enrichment
+  CATEGORY: 40M_CW        ← Added by enrichment
+  MULTIPLIER: YES          ← Added by enrichment
+```
+
+**Result**: FD QSOs automatically categorized for scoring
+
+#### Example 3: Regular QSO (No Enrichment)
+
+```
+QSO Input:
+  Callsign: N0CALL
+  Frequency: 14.285 MHz
+  Band: 20m
+  Mode: SSB
+
+Enrichment Rules Applied:
+  ✓ Frequency checked against all rules
+  ✗ No rule matches (14.285 MHz not in any rule range)
+
+Result:
+  QSO stored as-is (no extra fields added)
+  No enrichment applied
+```
+
+**Result**: Regular QSO stored with standard fields only
+
+### Monitoring Enrichment
+
+#### Enable Debug Logging to See Enrichment
+
+1. Click **"Client"** or **"Server"** tab
+2. Check **"Log details"** checkbox
+3. Watch log window for enrichment messages
+
+**Example Log Output**:
+```
+2024-02-15 14:32:45 [DEBUG] QSO received from W5XYZ at 145.850 MHz
+2024-02-15 14:32:46 [DEBUG] Rule "ISS Detection" applied to QSO message from N1MM
+2024-02-15 14:32:47 [DEBUG] Enriched QSO: SATELLITE=ISS, SPECIAL_QSO=YES
+2024-02-15 14:32:48 [DEBUG] QSO stored in database
+```
+
+#### Troubleshooting Enrichment
+
+**"My satellite QSO wasn't enriched"**
+- Check: Is frequency within rule range? (Use Server → Database → Satellite Rules to verify)
+- Check: Are rules active? (Server → Database → Rules tab, check "Active")
+- Check: Enable "Log details" to see enrichment attempts
+- Fix: Adjust frequency range in rule if needed
+
+**"Wrong enrichment applied"**
+- Check: Multiple rules can match one frequency
+- Fix: First matching rule is applied
+- Fix: Reorder rules or adjust frequency ranges
+
+**"Don't see enrichment in export"**
+- Verify: Rule was actually applied (check logs)
+- Verify: Export includes new QSOs (check export settings)
+- Verify: Extra fields are included in export format
+
+### Rule Configuration Quick Tips
+
+| Scenario | Frequency Range | Rule Name |
+|----------|---|---|
+| ISS Uplink | 145.800-145.900 MHz | ISS Detection |
+| ISS Downlink | 435.300-435.400 MHz | ISS Downlink |
+| Field Day 40m | 7.040-7.125 MHz | Field Day 40m |
+| Field Day 20m | 14.050-14.200 MHz | Field Day 20m |
+| EMCOMM | 146.520 MHz | Emergency |
+
+---
+
 ## 📄 File Locations Quick Ref
 
 | File | Location |

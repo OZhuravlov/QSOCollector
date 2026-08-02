@@ -32,6 +32,7 @@ namespace QSOCollector.Forms
         private void cancelButton_Click(object sender, EventArgs e)
         {
             log.Information("Server QSO data cleanup. User cancelled cleanup");
+            this.DialogResult = DialogResult.Cancel;
             Close();
         }
 
@@ -43,7 +44,7 @@ namespace QSOCollector.Forms
                 log.Warning("Server QSO data cleanup. User confirmed and start cleanup");
                 dbRepository.CleanupServerQsoData();
             }
-
+            this.DialogResult = DialogResult.OK;
             Close();
         }
     }

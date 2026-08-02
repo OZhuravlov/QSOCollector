@@ -318,12 +318,18 @@ namespace QSOCollector.Network.Server
             try
             {
                 log.Debug("Parsing QSO message from client {ClientIP}, source {Source}, format {Format}", clientIPAddress, qsoMessage.Source, qsoMessage.OriginalFormat);
-                qsoRecords = qsoMessage.OriginalFormat switch
+                if (!string.IsNullOrEmpty(qsoMessage.AdifQsoData))
                 {
-                    "ADIF" => AdifToTableFieldsMapper.Map(qsoMessage, sourceIpAddress: clientIPAddress),
-                    "N1MM" => N1mmContactInfoToTableFieldsMapper.Map(qsoMessage, clientIPAddress),
-                    _ => throw new ArgumentException($"Unsupported message format: {qsoMessage.OriginalFormat}"),
-                };
+                    qsoRecords = AdifToTableFieldsMapper.Map(qsoMessage, externalId: qsoMessage.ExternalId, sourceIpAddress: clientIPAddress);
+                }
+                else {
+                    qsoRecords = qsoMessage.OriginalFormat switch
+                    {
+                        "ADIF" => AdifToTableFieldsMapper.Map(qsoMessage, externalId: qsoMessage.ExternalId, sourceIpAddress: clientIPAddress),
+                        "N1MM" => N1mmContactInfoToTableFieldsMapper.Map(qsoMessage, clientIPAddress),
+                        _ => throw new ArgumentException($"Unsupported message format: {qsoMessage.OriginalFormat}"),
+                    };
+                }
 
                 if (serverProgressUpdater.IsDebug)
                 {

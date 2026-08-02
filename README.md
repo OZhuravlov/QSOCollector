@@ -12,6 +12,7 @@
 - **[Installation](#installation)** - Setup & configuration
 - **[Quick Start Guide](#quick-start-guide)** - Get running in 5 minutes
 - **[Features](#features)** - Detailed feature list
+- **[Message Processing Pipeline](#message-processing-pipeline)** - How QSOs are enriched
 - **[How to Use](#how-to-use)** - Server & Client operation
 - **[QSO Search](#qso-search-feature)** - Search & filter QSOs
 - **[Troubleshooting](#troubleshooting)** - Common issues & solutions
@@ -201,6 +202,178 @@ dotnet --version
 │                                                            │
 └─────────────────────────────────────────────────────────┘
 ```
+
+---
+
+## 🔧 Message Processing Pipeline
+
+### How QSO Messages Are Enriched
+
+QSOCollector employs a sophisticated multi-stage message enrichment pipeline to transform logger output (N1MM or ADIF format) into standardized, validated QSO records.
+
+### Processing Stages
+
+Every QSO passes through a 4-stage enrichment pipeline:
+
+#### Stage 1: Format Validation ✓
+Verifies incoming messages are valid N1MM or ADIF format
+- **ADIF validation**: Checks for `<EOR>` (end of record) and `<QSO_DATE:` tags
+- **N1MM validation**: Checks for `<contactinfo>` or `<contactreplace>` tags
+- **Benefit**: Rejects malformed data early, prevents database corruption
+
+#### Stage 2: Format-Specific Deserialization 📦
+Parses message to extract QSO fields
+- **N1MM path**: Deserializes XML contact information
+- **ADIF path**: Extracts headers (metadata) and body records (QSO data)
+- **Captures**: Frequency, band, mode, callsign, operator, timestamp, etc.
+
+#### Stage 3: Satellite Rule Application 🛰️
+Applies frequency-based enrichment rules
+- **Frequency matching**: Compares QSO frequency against configured rule ranges
+- **Band lookup**: Automatically derives band name from frequency if needed
+- **Rule application**: First matching rule is applied; extra fields injected
+- **Change tracking**: Indicates whether original message was modified
+
+#### Stage 4: Output Generation 📤
+Returns enriched data ready for storage
+- **For N1MM**: Re-serializes modified XML with enrichment
+- **For ADIF**: Returns enriched record dictionary
+- **Result**: QSO stored with extra fields and metadata
+
+### Processing Flow Diagram
+
+```
+Incoming QSO Message (N1MM or ADIF)
+            ↓
+  [Format Validation] → Reject if invalid format
+            ↓
+  [Format Deserialization]
+   /                      \
+N1MM XML Parse        ADIF Parse
+   |                      |
+Extract:              Extract:
+- ContactInfo         - Header fields
+- Band/Frequency      - Body records
+- Mode/Callsign       - Frequency/Band
+   |                      |
+    \                    /
+              ↓
+  [Satellite Rule Matching]
+  - Match on frequency ranges
+  - Lookup band from frequency if needed
+  - Apply enrichment rules
+              ↓
+  [Enriched QSO Record]
+   - Extra fields added
+   - Metadata updated
+   - Ready for storage
+```
+
+### Satellite Rule Engine
+
+Satellite Rules enable automatic QSO classification based on frequency:
+
+| Scenario | Rule Config | Result |
+|----------|------------|--------|
+| **ISS Operations** | Frequency 145.800-145.900 MHz | QSO auto-tagged: `SATELLITE:ISS` |
+| **Field Day** | Frequency 7.040-7.300 MHz | QSO auto-tagged: `EVENT:FIELD_DAY` |
+| **EMCOMM** | Frequency 146.520 MHz | QSO auto-tagged: `SPECIAL:EMCOMM` |
+
+**Example Flow**:
+```
+QSO arrives at 145.850 MHz from W5XYZ
+    ↓
+Frequency validated (within 2m band range)
+    ↓
+Checked against "ISS Detection" rule (145.800-145.900 MHz)
+    ↓
+Rule matches! ✓
+    ↓
+Extra fields automatically injected:
+  SATELLITE: ISS
+  SPECIAL_QSO: YES
+    ↓
+Enriched QSO stored in database
+```
+
+### Band-Frequency Automatic Mapping
+
+When band name is missing, system automatically derives it from frequency:
+
+| Band | Frequency Range | Usage |
+|------|-----------------|-------|
+| **80m** | 3.5 - 3.9 MHz | Low frequency, long range |
+| **40m** | 7.0 - 7.3 MHz | Popular DX band |
+| **20m** | 14.0 - 14.35 MHz | Daytime DX |
+| **15m** | 21.0 - 21.45 MHz | Sporadic E, sunspot dependent |
+| **10m** | 28.0 - 29.7 MHz | Contest, EME |
+| **2m** | 144 - 148 MHz | VHF, satellite, FM |
+| **70cm** | 420 - 450 MHz | UHF, satellite, local |
+
+**Example**:
+- Input: QSO frequency 145.850 MHz (no band specified)
+- Lookup: 145.850 falls in 2m band (144-148 MHz)
+- Output: `BAND:2m` automatically assigned
+
+### Enrichment Examples
+
+#### Example 1: ISS Satellite QSO (N1MM Logger)
+```
+Original N1MM Message:
+<contactinfo>
+  <call>W5XYZ</call>
+  <band>2m</band>
+  <txfreq>145850</txfreq>
+  <rxfreq>145800</rxfreq>
+  <mode>USB</mode>
+  ...
+</contactinfo>
+
+Processing:
+  ✓ Format valid (N1MM XML)
+  ✓ Frequency extracted: 145.850 MHz
+  ✓ Rule matched: "ISS Detection" (145.800-145.900 range)
+  ✓ Enrichment applied
+
+Enriched Result (stored in ADIF):
+  CALL: W5XYZ
+  BAND: 2m
+  FREQ: 145.850
+  FREQ_RX: 145.800
+  MODE: USB
+  SATELLITE: ISS           ← Added by enrichment
+  SPECIAL_QSO: YES         ← Added by enrichment
+```
+
+#### Example 2: Regular QSO (ADIF Format)
+```
+Original ADIF:
+<QSO_DATE:8>20240215
+<TIME_ON:4>1430
+<CALL:6>N0CALL
+<BAND:3>40m
+<MODE:3>SSB
+<FREQ:7>7.200
+<EOR>
+
+Processing:
+  ✓ Format valid (ADIF with <EOR> and <QSO_DATE>)
+  ✓ Frequency extracted: 7.200 MHz
+  ✓ No rule matched (frequency not in special ranges)
+  ✓ No enrichment needed
+
+Result (stored in database):
+  [All original fields preserved]
+  [No extra fields added]
+```
+
+### Why Message Processing Matters
+
+1. **Data Integrity**: Validation prevents corrupt data from entering database
+2. **Automatic Classification**: Rules enable satellite tracking without operator intervention
+3. **Format Flexibility**: N1MM and ADIF both supported via same pipeline
+4. **Auditability**: All processing logged for debugging and compliance
+5. **Extensibility**: New rules can be added without code changes
 
 ---
 
@@ -433,6 +606,64 @@ A: Search is limited to 200 results. Archive old QSOs or split into multiple dat
 **Q: Why is database growing large?**  
 A: Each QSO record takes ~200 bytes. 10,000 QSOs ≈ 2 MB. Database files can be archived/backed up.
 
+### Message Enrichment & Satellite Rules
+
+**Q: What is "message enrichment"?**  
+A: Enrichment is automatic enhancement of QSO data based on frequency-matching rules. When a QSO arrives, the system checks its frequency against configured rules and automatically adds metadata (e.g., satellite name, special event flags). This happens transparently—no operator intervention needed.
+
+**Q: Why do some QSOs look different in the export?**  
+A: If satellite rules are configured and matched your QSO, enrichment fields will have been added. For example, a QSO on ISS frequency will automatically include "SATELLITE:ISS" field after processing. This is intentional and useful for logging and analytics.
+
+**Q: Can I control what enrichment is applied?**  
+A: Yes! Configure satellite rules in Server → Database → Satellite Rules. Each rule specifies a frequency range and the fields to inject when matched. You can enable, disable, or modify rules at any time.
+
+**Q: How do N1MM and ADIF messages differ after enrichment?**  
+A: The enrichment process is identical for both formats:
+- **Input**: N1MM XML or ADIF text
+- **Processing**: Same validation and rule matching
+- **Output**: Enriched data in same format as input
+N1MM clients receive enriched XML back; ADIF data is stored with enriched fields.
+
+**Q: What if my satellite rule isn't applying?**  
+A: Check these:
+1. Is the rule enabled? (Check "Active" checkbox)
+2. Is the QSO frequency within the rule range? (e.g., ISS rule 145.800-145.900 MHz)
+3. Are there multiple overlapping rules? (First match wins; reorder if needed)
+4. Enable "Log details" to see if rule matched or why it didn't
+
+**Q: Can I see enrichment happening in real-time?**  
+A: Yes! Enable "Log details" on the Server or Client tab. Watch the log window for messages like "Rule XYZ applied to QSO message from N1MM". This shows enrichment in action.
+
+**Q: Do satellite rules affect performance?**  
+A: No. Rule matching is extremely fast (<1ms per QSO). Even with complex rules and large frequency ranges, there's no noticeable impact on collection rates. The bottleneck is disk I/O, not enrichment processing.
+
+**Q: What happens during format conversion (N1MM→ADIF)?**  
+A: Every N1MM QSO is automatically converted to ADIF format for consistent storage:
+- Fields are mapped to ADIF equivalents (e.g., txfreq→FREQ)
+- Frequency is converted to MHz (e.g., 7200 kHz→7.2 MHz)
+- Timestamp is formatted as YYYYMMDD/HHMM
+- All original data is preserved
+- Extra enrichment fields are added
+See "N1MM-to-ADIF Format Conversion" section in UserManual for details.
+
+**Q: Is my data safe during format conversion?**  
+A: Absolutely! The conversion process includes:
+- Validation checks before conversion
+- Precision to 0.001 MHz for frequencies
+- No data truncation or loss
+- All original fields mapped to ADIF equivalents
+- Reverse conversion allows N1MM loggers to display enriched data
+No QSOs are lost or corrupted during conversion.
+
+**Q: Why was my QSO rejected during enrichment?**  
+A: QSOs can be rejected for format reasons:
+- **ADIF**: Missing `<EOR>` or `<QSO_DATE:` tags
+- **N1MM**: Missing `<contactinfo>` tags
+Check your logger's export format settings. Enable "Log details" to see specific rejection reasons.
+
+**Q: Can I export enriched data?**  
+A: Yes! When you export QSOs, any enrichment fields applied by satellite rules are included in the export. This enables external systems to see your satellite/event classifications.
+
 ---
 
 ## 🔧 Troubleshooting
@@ -488,6 +719,115 @@ A: Each QSO record takes ~200 bytes. 10,000 QSOs ≈ 2 MB. Database files can be
 2. Close and reopen application
 3. Check disk space availability
 4. Backup `%AppData%\QSOCollector\qso.db` and try repair tool
+
+### 🔍 QSO Validation & Rejection
+
+QSOCollector validates every incoming QSO message to ensure format compliance and data quality.
+
+#### Why QSOs Are Rejected
+
+**ADIF Format Validation**
+
+QSOs in ADIF format are rejected if:
+- ❌ Missing `<EOR>` tag (end of record marker)
+- ❌ Missing `<QSO_DATE:...>` field (required date field)
+- ❌ Invalid or malformed XML structure
+- ❌ Corrupted or truncated message
+
+**Example of Valid ADIF QSO:**
+```
+<QSO_DATE:8>20240215
+<TIME_ON:4>1430
+<CALL:6>W5XYZ
+<BAND:3>40m
+<MODE:3>SSB
+<FREQ:7>7.200
+<EOR>
+```
+
+**N1MM Format Validation**
+
+QSOs in N1MM format are rejected if:
+- ❌ Missing `<contactinfo>` or `<contactreplace>` tags
+- ❌ Invalid or malformed XML structure
+- ❌ Missing required fields (band, frequency, mode, callsign)
+- ❌ Corrupted or truncated message
+
+**Example of Valid N1MM Contact:**
+```xml
+<contactinfo>
+  <call>W5XYZ</call>
+  <band>40m</band>
+  <mode>SSB</mode>
+  <txfreq>7200</txfreq>
+  <rxfreq>7200</rxfreq>
+  ...
+</contactinfo>
+```
+
+#### How to Fix Validation Errors
+
+**Step 1: Check Logger Settings**
+1. Verify N1MM or ADIF export format is enabled in your logger
+2. Confirm correct listener port is configured
+3. Ensure logger QSO broadcasting is active
+
+**Step 2: Enable Debug Logging**
+1. Click **"Client"** tab
+2. Check **"Log details"** checkbox
+3. Watch the Client/Server log window
+4. Look for "Invalid format" or validation error messages
+
+**Step 3: Verify Message Format**
+1. Export a test QSO from your logger manually
+2. Save to file
+3. Check file for required tags:
+   - ADIF: Must contain `<EOR>` and `<QSO_DATE:`
+   - N1MM: Must contain `<contactinfo>` tags
+4. Compare against examples above
+
+**Step 4: Test Logger Directly**
+1. Open PowerShell
+2. Enable UDP listener on client PC
+3. Send test QSO from logger
+4. Check if listener receives anything
+5. Review logs for specific error messages
+
+#### Common Validation Error Messages
+
+| Error Message | Format | Cause | Fix |
+|---|---|---|---|
+| "Invalid ADIF: Missing <EOR>" | ADIF | Record not terminated | Check logger ADIF export format |
+| "Invalid ADIF: No QSO_DATE" | ADIF | Missing date field | Verify QSO has date/time |
+| "Invalid N1MM: Missing tags" | N1MM | Missing contactinfo | Check N1MM export settings |
+| "Invalid XML structure" | Both | Corrupted format | Restart logger, try again |
+| "Unknown format" | Either | Not N1MM or ADIF | Check Format setting in Listeners |
+
+#### Enrichment-Related Validation
+
+Some QSOs pass format validation but fail during enrichment:
+
+**Issue**: Frequency or Band Missing
+- **Cause**: QSO lacks both frequency and band information
+- **Impact**: Cannot apply satellite rules; QSO may be skipped
+- **Fix**: Ensure logger captures frequency or band for every QSO
+
+**Issue**: Invalid Frequency Range
+- **Cause**: Frequency value outside valid range for band
+- **Impact**: Rule matching may fail
+- **Fix**: Verify frequency and band match (e.g., 7.2 MHz should be 40m, not 2m)
+
+#### Troubleshooting Checklist
+
+- [ ] Enable "Log details" checkbox to see validation errors
+- [ ] Check listener Format matches logger output (N1MM vs. ADIF)
+- [ ] Verify listener port matches logger configuration
+- [ ] Test logger separately to confirm it's broadcasting
+- [ ] Export test QSO from logger and check format
+- [ ] Look for error messages in Client/Server log
+- [ ] Try restarting logger and QSOCollector
+- [ ] Check Windows Firewall allows UDP on listener port
+- [ ] Verify logger is set to broadcast (not just logging locally)
 
 ---
 

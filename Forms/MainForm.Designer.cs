@@ -31,9 +31,13 @@ namespace QSOCollector
         private void InitializeComponent()
         {
             components = new System.ComponentModel.Container();
-            DataGridViewCellStyle dataGridViewCellStyle16 = new DataGridViewCellStyle();
-            DataGridViewCellStyle dataGridViewCellStyle17 = new DataGridViewCellStyle();
-            DataGridViewCellStyle dataGridViewCellStyle18 = new DataGridViewCellStyle();
+            DataGridViewCellStyle dataGridViewCellStyle1 = new DataGridViewCellStyle();
+            DataGridViewCellStyle dataGridViewCellStyle2 = new DataGridViewCellStyle();
+            DataGridViewCellStyle dataGridViewCellStyle3 = new DataGridViewCellStyle();
+            DataGridViewCellStyle dataGridViewCellStyle4 = new DataGridViewCellStyle();
+            DataGridViewCellStyle dataGridViewCellStyle5 = new DataGridViewCellStyle();
+            DataGridViewCellStyle dataGridViewCellStyle6 = new DataGridViewCellStyle();
+            DataGridViewCellStyle dataGridViewCellStyle7 = new DataGridViewCellStyle();
             mainTabControl = new TabControl();
             clientTab = new TabPage();
             clientServerCheckedAtLabel = new Label();
@@ -90,6 +94,15 @@ namespace QSOCollector
             serverPortTextBox = new TextBox();
             serverPortLabel = new Label();
             enableServerCheckBox = new CheckBox();
+            sharedTab = new TabPage();
+            sharedRuleGroupBox = new GroupBox();
+            sharedActivateDeactivateRuleButton = new Button();
+            sharedRuleEditDeleteLabel = new Label();
+            sharedRuleBands = new Button();
+            sharedDeleteRuleButton = new Button();
+            sharedEditRuleButton = new Button();
+            sharedCreateRuleButton = new Button();
+            sharedRuleDataGridView = new DataGridView();
             aboutTab = new TabPage();
             tradeMarkLabel = new Label();
             githubLabel = new Label();
@@ -102,6 +115,20 @@ namespace QSOCollector
             autoStartCheckbox = new CheckBox();
             enableDebugWhenAutoStartCheckbox = new CheckBox();
             myToolTip = new ToolTip(components);
+            imageList1 = new ImageList(components);
+            imageList2 = new ImageList(components);
+            id = new DataGridViewTextBoxColumn();
+            ruleName = new DataGridViewTextBoxColumn();
+            origFreqFrom = new DataGridViewTextBoxColumn();
+            origFreqTo = new DataGridViewTextBoxColumn();
+            propagationMode = new DataGridViewTextBoxColumn();
+            satName = new DataGridViewTextBoxColumn();
+            satMode = new DataGridViewTextBoxColumn();
+            targetBand = new DataGridViewTextBoxColumn();
+            targetBandRx = new DataGridViewTextBoxColumn();
+            targetFreqRx = new DataGridViewTextBoxColumn();
+            targetfreqTx = new DataGridViewTextBoxColumn();
+            isActive = new DataGridViewCheckBoxColumn();
             mainTabControl.SuspendLayout();
             clientTab.SuspendLayout();
             processingGroupBox.SuspendLayout();
@@ -109,6 +136,9 @@ namespace QSOCollector
             serverTab.SuspendLayout();
             serverProcessingGroupBox.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)serverQsoAmountsDataGridView).BeginInit();
+            sharedTab.SuspendLayout();
+            sharedRuleGroupBox.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)sharedRuleDataGridView).BeginInit();
             aboutTab.SuspendLayout();
             SuspendLayout();
             // 
@@ -116,6 +146,7 @@ namespace QSOCollector
             // 
             mainTabControl.Controls.Add(clientTab);
             mainTabControl.Controls.Add(serverTab);
+            mainTabControl.Controls.Add(sharedTab);
             mainTabControl.Controls.Add(aboutTab);
             mainTabControl.Font = new Font("Segoe UI", 10.2F, FontStyle.Bold, GraphicsUnit.Point, 0);
             mainTabControl.Location = new Point(-1, 0);
@@ -124,7 +155,7 @@ namespace QSOCollector
             mainTabControl.SelectedIndex = 0;
             mainTabControl.Size = new Size(690, 519);
             mainTabControl.TabIndex = 0;
-            mainTabControl.SelectedIndexChanged += mainTabControl_SelectedIndexChanged;
+            mainTabControl.SelectedIndexChanged += MainTabControl_SelectedIndexChanged;
             // 
             // clientTab
             // 
@@ -235,7 +266,7 @@ namespace QSOCollector
             resetClientButton.Text = "Reset Client";
             myToolTip.SetToolTip(resetClientButton, "This helps to reset Client partially or completely");
             resetClientButton.UseVisualStyleBackColor = false;
-            resetClientButton.Click += resetClientButton_Click;
+            resetClientButton.Click += ResetClientButton_Click;
             // 
             // clientLogDetailsCheckBox
             // 
@@ -247,7 +278,7 @@ namespace QSOCollector
             clientLogDetailsCheckBox.TabIndex = 20;
             myToolTip.SetToolTip(clientLogDetailsCheckBox, "Enables more detailed log");
             clientLogDetailsCheckBox.UseVisualStyleBackColor = true;
-            clientLogDetailsCheckBox.CheckedChanged += clientLogDetailsCheckBox_CheckedChanged;
+            clientLogDetailsCheckBox.CheckedChanged += ClientLogDetailsCheckBox_CheckedChanged;
             // 
             // clientLogDetailsLabel
             // 
@@ -420,7 +451,7 @@ namespace QSOCollector
             // 
             // listenersConfigButton
             // 
-            listenersConfigButton.BackColor = Color.SlateGray;
+            listenersConfigButton.BackColor = Color.DarkCyan;
             listenersConfigButton.FlatStyle = FlatStyle.Popup;
             listenersConfigButton.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
             listenersConfigButton.Location = new Point(8, 38);
@@ -467,7 +498,7 @@ namespace QSOCollector
             clientServerPortTextBox.Size = new Size(62, 23);
             clientServerPortTextBox.TabIndex = 2;
             myToolTip.SetToolTip(clientServerPortTextBox, "Port used by QSO Collector Server");
-            clientServerPortTextBox.TextChanged += clientServerPortTextBox_TextChanged;
+            clientServerPortTextBox.TextChanged += ClientServerPortTextBox_TextChanged;
             clientServerPortTextBox.KeyPress += PortTextBox_KeyPress;
             // 
             // clientServerNameIpTextBox
@@ -479,7 +510,7 @@ namespace QSOCollector
             clientServerNameIpTextBox.Size = new Size(112, 23);
             clientServerNameIpTextBox.TabIndex = 1;
             myToolTip.SetToolTip(clientServerNameIpTextBox, "IP Address of PC where QSO Collector is running in Server mode");
-            clientServerNameIpTextBox.TextChanged += clientServerNameIpTextBox_TextChanged;
+            clientServerNameIpTextBox.TextChanged += ClientServerNameIpTextBox_TextChanged;
             // 
             // clientServerNameLabel
             // 
@@ -574,7 +605,7 @@ namespace QSOCollector
             qsoSearchButton.TabIndex = 16;
             qsoSearchButton.Text = "Search QSOs";
             qsoSearchButton.UseVisualStyleBackColor = false;
-            qsoSearchButton.Click += qsoSearchButton_Click;
+            qsoSearchButton.Click += QsoSearchButton_Click;
             // 
             // premiumCallsignsButton
             // 
@@ -591,7 +622,7 @@ namespace QSOCollector
             premiumCallsignsButton.Text = "Premium Callsigns";
             premiumCallsignsButton.UseVisualStyleBackColor = false;
             premiumCallsignsButton.Visible = false;
-            premiumCallsignsButton.Click += premiumCallsignsButton_Click;
+            premiumCallsignsButton.Click += PremiumCallsignsButton_Click;
             // 
             // qsoAutoExportButton
             // 
@@ -607,7 +638,7 @@ namespace QSOCollector
             qsoAutoExportButton.TabIndex = 14;
             qsoAutoExportButton.Text = "Setup Automatic Export to ADIF";
             qsoAutoExportButton.UseVisualStyleBackColor = false;
-            qsoAutoExportButton.Click += qsoAutoExportButton_Click;
+            qsoAutoExportButton.Click += QsoAutoExportButton_Click;
             // 
             // serverClientMonitoringButton
             // 
@@ -623,7 +654,7 @@ namespace QSOCollector
             serverClientMonitoringButton.TabIndex = 13;
             serverClientMonitoringButton.Text = "Client Monitoring";
             serverClientMonitoringButton.UseVisualStyleBackColor = false;
-            serverClientMonitoringButton.Click += serverClientMonitoringButton_Click;
+            serverClientMonitoringButton.Click += ServerClientMonitoringButton_Click;
             // 
             // resetServerButton
             // 
@@ -639,7 +670,7 @@ namespace QSOCollector
             resetServerButton.Text = "Reset Server";
             myToolTip.SetToolTip(resetServerButton, "This helps to reset Server completely. Use only before Expedition starts to delete previous dxpedition data or to remove  test data");
             resetServerButton.UseVisualStyleBackColor = false;
-            resetServerButton.Click += resetServerButton_Click;
+            resetServerButton.Click += ResetServerButton_Click;
             // 
             // serverShowLogDetailsCheckBox
             // 
@@ -652,7 +683,7 @@ namespace QSOCollector
             serverShowLogDetailsCheckBox.TabIndex = 8;
             serverShowLogDetailsCheckBox.Text = "Show Log details";
             serverShowLogDetailsCheckBox.UseVisualStyleBackColor = true;
-            serverShowLogDetailsCheckBox.CheckedChanged += serverShowLogDetailsCheckBox_CheckedChanged;
+            serverShowLogDetailsCheckBox.CheckedChanged += ServerShowLogDetailsCheckBox_CheckedChanged;
             // 
             // qsoImportButton
             // 
@@ -667,7 +698,7 @@ namespace QSOCollector
             qsoImportButton.TabIndex = 1;
             qsoImportButton.Text = "Import ADIF";
             qsoImportButton.UseVisualStyleBackColor = false;
-            qsoImportButton.Click += qsoImportButton_Click;
+            qsoImportButton.Click += QsoImportButton_Click;
             // 
             // serverProcessingGroupBox
             // 
@@ -690,38 +721,38 @@ namespace QSOCollector
             serverQsoAmountsDataGridView.AllowUserToResizeRows = false;
             serverQsoAmountsDataGridView.BackgroundColor = SystemColors.Control;
             serverQsoAmountsDataGridView.ClipboardCopyMode = DataGridViewClipboardCopyMode.EnableAlwaysIncludeHeaderText;
-            dataGridViewCellStyle16.Alignment = DataGridViewContentAlignment.MiddleCenter;
-            dataGridViewCellStyle16.BackColor = SystemColors.Control;
-            dataGridViewCellStyle16.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            dataGridViewCellStyle16.ForeColor = SystemColors.WindowText;
-            dataGridViewCellStyle16.SelectionBackColor = SystemColors.Highlight;
-            dataGridViewCellStyle16.SelectionForeColor = SystemColors.HighlightText;
-            dataGridViewCellStyle16.WrapMode = DataGridViewTriState.True;
-            serverQsoAmountsDataGridView.ColumnHeadersDefaultCellStyle = dataGridViewCellStyle16;
+            dataGridViewCellStyle1.Alignment = DataGridViewContentAlignment.MiddleCenter;
+            dataGridViewCellStyle1.BackColor = SystemColors.Window;
+            dataGridViewCellStyle1.Font = new Font("Segoe UI", 10.2F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            dataGridViewCellStyle1.ForeColor = SystemColors.WindowText;
+            dataGridViewCellStyle1.SelectionBackColor = Color.LightGray;
+            dataGridViewCellStyle1.SelectionForeColor = SystemColors.WindowText;
+            dataGridViewCellStyle1.WrapMode = DataGridViewTriState.True;
+            serverQsoAmountsDataGridView.ColumnHeadersDefaultCellStyle = dataGridViewCellStyle1;
             serverQsoAmountsDataGridView.ColumnHeadersHeight = 29;
             serverQsoAmountsDataGridView.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
             serverQsoAmountsDataGridView.Columns.AddRange(new DataGridViewColumn[] { qsoAmountMode, todayQsoAmount, totalQsoAmount, exportedQsoAmount, lastQsoTime, lastExportedQsoTime });
-            dataGridViewCellStyle17.Alignment = DataGridViewContentAlignment.MiddleCenter;
-            dataGridViewCellStyle17.BackColor = SystemColors.Window;
-            dataGridViewCellStyle17.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            dataGridViewCellStyle17.ForeColor = SystemColors.ControlText;
-            dataGridViewCellStyle17.SelectionBackColor = SystemColors.Highlight;
-            dataGridViewCellStyle17.SelectionForeColor = SystemColors.HighlightText;
-            dataGridViewCellStyle17.WrapMode = DataGridViewTriState.False;
-            serverQsoAmountsDataGridView.DefaultCellStyle = dataGridViewCellStyle17;
+            dataGridViewCellStyle2.Alignment = DataGridViewContentAlignment.MiddleCenter;
+            dataGridViewCellStyle2.BackColor = SystemColors.Window;
+            dataGridViewCellStyle2.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            dataGridViewCellStyle2.ForeColor = SystemColors.WindowText;
+            dataGridViewCellStyle2.SelectionBackColor = Color.LightGray;
+            dataGridViewCellStyle2.SelectionForeColor = SystemColors.WindowText;
+            dataGridViewCellStyle2.WrapMode = DataGridViewTriState.False;
+            serverQsoAmountsDataGridView.DefaultCellStyle = dataGridViewCellStyle2;
             serverQsoAmountsDataGridView.EditMode = DataGridViewEditMode.EditProgrammatically;
             serverQsoAmountsDataGridView.Location = new Point(3, 22);
             serverQsoAmountsDataGridView.Margin = new Padding(3, 2, 3, 2);
             serverQsoAmountsDataGridView.Name = "serverQsoAmountsDataGridView";
             serverQsoAmountsDataGridView.ReadOnly = true;
-            dataGridViewCellStyle18.Alignment = DataGridViewContentAlignment.MiddleCenter;
-            dataGridViewCellStyle18.BackColor = SystemColors.Control;
-            dataGridViewCellStyle18.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            dataGridViewCellStyle18.ForeColor = SystemColors.WindowText;
-            dataGridViewCellStyle18.SelectionBackColor = SystemColors.Highlight;
-            dataGridViewCellStyle18.SelectionForeColor = SystemColors.HighlightText;
-            dataGridViewCellStyle18.WrapMode = DataGridViewTriState.False;
-            serverQsoAmountsDataGridView.RowHeadersDefaultCellStyle = dataGridViewCellStyle18;
+            dataGridViewCellStyle3.Alignment = DataGridViewContentAlignment.MiddleCenter;
+            dataGridViewCellStyle3.BackColor = SystemColors.Window;
+            dataGridViewCellStyle3.Font = new Font("Segoe UI", 10.2F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            dataGridViewCellStyle3.ForeColor = SystemColors.WindowText;
+            dataGridViewCellStyle3.SelectionBackColor = Color.LightGray;
+            dataGridViewCellStyle3.SelectionForeColor = SystemColors.WindowText;
+            dataGridViewCellStyle3.WrapMode = DataGridViewTriState.False;
+            serverQsoAmountsDataGridView.RowHeadersDefaultCellStyle = dataGridViewCellStyle3;
             serverQsoAmountsDataGridView.RowHeadersWidth = 51;
             serverQsoAmountsDataGridView.RowHeadersWidthSizeMode = DataGridViewRowHeadersWidthSizeMode.DisableResizing;
             serverQsoAmountsDataGridView.RowTemplate.ReadOnly = true;
@@ -729,8 +760,8 @@ namespace QSOCollector
             serverQsoAmountsDataGridView.ShowEditingIcon = false;
             serverQsoAmountsDataGridView.Size = new Size(670, 148);
             serverQsoAmountsDataGridView.TabIndex = 7;
-            serverQsoAmountsDataGridView.RowsAdded += serverQsoAmountsDataGridView_RowsAdded;
-            serverQsoAmountsDataGridView.RowsRemoved += serverQsoAmountsDataGridView_RowsRemoved;
+            serverQsoAmountsDataGridView.RowsAdded += ServerQsoAmountsDataGridView_RowsAdded;
+            serverQsoAmountsDataGridView.RowsRemoved += ServerQsoAmountsDataGridView_RowsRemoved;
             // 
             // qsoAmountMode
             // 
@@ -856,7 +887,7 @@ namespace QSOCollector
             qsoExportButton.TabIndex = 0;
             qsoExportButton.Text = "Export to ADIF";
             qsoExportButton.UseVisualStyleBackColor = false;
-            qsoExportButton.Click += qsoExportButton_Click;
+            qsoExportButton.Click += QsoExportButton_Click;
             // 
             // startServerButton
             // 
@@ -885,7 +916,7 @@ namespace QSOCollector
             serverPortTextBox.PlaceholderText = "(port number)";
             serverPortTextBox.Size = new Size(72, 23);
             serverPortTextBox.TabIndex = 2;
-            serverPortTextBox.TextChanged += serverPortTextBox_TextChanged;
+            serverPortTextBox.TextChanged += ServerPortTextBox_TextChanged;
             serverPortTextBox.KeyPress += PortTextBox_KeyPress;
             // 
             // serverPortLabel
@@ -910,6 +941,149 @@ namespace QSOCollector
             enableServerCheckBox.Text = "Enable";
             enableServerCheckBox.UseVisualStyleBackColor = true;
             enableServerCheckBox.CheckedChanged += EnableServerCheckBox_CheckedChanged;
+            // 
+            // sharedTab
+            // 
+            sharedTab.Controls.Add(sharedRuleGroupBox);
+            sharedTab.Location = new Point(4, 28);
+            sharedTab.Name = "sharedTab";
+            sharedTab.Padding = new Padding(3);
+            sharedTab.Size = new Size(682, 487);
+            sharedTab.TabIndex = 3;
+            sharedTab.Text = "Shared";
+            sharedTab.UseVisualStyleBackColor = true;
+            // 
+            // sharedRuleGroupBox
+            // 
+            sharedRuleGroupBox.Controls.Add(sharedActivateDeactivateRuleButton);
+            sharedRuleGroupBox.Controls.Add(sharedRuleEditDeleteLabel);
+            sharedRuleGroupBox.Controls.Add(sharedRuleBands);
+            sharedRuleGroupBox.Controls.Add(sharedDeleteRuleButton);
+            sharedRuleGroupBox.Controls.Add(sharedEditRuleButton);
+            sharedRuleGroupBox.Controls.Add(sharedCreateRuleButton);
+            sharedRuleGroupBox.Controls.Add(sharedRuleDataGridView);
+            sharedRuleGroupBox.Location = new Point(3, 5);
+            sharedRuleGroupBox.Name = "sharedRuleGroupBox";
+            sharedRuleGroupBox.Size = new Size(679, 235);
+            sharedRuleGroupBox.TabIndex = 0;
+            sharedRuleGroupBox.TabStop = false;
+            sharedRuleGroupBox.Text = "SAT Rules";
+            // 
+            // sharedActivateDeactivateRuleButton
+            // 
+            sharedActivateDeactivateRuleButton.Enabled = false;
+            sharedActivateDeactivateRuleButton.Location = new Point(318, 178);
+            sharedActivateDeactivateRuleButton.Name = "sharedActivateDeactivateRuleButton";
+            sharedActivateDeactivateRuleButton.Size = new Size(182, 35);
+            sharedActivateDeactivateRuleButton.TabIndex = 7;
+            sharedActivateDeactivateRuleButton.Text = "Activate / Deactivate";
+            myToolTip.SetToolTip(sharedActivateDeactivateRuleButton, "Select Rule row to be activate/deactivate");
+            sharedActivateDeactivateRuleButton.UseVisualStyleBackColor = true;
+            sharedActivateDeactivateRuleButton.Click += SharedActivateDeactivateRuleButton_Click;
+            // 
+            // sharedRuleEditDeleteLabel
+            // 
+            sharedRuleEditDeleteLabel.AutoSize = true;
+            sharedRuleEditDeleteLabel.Font = new Font("Segoe UI Semibold", 9F, FontStyle.Bold | FontStyle.Italic, GraphicsUnit.Point, 0);
+            sharedRuleEditDeleteLabel.Location = new Point(160, 217);
+            sharedRuleEditDeleteLabel.Name = "sharedRuleEditDeleteLabel";
+            sharedRuleEditDeleteLabel.Size = new Size(256, 15);
+            sharedRuleEditDeleteLabel.TabIndex = 6;
+            sharedRuleEditDeleteLabel.Text = "(Select row with Rule to be able to to modify it)";
+            // 
+            // sharedRuleBands
+            // 
+            sharedRuleBands.BackColor = Color.DarkCyan;
+            sharedRuleBands.Location = new Point(506, 178);
+            sharedRuleBands.Name = "sharedRuleBands";
+            sharedRuleBands.Size = new Size(144, 35);
+            sharedRuleBands.TabIndex = 5;
+            sharedRuleBands.Text = "Band Manager";
+            myToolTip.SetToolTip(sharedRuleBands, "Select Rule row to be edit");
+            sharedRuleBands.UseVisualStyleBackColor = false;
+            sharedRuleBands.Click += SharedRuleBands_Click;
+            // 
+            // sharedDeleteRuleButton
+            // 
+            sharedDeleteRuleButton.Enabled = false;
+            sharedDeleteRuleButton.Location = new Point(208, 179);
+            sharedDeleteRuleButton.Name = "sharedDeleteRuleButton";
+            sharedDeleteRuleButton.Size = new Size(104, 35);
+            sharedDeleteRuleButton.TabIndex = 4;
+            sharedDeleteRuleButton.Text = "Delete";
+            myToolTip.SetToolTip(sharedDeleteRuleButton, "Select Rule row to be delete");
+            sharedDeleteRuleButton.UseVisualStyleBackColor = true;
+            sharedDeleteRuleButton.Click += SharedDeleteRuleButton_Click;
+            // 
+            // sharedEditRuleButton
+            // 
+            sharedEditRuleButton.Enabled = false;
+            sharedEditRuleButton.Location = new Point(106, 178);
+            sharedEditRuleButton.Name = "sharedEditRuleButton";
+            sharedEditRuleButton.Size = new Size(96, 35);
+            sharedEditRuleButton.TabIndex = 2;
+            sharedEditRuleButton.Text = "Edit";
+            myToolTip.SetToolTip(sharedEditRuleButton, "Select Rule row to be edit");
+            sharedEditRuleButton.UseVisualStyleBackColor = true;
+            sharedEditRuleButton.Click += SharedEditRuleButton_Click;
+            // 
+            // sharedCreateRuleButton
+            // 
+            sharedCreateRuleButton.Location = new Point(4, 179);
+            sharedCreateRuleButton.Name = "sharedCreateRuleButton";
+            sharedCreateRuleButton.Size = new Size(96, 35);
+            sharedCreateRuleButton.TabIndex = 1;
+            sharedCreateRuleButton.Text = "Create";
+            sharedCreateRuleButton.UseVisualStyleBackColor = true;
+            sharedCreateRuleButton.Click += SharedCreateRuleButton_Click;
+            // 
+            // sharedRuleDataGridView
+            // 
+            sharedRuleDataGridView.AllowUserToAddRows = false;
+            sharedRuleDataGridView.AllowUserToDeleteRows = false;
+            sharedRuleDataGridView.BackgroundColor = SystemColors.ControlLightLight;
+            sharedRuleDataGridView.CellBorderStyle = DataGridViewCellBorderStyle.Raised;
+            dataGridViewCellStyle4.Alignment = DataGridViewContentAlignment.MiddleCenter;
+            dataGridViewCellStyle4.BackColor = SystemColors.Window;
+            dataGridViewCellStyle4.Font = new Font("Segoe UI", 7.8F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            dataGridViewCellStyle4.ForeColor = SystemColors.WindowText;
+            dataGridViewCellStyle4.SelectionBackColor = Color.LightGray;
+            dataGridViewCellStyle4.SelectionForeColor = SystemColors.WindowText;
+            dataGridViewCellStyle4.WrapMode = DataGridViewTriState.True;
+            sharedRuleDataGridView.ColumnHeadersDefaultCellStyle = dataGridViewCellStyle4;
+            sharedRuleDataGridView.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            sharedRuleDataGridView.Columns.AddRange(new DataGridViewColumn[] { id, ruleName, origFreqFrom, origFreqTo, propagationMode, satName, satMode, targetBand, targetBandRx, targetFreqRx, targetfreqTx, isActive });
+            dataGridViewCellStyle5.Alignment = DataGridViewContentAlignment.MiddleLeft;
+            dataGridViewCellStyle5.BackColor = SystemColors.Window;
+            dataGridViewCellStyle5.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            dataGridViewCellStyle5.ForeColor = SystemColors.WindowText;
+            dataGridViewCellStyle5.SelectionBackColor = Color.LightGray;
+            dataGridViewCellStyle5.SelectionForeColor = SystemColors.WindowText;
+            dataGridViewCellStyle5.WrapMode = DataGridViewTriState.False;
+            sharedRuleDataGridView.DefaultCellStyle = dataGridViewCellStyle5;
+            sharedRuleDataGridView.Location = new Point(0, 23);
+            sharedRuleDataGridView.MultiSelect = false;
+            sharedRuleDataGridView.Name = "sharedRuleDataGridView";
+            sharedRuleDataGridView.ReadOnly = true;
+            dataGridViewCellStyle6.Alignment = DataGridViewContentAlignment.MiddleCenter;
+            dataGridViewCellStyle6.BackColor = SystemColors.Control;
+            dataGridViewCellStyle6.Font = new Font("Segoe UI", 7.8F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            dataGridViewCellStyle6.ForeColor = SystemColors.WindowText;
+            dataGridViewCellStyle6.SelectionBackColor = Color.LightGray;
+            dataGridViewCellStyle6.SelectionForeColor = SystemColors.WindowText;
+            dataGridViewCellStyle6.WrapMode = DataGridViewTriState.True;
+            sharedRuleDataGridView.RowHeadersDefaultCellStyle = dataGridViewCellStyle6;
+            dataGridViewCellStyle7.Alignment = DataGridViewContentAlignment.MiddleCenter;
+            dataGridViewCellStyle7.BackColor = SystemColors.Control;
+            dataGridViewCellStyle7.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            dataGridViewCellStyle7.ForeColor = SystemColors.WindowText;
+            dataGridViewCellStyle7.SelectionBackColor = Color.LightGray;
+            dataGridViewCellStyle7.SelectionForeColor = SystemColors.WindowText;
+            dataGridViewCellStyle7.WrapMode = DataGridViewTriState.False;
+            sharedRuleDataGridView.RowsDefaultCellStyle = dataGridViewCellStyle7;
+            sharedRuleDataGridView.Size = new Size(673, 150);
+            sharedRuleDataGridView.TabIndex = 0;
+            sharedRuleDataGridView.SelectionChanged += SharedRuleDataGridView_SelectionChanged;
             // 
             // aboutTab
             // 
@@ -966,7 +1140,7 @@ namespace QSOCollector
             githubLinkLabel.TabIndex = 8;
             githubLinkLabel.TabStop = true;
             githubLinkLabel.Text = "https://github.com/OZhuravlov/QSOCollector";
-            githubLinkLabel.LinkClicked += githubLinkLabel_LinkClicked;
+            githubLinkLabel.LinkClicked += GithubLinkLabel_LinkClicked;
             // 
             // openManualButton
             // 
@@ -980,7 +1154,7 @@ namespace QSOCollector
             openManualButton.TabIndex = 9;
             openManualButton.Text = "Open User Manual (HTML)";
             openManualButton.UseVisualStyleBackColor = false;
-            openManualButton.Click += openManualButton_Click;
+            openManualButton.Click += OpenManualButton_Click;
             // 
             // aboutTextBox
             // 
@@ -997,7 +1171,7 @@ namespace QSOCollector
             // 
             trayNotifyIcon.Text = "QSO Collector running";
             trayNotifyIcon.Visible = true;
-            trayNotifyIcon.DoubleClick += trayNotifyIcon_DoubleClick;
+            trayNotifyIcon.DoubleClick += TrayNotifyIcon_DoubleClick;
             // 
             // autoStartCheckbox
             // 
@@ -1012,7 +1186,7 @@ namespace QSOCollector
             autoStartCheckbox.TabIndex = 1;
             autoStartCheckbox.Text = "Start with Windows";
             autoStartCheckbox.UseVisualStyleBackColor = true;
-            autoStartCheckbox.CheckedChanged += autoStartCheckbox_CheckedChanged;
+            autoStartCheckbox.CheckedChanged += AutoStartCheckbox_CheckedChanged;
             // 
             // enableDebugWhenAutoStartCheckbox
             // 
@@ -1025,7 +1199,128 @@ namespace QSOCollector
             enableDebugWhenAutoStartCheckbox.TabIndex = 2;
             enableDebugWhenAutoStartCheckbox.Text = "in debug mode";
             enableDebugWhenAutoStartCheckbox.UseVisualStyleBackColor = true;
-            enableDebugWhenAutoStartCheckbox.CheckedChanged += enableDebugWhenAutoStartCheckbox_CheckedChanged;
+            enableDebugWhenAutoStartCheckbox.CheckedChanged += EnableDebugWhenAutoStartCheckbox_CheckedChanged;
+            // 
+            // imageList1
+            // 
+            imageList1.ColorDepth = ColorDepth.Depth32Bit;
+            imageList1.ImageSize = new Size(16, 16);
+            imageList1.TransparentColor = Color.Transparent;
+            // 
+            // imageList2
+            // 
+            imageList2.ColorDepth = ColorDepth.Depth32Bit;
+            imageList2.ImageSize = new Size(16, 16);
+            imageList2.TransparentColor = Color.Transparent;
+            // 
+            // id
+            // 
+            id.DataPropertyName = "id";
+            id.HeaderText = "Id";
+            id.MaxInputLength = 10;
+            id.Name = "id";
+            id.ReadOnly = true;
+            id.Visible = false;
+            // 
+            // ruleName
+            // 
+            ruleName.DataPropertyName = "name";
+            ruleName.HeaderText = "Name";
+            ruleName.MaxInputLength = 50;
+            ruleName.Name = "ruleName";
+            ruleName.ReadOnly = true;
+            // 
+            // origFreqFrom
+            // 
+            origFreqFrom.DataPropertyName = "orig_freq_mhz_from";
+            origFreqFrom.HeaderText = "Freq from, mHz";
+            origFreqFrom.MaxInputLength = 10;
+            origFreqFrom.Name = "origFreqFrom";
+            origFreqFrom.ReadOnly = true;
+            origFreqFrom.Resizable = DataGridViewTriState.False;
+            origFreqFrom.Width = 60;
+            // 
+            // origFreqTo
+            // 
+            origFreqTo.DataPropertyName = "orig_freq_mhz_to";
+            origFreqTo.HeaderText = "Freq to, mHz";
+            origFreqTo.MaxInputLength = 10;
+            origFreqTo.Name = "origFreqTo";
+            origFreqTo.ReadOnly = true;
+            origFreqTo.Resizable = DataGridViewTriState.False;
+            origFreqTo.Width = 60;
+            // 
+            // propagationMode
+            // 
+            propagationMode.DataPropertyName = "propagation_mode";
+            propagationMode.HeaderText = "Prop. Mode";
+            propagationMode.MaxInputLength = 10;
+            propagationMode.Name = "propagationMode";
+            propagationMode.ReadOnly = true;
+            propagationMode.Resizable = DataGridViewTriState.True;
+            propagationMode.Width = 50;
+            // 
+            // satName
+            // 
+            satName.DataPropertyName = "sat_name";
+            satName.HeaderText = "Satelite name";
+            satName.MaxInputLength = 50;
+            satName.Name = "satName";
+            satName.ReadOnly = true;
+            satName.Width = 70;
+            // 
+            // satMode
+            // 
+            satMode.DataPropertyName = "sat_mode";
+            satMode.HeaderText = "SAT mode";
+            satMode.MaxInputLength = 10;
+            satMode.Name = "satMode";
+            satMode.ReadOnly = true;
+            satMode.Width = 40;
+            // 
+            // targetBand
+            // 
+            targetBand.DataPropertyName = "band";
+            targetBand.HeaderText = "New Band TX";
+            targetBand.MaxInputLength = 10;
+            targetBand.Name = "targetBand";
+            targetBand.ReadOnly = true;
+            targetBand.Width = 50;
+            // 
+            // targetBandRx
+            // 
+            targetBandRx.DataPropertyName = "band_rx";
+            targetBandRx.HeaderText = "New Band RX";
+            targetBandRx.MaxInputLength = 10;
+            targetBandRx.Name = "targetBandRx";
+            targetBandRx.ReadOnly = true;
+            targetBandRx.Width = 50;
+            // 
+            // targetFreqRx
+            // 
+            targetFreqRx.DataPropertyName = "freq_mhz_rx";
+            targetFreqRx.HeaderText = "New Freq RX, mHz";
+            targetFreqRx.MaxInputLength = 10;
+            targetFreqRx.Name = "targetFreqRx";
+            targetFreqRx.ReadOnly = true;
+            targetFreqRx.Width = 80;
+            // 
+            // targetfreqTx
+            // 
+            targetfreqTx.DataPropertyName = "freq_mhz";
+            targetfreqTx.HeaderText = "New Freq TX, mHz";
+            targetfreqTx.MaxInputLength = 10;
+            targetfreqTx.Name = "targetfreqTx";
+            targetfreqTx.ReadOnly = true;
+            targetfreqTx.Width = 80;
+            // 
+            // isActive
+            // 
+            isActive.DataPropertyName = "is_active";
+            isActive.HeaderText = "Is Rule Active?";
+            isActive.Name = "isActive";
+            isActive.ReadOnly = true;
+            isActive.Width = 50;
             // 
             // QsoCollectorForm
             // 
@@ -1055,6 +1350,10 @@ namespace QSOCollector
             serverProcessingGroupBox.ResumeLayout(false);
             serverProcessingGroupBox.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)serverQsoAmountsDataGridView).EndInit();
+            sharedTab.ResumeLayout(false);
+            sharedRuleGroupBox.ResumeLayout(false);
+            sharedRuleGroupBox.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)sharedRuleDataGridView).EndInit();
             aboutTab.ResumeLayout(false);
             aboutTab.PerformLayout();
             ResumeLayout(false);
@@ -1107,6 +1406,8 @@ namespace QSOCollector
         private DataGridView serverQsoAmountsDataGridView;
         private BindingSource serverQsoAmountsBindingSource = new BindingSource();
         private SQLiteDataAdapter serverQsoAmountsDataAdapter = new SQLiteDataAdapter();
+        private BindingSource sharedRuleBindingSource = new BindingSource();
+        private SQLiteDataAdapter sharedRuleDataAdapter = new SQLiteDataAdapter();
         private CheckBox clientLogDetailsCheckBox;
         private Label clientLogDetailsLabel;
         private CheckBox serverShowLogDetailsCheckBox;
@@ -1133,5 +1434,28 @@ namespace QSOCollector
         private Button premiumCallsignsButton;
         private Label githubLabel;
         private Label tradeMarkLabel;
+        private ImageList imageList1;
+        private ImageList imageList2;
+        private TabPage sharedTab;
+        private GroupBox sharedRuleGroupBox;
+        private DataGridView sharedRuleDataGridView;
+        private Button sharedCreateRuleButton;
+        private Button sharedDeleteRuleButton;
+        private Button sharedEditRuleButton;
+        private Button sharedRuleBands;
+        private Label sharedRuleEditDeleteLabel;
+        private Button sharedActivateDeactivateRuleButton;
+        private DataGridViewTextBoxColumn id;
+        private DataGridViewTextBoxColumn ruleName;
+        private DataGridViewTextBoxColumn origFreqFrom;
+        private DataGridViewTextBoxColumn origFreqTo;
+        private DataGridViewTextBoxColumn propagationMode;
+        private DataGridViewTextBoxColumn satName;
+        private DataGridViewTextBoxColumn satMode;
+        private DataGridViewTextBoxColumn targetBand;
+        private DataGridViewTextBoxColumn targetBandRx;
+        private DataGridViewTextBoxColumn targetFreqRx;
+        private DataGridViewTextBoxColumn targetfreqTx;
+        private DataGridViewCheckBoxColumn isActive;
     }
 }

@@ -1,5 +1,7 @@
-﻿using Newtonsoft.Json.Linq;
+﻿using Microsoft.Data.Sqlite;
+using Newtonsoft.Json.Linq;
 using QSOCollector.Data;
+using QSOCollector.Forms;
 using QSOCollector.Root;
 using System.Data;
 using System.Data.SQLite;
@@ -10,8 +12,11 @@ namespace QSOCollector
 {
     public partial class ListenersForm : Form
     {
+        public Dictionary<int, bool> listnerRuleChanged = [];
+
         private readonly bool isLocalClientRunning;
         private readonly IDbRepository dbRepository;
+        private readonly List<int> deletedListenereIds = [];
 
         public ListenersForm(IDbRepository dbRepository, bool isLocalClientRunning)
         {
@@ -24,13 +29,61 @@ namespace QSOCollector
         {
             // Bind the DataGridView to the BindingSource
             // and load the data from the database.
-            dataGridView1.DataSource = bindingSource1;
-            GetListenersConfigDataForDataGridView1(dbRepository.GetConnectionString(), "select id, name, qso_port, forward_port, acknowledge_port, message_format, is_active from listeners");
-            exportConfigButton.Enabled = dataGridView1.Rows.Count > 0;
+            ListenerDataGridView.DataSource = bindingSource1;
+            Init();
+            exportConfigButton.Enabled = ListenerDataGridView.Rows.Count > 0;
         }
 
-        private void GetListenersConfigDataForDataGridView1(string connectionString, string selectCommand)
+        private void Init()
         {
+            PopulateListenersConfigDataGridView();
+            InitListnerRuleChanged();
+            RefreshRuleButtons();
+        }
+
+        private void RefreshRuleButtons()
+        {
+            int rulesColumnIdx = ListenerDataGridView.Columns["rules"].Index;
+            int idColumnIdx = ListenerDataGridView.Columns["id"].Index;
+            foreach (DataGridViewRow row in ListenerDataGridView.Rows)
+            {
+                if (row.IsNewRow) continue;
+                var id = int.Parse(row.Cells[idColumnIdx].Value.ToString());
+                string? rules = dbRepository.GetListenerConcatRuleNames(id);
+                DataGridViewButtonCell cell = (DataGridViewButtonCell)row.Cells[rulesColumnIdx];
+                cell.UseColumnTextForButtonValue = false;
+                cell.FlatStyle = FlatStyle.Popup;
+
+                Font font;
+                Color backColor;
+                if (String.IsNullOrEmpty(rules))
+                {
+                    cell.ToolTipText = "No rules defined";
+                    cell.Value = "Add Rules";
+                    font = new Font(ListenerDataGridView.Font, FontStyle.Regular);
+                    backColor = Color.White;
+                }
+                else
+                {
+                    cell.ToolTipText = rules;
+                    cell.Value = "Edit Rules";
+                    cell.FlatStyle = FlatStyle.Popup;
+                    font = new Font(ListenerDataGridView.Font, FontStyle.Bold);
+                    backColor = Color.DarkSeaGreen;
+                }
+
+                cell.Style.ApplyStyle(new()
+                {
+                    Font = font,
+                    BackColor = backColor,
+                });
+            }
+        }
+
+        private void PopulateListenersConfigDataGridView()
+        {
+            string connectionString = dbRepository.GetConnectionString();
+            string selectCommand = "select id, name, qso_port, forward_port, acknowledge_port, message_format, is_active from listeners";
             try
             {
                 // Create a new data adapter based on the specified query.
@@ -38,7 +91,7 @@ namespace QSOCollector
 
                 // Create a command builder to generate SQL update, insert, and
                 // delete commands based on selectCommand.
-                SQLiteCommandBuilder commandBuilder = new (dataAdapter);
+                SQLiteCommandBuilder commandBuilder = new(dataAdapter);
 
                 // Populate a new data table and bind it to the BindingSource.
                 DataTable table = new()
@@ -47,26 +100,47 @@ namespace QSOCollector
                 };
                 dataAdapter.Fill(table);
                 bindingSource1.DataSource = table;
-
-                // Resize the DataGridView columns to fit the newly loaded content.
-                // dataGridView1.AutoResizeColumns(
-                //     DataGridViewAutoSizeColumnsMode.AllCellsExceptHeader);
             }
-            catch (SQLiteException ex)
+            catch (SqliteException ex)
             {
                 MessageBox.Show($"Can't retrieve data from DB: {ex.Message}");
             }
         }
 
-        private void dataGridView1_CellValidating(object sender, DataGridViewCellValidatingEventArgs e)
+        private void InitListnerRuleChanged()
         {
-            DataGridViewColumn column = dataGridView1.Columns[e.ColumnIndex];
-            e.Cancel = column.Name.EndsWith("_port") && !handlePortValue(e.RowIndex, e.ColumnIndex, column.HeaderText);
+            foreach (DataGridViewRow row in ListenerDataGridView.Rows)
+            {
+                if (row.IsNewRow)
+                {
+                    continue;
+                }
+                int? listenerId = getListenerId(row);
+                if (listenerId == null)
+                {
+                    continue;
+                }
+                int id = listenerId.Value;
+                if (listnerRuleChanged.ContainsKey(id))
+                {
+                    listnerRuleChanged[id] = true;
+                }
+                else
+                {
+                    listnerRuleChanged.Add(id, true);
+                }
+            }
         }
 
-        private bool handlePortValue(int currentRowIndex, int currentColumnIndex, string currentColumnHeader)
+        private void ListenerDataGridView_CellValidating(object sender, DataGridViewCellValidatingEventArgs e)
         {
-            DataGridViewRow currentRow = dataGridView1.Rows[currentRowIndex];
+            DataGridViewColumn column = ListenerDataGridView.Columns[e.ColumnIndex];
+            e.Cancel = column.Name.EndsWith("_port") && !HandlePortValue(e.RowIndex, e.ColumnIndex, column.HeaderText);
+        }
+
+        private bool HandlePortValue(int currentRowIndex, int currentColumnIndex, string currentColumnHeader)
+        {
+            DataGridViewRow currentRow = ListenerDataGridView.Rows[currentRowIndex];
             DataGridViewCell currentCell = currentRow.Cells[currentColumnIndex];
             string? portValue = currentCell.EditedFormattedValue?.ToString();
 
@@ -81,21 +155,21 @@ namespace QSOCollector
 
             // Get port columns indexes
             List<DataGridViewColumn> portColumns = [
-                dataGridView1.Columns["qso_port"],
-                dataGridView1.Columns["acknowledge_port"],
-                dataGridView1.Columns["forward_port"]
+                ListenerDataGridView.Columns["qso_port"],
+                ListenerDataGridView.Columns["acknowledge_port"],
+                ListenerDataGridView.Columns["forward_port"]
             ];
 
-            int nameIndex = dataGridView1.Columns["name"].Index;
-            string currentColumnName = dataGridView1.Columns[currentColumnIndex].Name;
+            int nameIndex = ListenerDataGridView.Columns["name"].Index;
+            string currentColumnName = ListenerDataGridView.Columns[currentColumnIndex].Name;
 
             // Check for uniqueness
-            foreach (DataGridViewRow otherRow in dataGridView1.Rows)
+            foreach (DataGridViewRow otherRow in ListenerDataGridView.Rows)
             {
                 // Skip empty rows
                 if (otherRow.IsNewRow) continue;
 
-                foreach (DataGridViewColumn otherColumn in dataGridView1.Columns)
+                foreach (DataGridViewColumn otherColumn in ListenerDataGridView.Columns)
                 {
                     DataGridViewCell otherCell = otherRow.Cells[otherColumn.Index];
 
@@ -130,42 +204,42 @@ namespace QSOCollector
 
                     if (otherPort == portValue)
                     {
-                        dataGridView1.BeginEdit(true);
-                        string errorMessage = $"Port must be unique accross all ports in config but {portValue} conflicts with '{dataGridView1.Columns[otherCell.ColumnIndex].HeaderText}' of '{otherRow.Cells[nameIndex].FormattedValue}' Listener";
+                        ListenerDataGridView.BeginEdit(true);
+                        string errorMessage = $"Port must be unique accross all ports in config but {portValue} conflicts with '{ListenerDataGridView.Columns[otherCell.ColumnIndex].HeaderText}' of '{otherRow.Cells[nameIndex].FormattedValue}' Listener";
                         MessageBox.Show(errorMessage, "Port Uniqueness Violation", MessageBoxButtons.OK, MessageBoxIcon.Error);
                         currentCell.ErrorText = errorMessage;
                         currentRow.ErrorText = errorMessage;
-                        dataGridView1.EndEdit();
+                        ListenerDataGridView.EndEdit();
                         return false;
                     }
                 }
             }
-            dataGridView1.BeginEdit(true);
+            ListenerDataGridView.BeginEdit(true);
             currentCell.ErrorText = string.Empty;
             currentRow.ErrorText = string.Empty;
-            dataGridView1.EndEdit();
+            ListenerDataGridView.EndEdit();
             return true;
         }
 
-        private void dataGridView1_RowValidating(object sender, DataGridViewCellCancelEventArgs data)
+        private void ListenerDataGridView_RowValidating(object sender, DataGridViewCellCancelEventArgs data)
         {
-            DataGridViewRow row = dataGridView1.Rows[data.RowIndex];
+            DataGridViewRow row = ListenerDataGridView.Rows[data.RowIndex];
             // skip checking new row
             if (row.IsNewRow) return;
-            // Validate all columns except id and description
-            foreach (DataGridViewColumn column in dataGridView1.Columns)
+            // Validate all columns except id forward_port and acknowledge_port
+            foreach (DataGridViewColumn column in ListenerDataGridView.Columns)
             {
                 if (column.Name == "id" || column.Name == "forward_port" || column.Name == "acknowledge_port")
                     continue;
                 DataGridViewCell cell = row.Cells[column.Index];
                 if (cell.FormattedValue == null || string.IsNullOrWhiteSpace(cell.FormattedValue.ToString()))
                 {
-                    dataGridView1.BeginEdit(true);
+                    ListenerDataGridView.BeginEdit(true);
                     string errorMessage = $"The value of '{column.HeaderText}' must not be empty";
                     cell.ErrorText = errorMessage;
                     row.ErrorText = errorMessage;
                     exportConfigButton.Enabled = false;
-                    dataGridView1.EndEdit();
+                    ListenerDataGridView.EndEdit();
                     data.Cancel = true;
                     return;
                 }
@@ -174,13 +248,13 @@ namespace QSOCollector
             exportConfigButton.Enabled = true;
         }
 
-        private void dataGridView1_DefaultValuesNeeded(object sender, DataGridViewRowEventArgs e)
+        private void ListenerDataGridView_DefaultValuesNeeded(object sender, DataGridViewRowEventArgs e)
         {
             e.Row.Cells["is_active"].Value = true;
             e.Row.Cells["message_format"].Value = "N1MM";
         }
 
-        private void cancelEditListenersButton_Click(object sender, EventArgs e)
+        private void CancelEditListenersButton_Click(object sender, EventArgs e)
         {
             if (saveListenersButton.Enabled)
             {
@@ -190,19 +264,20 @@ namespace QSOCollector
                     return;
                 }
             }
+            this.DialogResult = DialogResult.Cancel;
             this.Close();
         }
 
-        private void dataGridView1_CellBeginEdit(object sender, DataGridViewCellCancelEventArgs e)
+        private void ListenerDataGridView_CellBeginEdit(object sender, DataGridViewCellCancelEventArgs e)
         {
             cancelEditListenersButton.Text = "Cancel";
             saveListenersButton.Enabled = true;
         }
 
-        private void saveListenersButton_Click(object sender, EventArgs e)
+        private void SaveListenersButton_Click(object sender, EventArgs e)
         {
             // Validate rows before saving
-            foreach (DataGridViewRow row in dataGridView1.Rows)
+            foreach (DataGridViewRow row in ListenerDataGridView.Rows)
             {
                 if (row.IsNewRow) continue;
                 if (!string.IsNullOrEmpty(row.ErrorText))
@@ -213,10 +288,16 @@ namespace QSOCollector
             }
 
             // Ensure the current edit is committed.
-            dataGridView1.EndEdit();
+            ListenerDataGridView.EndEdit();
             // Save the data from the DataGridView to the database.
             try
             {
+                deletedListenereIds.ForEach(listinerId =>
+                {
+                    List<int> satRuleIds = dbRepository.GetListenerSatRules(listinerId).Select(rule => (int)rule.Id).ToList();
+                    dbRepository.RemoveRulesFromListener(listinerId, satRuleIds);
+                });
+                deletedListenereIds.Clear();
                 dataAdapter.Update((DataTable)bindingSource1.DataSource);
             }
             catch (DBConcurrencyException)
@@ -230,14 +311,14 @@ namespace QSOCollector
             {
                 MessageBox.Show("New config will be applied only after restarting Client", "Restart required", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
+            Init();
         }
 
-        private void deleteSelectedListenersButton_Click(object sender, EventArgs e)
+        private void DeleteSelectedListenersButton_Click(object sender, EventArgs e)
         {
-            List<DataGridViewRow> rowsToDelete = dataGridView1.SelectedRows
+            List<DataGridViewRow> rowsToDelete = [.. ListenerDataGridView.SelectedRows
                 .OfType<DataGridViewRow>()
-                .Where(r => !r.IsNewRow)
-                .ToList();
+                .Where(r => !r.IsNewRow)];
 
             if (rowsToDelete.Count == 0)
             {
@@ -245,23 +326,31 @@ namespace QSOCollector
                 return;
             }
 
-            rowsToDelete.ForEach(r => dataGridView1.Rows.Remove(r));
+            rowsToDelete.ForEach(r => {
+                int? listenerId = getListenerId(r);
+                ListenerDataGridView.Rows.Remove(r);
+                if (listenerId.HasValue)
+                {
+                    deletedListenereIds.Add(listenerId.Value);
+                }
+            });
             cancelEditListenersButton.Text = "Cancel";
             saveListenersButton.Enabled = true;
-            exportConfigButton.Enabled = dataGridView1.Rows.Count > 0;
+            exportConfigButton.Enabled = ListenerDataGridView.Rows.Count > 0;
+            RefreshRuleButtons();
         }
 
-        private void dataGridView1_EditingControlShowing(object sender, DataGridViewEditingControlShowingEventArgs e)
+        private void ListenerDataGridView_EditingControlShowing(object sender, DataGridViewEditingControlShowingEventArgs e)
         {
-            e.Control.KeyPress += new KeyPressEventHandler(dataGridView1Port_KeyPress);
+            e.Control.KeyPress += new KeyPressEventHandler(ListenerDataGridView_PortKeyPress);
         }
 
-        private void dataGridView1Port_KeyPress(object sender, KeyPressEventArgs e)
+        private void ListenerDataGridView_PortKeyPress(object sender, KeyPressEventArgs e)
         {
-            int currentColumnIndex = dataGridView1.CurrentCell.ColumnIndex;
-            int qsoPortColumnIndex = dataGridView1.Columns["qso_port"].Index;
-            int acknowledgePortColumnIndex = dataGridView1.Columns["acknowledge_port"].Index;
-            int forwardPortColumnIndex = dataGridView1.Columns["forward_port"].Index;
+            int currentColumnIndex = ListenerDataGridView.CurrentCell.ColumnIndex;
+            int qsoPortColumnIndex = ListenerDataGridView.Columns["qso_port"].Index;
+            int acknowledgePortColumnIndex = ListenerDataGridView.Columns["acknowledge_port"].Index;
+            int forwardPortColumnIndex = ListenerDataGridView.Columns["forward_port"].Index;
 
             if (currentColumnIndex != qsoPortColumnIndex && currentColumnIndex != acknowledgePortColumnIndex && currentColumnIndex != forwardPortColumnIndex)
             {
@@ -274,7 +363,7 @@ namespace QSOCollector
             }
         }
 
-        private void exportConfigButton_Click(object sender, EventArgs e)
+        private void ExportConfigButton_Click(object sender, EventArgs e)
         {
             if (saveListenersButton.Enabled)
             {
@@ -283,7 +372,7 @@ namespace QSOCollector
                 {
                     return;
                 }
-                saveListenersButton_Click(saveListenersButton, EventArgs.Empty);
+                SaveListenersButton_Click(saveListenersButton, EventArgs.Empty);
             }
 
             using SaveFileDialog saveFileDialog = new()
@@ -298,7 +387,7 @@ namespace QSOCollector
 
             if (saveFileDialog.ShowDialog() == DialogResult.OK)
             {
-                List<Models.ListenerConfig> listenerConfigs = dbRepository.GetListenerConfigs();
+                List<Models.ListenerConfig> listenerConfigs = dbRepository.GetListenerConfigs() ?? [];
                 string jsonListenerConfigs = JToken.Parse(JsonSerializer.Serialize(listenerConfigs)).ToString();
                 string filePath = saveFileDialog.FileName;
                 File.WriteAllText(filePath, jsonListenerConfigs);
@@ -309,9 +398,9 @@ namespace QSOCollector
             }
         }
 
-        private void importConfigButton_Click(object sender, EventArgs e)
+        private void ImportConfigButton_Click(object sender, EventArgs e)
         {
-            if (dataGridView1.Rows.Count > 0 || dbRepository.GetListenerConfigs().Count > 0)
+            if (ListenerDataGridView.Rows.Count > 0 || dbRepository.GetListenerConfigs()?.Count > 0)
             {
                 DialogResult result = MessageBox.Show("Existing configs will be replaced by imported. Do you want to continue?", "Existing config replacement", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
                 if (result == DialogResult.No)
@@ -335,6 +424,52 @@ namespace QSOCollector
                 dbRepository.ReplaceListenerConfigs(listenerConfigs);
                 ListenersForm_Load(this, EventArgs.Empty);
             }
+        }
+
+        private void ListenerDataGridView_Sorted(object sender, EventArgs e)
+        {
+            RefreshRuleButtons();
+        }
+
+        private void ListenerDataGridView_CellContentClick(object sender, DataGridViewCellEventArgs e)
+        {
+            var senderGrid = (DataGridView)sender;
+
+            if (senderGrid.Columns[e.ColumnIndex] is DataGridViewButtonColumn &&
+                e.RowIndex >= 0)
+            {
+                int? listenerId = getListenerId(senderGrid.Rows[e.RowIndex]);
+                if (saveListenersButton.Enabled || !listenerId.HasValue)
+                {
+                    MessageBox.Show("Please Save Listener Configs before dealing with Rules", "Listener Config saving required", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                ListenerRulesForm listenerRulesForm = new(dbRepository, listenerId.Value);
+                listenerRulesForm.ShowDialog();
+                if (listenerRulesForm.assignChanged)
+                {
+                    if (listnerRuleChanged.ContainsKey(listenerId.Value))
+                    {
+                        listnerRuleChanged[listenerId.Value] = true;
+                    }
+                    else
+                    {
+                        listnerRuleChanged.Add(listenerId.Value, true);
+                    }
+                    RefreshRuleButtons();
+                }
+            }
+        }
+
+        private int? getListenerId(DataGridViewRow row)
+        {
+            string? id = row.Cells["id"].Value?.ToString();
+            if (string.IsNullOrEmpty(id))
+            {
+                return null;
+            }
+            return Convert.ToInt32(id);
         }
     }
 }
