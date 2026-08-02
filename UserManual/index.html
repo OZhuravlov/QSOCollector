@@ -164,7 +164,7 @@
                         <tr>
                             <td><strong>Network</strong></td>
                             <td>Ethernet or WiFi 802.11ac</td>
-                            <td>100 Mbps minimum recommended</td>
+                            <td>10 Mbps minimum recommended</td>
                         </tr>
                     </table>
 
@@ -774,6 +774,12 @@
                             <td>Format of QSO data from logger</td>
                         </tr>
                         <tr>
+                            <td><strong>SAT Rules</strong></td>
+                            <td>❌ No</td>
+                            <td>Add Rules</td>
+                            <td>Manage Rules to adjust/populate fields for SAT QSO log</td>
+                        </tr>
+                        <tr>
                             <td><strong>Active</strong></td>
                             <td>✅ Yes</td>
                             <td>Checked</td>
@@ -855,22 +861,24 @@
                 <h2>🛰️ Satellite Rules Configuration & Behavior</h2>
                 <div class="content-box">
                     <h3>What Are Satellite Rules?</h3>
-                    <p><strong>Satellite Rules</strong> are frequency-based enrichment rules that automatically classify and enhance QSOs based on their transmission frequency.</p>
+                    <p><strong>Satellite Rules</strong> are frequency-based enrichment rules that automatically classify and enhance QSOs based on the TX frequency originally coming in the QSO log.</p>
 
-                    <h4>Example Use Cases:</h4>
+                    <h4>Use Case example - QO-100 Sattelite QSO</h4>
+                    <p>Because Radio uses IF frequency (144mHz, 50mHz) and Logger may not be aware of QSO propagation mode this causes wrong QSO log. For proper QSO log:</p>
                     <ul>
-                        <li>🛰️ <strong>Satellite Detection</strong> - Automatically tag all QSOs on 145.800 MHz as "ISS Beacon"</li>
-                        <li>🎯 <strong>Special Events</strong> - Flag QSOs on specific frequencies as "Field Day Mode"</li>
-                        <li>📊 <strong>Band-Specific Processing</strong> - Apply different rules for CW vs. SSB on same band</li>
-                        <li>📡 <strong>Data Mode Tracking</strong> - Classify digital modes by frequency signature</li>
+                        <li>🎯 TX Band and/or TX Frequency should be set to 13cm (2.4GHz)</li>
+                        <li>📊 RX Band and/or RX Frequency should be set to 3cm (10GHz)</li>
+                        <li>🛰️ PROP_MODE SAT should be provided in ADIF log</li>
+                        <li>📡 SAT_NAME QO-100, SAT_MODE SX should be provided in ADIF log</li>
                     </ul>
+                    <p>This could be handled with Sattelite (SAT) Rule</p>
 
                     <h3>How Satellite Rules Work</h3>
 
                     <h4>1. Rule Matching Process</h4>
                     <p>When a QSO arrives at the server:</p>
                     <ol>
-                        <li>System extracts QSO frequency (TX frequency used primarily)</li>
+                        <li>System extracts QSO frequency (TX)</li>
                         <li>Compares against all active rules in order</li>
                         <li><strong>First matching rule wins</strong> - applies enrichment and stops</li>
                         <li>If no rule matches - QSO stored as-is</li>
@@ -888,121 +896,39 @@
 
                     <h4>Accessing Satellite Rules</h4>
                     <ol>
-                        <li>Click <strong>"Server"</strong> tab</li>
-                        <li>Click <strong>"Database"</strong> button</li>
-                        <li>Look for <strong>"Satellite Rules"</strong> section in the database manager</li>
+                        <li>Click <strong>"Shared"</strong> tab</li>
+                        <li>You can see the list of already created SAT Rules</li>
                     </ol>
 
                     <h4>Creating a New Rule</h4>
                     <ol>
-                        <li>Click <strong>"Add Rule"</strong> button</li>
-                        <li>Enter the following information:
+                        <li>Click <strong>"Create"</strong> button</li>
+                        <li>
+                            Enter the following information:
                             <ul>
-                                <li><strong>Name:</strong> Human-readable name (e.g., "ISS Uplink Detection")</li>
-                                <li><strong>Source Freq From:</strong> Starting frequency in MHz (e.g., 145.800)</li>
-                                <li><strong>Source Freq To:</strong> Ending frequency in MHz (e.g., 145.900)</li>
-                                <li><strong>Extra Fields:</strong> JSON format enrichment data (see examples below)</li>
+                                <li><strong>Name:</strong> Human-readable name (e.g., "QO-100 144mHz")</li>
+                                <li><strong>Source TX Freq From:</strong> Starting frequency in MHz (e.g., 145.800)</li>
+                                <li><strong>Source TX Freq To:</strong> Ending frequency in MHz (e.g., 145.900)</li>
+                                <li><strong>Propagation mode:</strong> PROP_MODE in ADIF - for satellite it's always <strong>SAT</strong>. <a href="https://adif.org/317/ADIF_317.htm#Propagation_Mode_Enumeration" target="_blank" rel="noopener noreferrer">More modes</a></li>
+                                <li><strong>Sattelite name:</strong> SAT_NAME in ADIF - name of satellite</li>
+                                <li><strong>Sattelite mode:</strong> SAT_MODE in ADIF - a code representing the satellite's uplink band and downlink band</li>
+                                <li><strong>Band TX:</strong> Optional. Uplink band (TX). To override Band in QSO log</li>
+                                <li><strong>Band RX:</strong> Optional. Downlink band (RX). To override Band_Rx in QSO log</li>
+                                <li><strong>Freqency TX:</strong> Optional. Uplink frequency (TX). To override Freq in QSO log</li>
+                                <li><strong>Freqency RX:</strong> Optional. Downlink frequency (RX). To override Freq_Rx in QSO log</li>
                             </ul>
                         </li>
                         <li>Click <strong>"Save"</strong></li>
                     </ol>
-
-                    <h4>Example Rule: ISS Tracking</h4>
-                    <p><strong>Name:</strong> ISS Uplink Detection<br>
-                    <strong>Frequency Range:</strong> 145.800 - 146.000 MHz<br>
-                    <strong>Extra Fields:</strong></p>
-                    <pre style="background: #f5f5f5; padding: 10px; border-radius: 5px; font-size: 12px;">{
-  "SATELLITE": "ISS",
-  "SPECIAL_QSO": "YES",
-  "UPLINK_MODE": "J7F"
-}</pre>
-
-                    <h4>Example Rule: Field Day Event</h4>
-                    <p><strong>Name:</strong> Field Day 20m CW<br>
-                    <strong>Frequency Range:</strong> 14.025 - 14.100 MHz<br>
-                    <strong>Extra Fields:</strong></p>
-                    <pre style="background: #f5f5f5; padding: 10px; border-radius: 5px; font-size: 12px;">{
-  "EVENT": "FIELD_DAY",
-  "CATEGORY": "20m_CW",
-  "MULTIPLIER": "YES"
-}</pre>
-
-                    <h3>Rule Behavior Details</h3>
-
-                    <h4>Format-Specific Application</h4>
-                    <table style="width: 100%; border-collapse: collapse; margin: 10px 0;">
-                        <tr style="background: #f0f0f0;">
-                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;"><strong>For N1MM QSOs</strong></th>
-                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;"><strong>For ADIF QSOs</strong></th>
-                        </tr>
-                        <tr>
-                            <td style="border: 1px solid #ddd; padding: 8px;">Deserialize XML contact info</td>
-                            <td style="border: 1px solid #ddd; padding: 8px;">Parse ADIF header and body</td>
-                        </tr>
-                        <tr>
-                            <td style="border: 1px solid #ddd; padding: 8px;">Extract both TX and RX frequencies</td>
-                            <td style="border: 1px solid #ddd; padding: 8px;">Extract frequency fields (FREQ, FREQ_RX)</td>
-                        </tr>
-                        <tr>
-                            <td style="border: 1px solid #ddd; padding: 8px;">Match against rule ranges</td>
-                            <td style="border: 1px solid #ddd; padding: 8px;">Match against rule ranges</td>
-                        </tr>
-                        <tr>
-                            <td style="border: 1px solid #ddd; padding: 8px;">Re-serialize with enriched fields</td>
-                            <td style="border: 1px solid #ddd; padding: 8px;">Inject extra fields into record</td>
-                        </tr>
-                        <tr>
-                            <td style="border: 1px solid #ddd; padding: 8px;">Return modified XML to logger</td>
-                            <td style="border: 1px solid #ddd; padding: 8px;">Return enriched ADIF data</td>
-                        </tr>
-                    </table>
-
-                    <h4>Change Tracking</h4>
-                    <p>When a rule is applied:</p>
-                    <ul>
-                        <li>✅ Original message marked as "changed"</li>
-                        <li>✅ Modified data returned to caller</li>
-                        <li>✅ N1MM: Re-sent to logger with enrichment</li>
-                        <li>✅ ADIF: Stored with enriched fields</li>
-                        <li>✅ Audit log: Rule application logged</li>
-                    </ul>
-
-                    <h3>Troubleshooting Rules</h3>
-
-                    <table style="width: 100%; border-collapse: collapse; margin: 10px 0;">
-                        <tr style="background: #f0f0f0;">
-                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;"><strong>Issue</strong></th>
-                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;"><strong>Cause</strong></th>
-                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;"><strong>Solution</strong></th>
-                        </tr>
-                        <tr>
-                            <td style="border: 1px solid #ddd; padding: 8px;">Rule not applying</td>
-                            <td style="border: 1px solid #ddd; padding: 8px;">Frequency out of range</td>
-                            <td style="border: 1px solid #ddd; padding: 8px;">Verify frequency in QSO matches rule range</td>
-                        </tr>
-                        <tr>
-                            <td style="border: 1px solid #ddd; padding: 8px;">Wrong rule applied</td>
-                            <td style="border: 1px solid #ddd; padding: 8px;">Multiple overlapping rules</td>
-                            <td style="border: 1px solid #ddd; padding: 8px;">Rules processed in order; first match wins. Reorder rules if needed</td>
-                        </tr>
-                        <tr>
-                            <td style="border: 1px solid #ddd; padding: 8px;">Enrichment missing</td>
-                            <td style="border: 1px solid #ddd; padding: 8px;">Rule disabled</td>
-                            <td style="border: 1px solid #ddd; padding: 8px;">Check rule "Active" status (checkbox)</td>
-                        </tr>
-                        <tr>
-                            <td style="border: 1px solid #ddd; padding: 8px;">Format error</td>
-                            <td style="border: 1px solid #ddd; padding: 8px;">Malformed extra fields JSON</td>
-                            <td style="border: 1px solid #ddd; padding: 8px;">Validate JSON syntax in rule definition</td>
-                        </tr>
-                    </table>
+                    <div class="warning-box">
+                        Rule creation doesn't mean that Rule starts to be applied automatically. Rule needs to be assigned to UDP Listener (Client -> UDP Listeners -> Add Rules)
+                    </div>
 
                     <h3>Rule Best Practices</h3>
 
                     <div class="success-box">
                         <strong>✅ Do:</strong>
                         <ul>
-                            <li>Start rules with broadest frequency ranges first</li>
                             <li>Use clear, descriptive rule names</li>
                             <li>Test rules with known satellite QSOs</li>
                             <li>Document your rule set for team members</li>
@@ -1014,7 +940,6 @@
                         <strong>❌ Avoid:</strong>
                         <ul>
                             <li>Overlapping frequency ranges (confusing priority)</li>
-                            <li>Invalid JSON in Extra Fields (will cause errors)</li>
                             <li>Frequency ranges that are too wide (non-specific)</li>
                             <li>Inactive rules (disable instead of delete for history)</li>
                         </ul>
@@ -1022,26 +947,20 @@
 
                     <h3>Real-World Scenarios</h3>
 
-                    <h4>Scenario 1: International Space Station (ISS)</h4>
-                    <ul>
-                        <li><strong>Why:</strong> Track all ISS passes automatically</li>
-                        <li><strong>Rule Setup:</strong> 145.800-145.900 MHz → Add SATELLITE:ISS</li>
-                        <li><strong>Result:</strong> Every QSO on ISS frequency auto-tagged</li>
-                    </ul>
-
-                    <h4>Scenario 2: EMCOMM Exercise</h4>
-                    <ul>
-                        <li><strong>Why:</strong> Distinguish emergency exercise QSOs from regular traffic</li>
-                        <li><strong>Rule Setup:</strong> 146.520 MHz → Add EVENT:EMCOMM, SPECIAL:YES</li>
-                        <li><strong>Result:</strong> Automatic classification for reporting</li>
-                    </ul>
-
-                    <h4>Scenario 3: Contest Field Day</h4>
-                    <ul>
-                        <li><strong>Why:</strong> Track FD event QSOs separately for scoring</li>
-                        <li><strong>Rule Setup:</strong> Multiple rules for different bands/modes</li>
-                        <li><strong>Result:</strong> Automatic scoring categories without manual entry</li>
-                    </ul>
+                    <h4>Example Rule: QO-100</h4>
+                    <p>
+                        <strong>Name:</strong> QO-100 50mHz<br>
+                        <strong>Source Frequency Range:</strong> 145.800 - 146.000 MHz<br>
+                        <strong>Propagation mode:</strong> SAT<br>
+                        <strong>Sattelite name:</strong> QO-100<br>
+                        <strong>Sattelite mode:</strong> SX<br>
+                        <strong>Band TX:</strong> 13cm<br>
+                        <strong>Band RX:</strong> 3cm<br>
+                        <strong>Freq TX:</strong> 2410<br>
+                        <strong>Freq RX:</strong> 10489<br>
+                        <strong>Rule means:</strong> If UDP Listener recieves a log with TX (main) frequency in the range between 145.800 and 146.000 MHz<br>
+                        Then Band TX, Band RX, Freq TX and Freq RX will be ovewritten and PROP_MODE, SAT_NAME, SAT_MODE will be added/overwritten in QSO log<br>
+                    </p>
                 </div>
             </section>
 
@@ -2899,7 +2818,7 @@ netstat -ano | findstr UDP</pre>
             <div class="footer" style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; text-align: center; font-size: 12px; color: #666;">
                 <p><strong>QSOCollector User Manual - Version 1.0</strong></p>
                 <p>.NET 10 | Windows 10/11 | Open Source</p>
-                <p>Last Updated: February 2026</p>
+                <p>Last Updated: August 2026</p>
                 <p><a href="https://github.com/OZhuravlov/QSOCollector" target="_blank">GitHub Repository</a> | 
                    <a href="https://github.com/OZhuravlov/QSOCollector/issues" target="_blank">Report Issues</a></p>
             </div>

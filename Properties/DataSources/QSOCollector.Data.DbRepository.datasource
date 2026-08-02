@@ -6,5 +6,5 @@
     cause the file to be unrecognizable by the program.
 -->
 <GenericObjectDataSource DisplayName="DbRepository" Version="1.0" xmlns="urn:schemas-microsoft-com:xml-msdatasource">
-  <TypeInfo>QSOCollector.Data.DbRepository, QSOCollector, Version=1.7.0, Culture=neutral, PublicKeyToken=null</TypeInfo>
+  <TypeInfo>QSOCollector.Data.DbRepository, QSOCollector, Version=1.7.1, Culture=neutral, PublicKeyToken=null</TypeInfo>
 </GenericObjectDataSource>

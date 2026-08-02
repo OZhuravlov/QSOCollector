@@ -864,6 +864,6 @@ For detailed information on any topic, see the **[Full Interactive User Manual](
 
 ---
 
-*Last Updated: February 2026*  
+*Last Updated: August 2026*  
 *.NET 10 • Windows 10/11 • Apache 2.0 License*
 
