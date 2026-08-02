@@ -45,6 +45,9 @@ namespace QSOCollector.Parsers
             }
 
             string qsoSection = ExtractAdifBody(qsoMessage.AdifQsoData);
+            if (qsoSection.EndsWith(endOfRecord)) {
+                qsoSection = qsoSection[..(qsoSection.Length - endOfRecord.Length)];
+            }
 
             // Split QSO records by <EOR>
             var qsoRecords = Regex.Split(qsoSection, @endOfRecord, RegexOptions.IgnoreCase);
@@ -102,7 +105,7 @@ namespace QSOCollector.Parsers
             // Find header section (if any)
             int headerEnd = adifMessage.IndexOf(endOfHeader, StringComparison.OrdinalIgnoreCase);
             string qsoSection = headerEnd >= 0 ? adifMessage[(headerEnd + 5)..] : adifMessage;
-            qsoSection = qsoSection[..qsoSection.LastIndexOf(@endOfRecord, StringComparison.OrdinalIgnoreCase)];
+            qsoSection = qsoSection[..(qsoSection.LastIndexOf(@endOfRecord, StringComparison.OrdinalIgnoreCase) + @endOfRecord.Length)];
             return qsoSection;
         }
 

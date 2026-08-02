@@ -1,6 +1,7 @@
 using QSOCollector.Models;
-using System.Xml.Serialization;
+using System.Text;
 using System.Xml;
+using System.Xml.Serialization;
 
 namespace QSOCollector.Parsers
 {
@@ -18,7 +19,7 @@ namespace QSOCollector.Parsers
             XmlSerializerNamespaces namespaces = new ();
             namespaces.Add(string.Empty, string.Empty);
             var serializer = new XmlSerializer(contactInfo.GetType(), new XmlRootAttribute(rootName));
-            using var writer = new StringWriter();
+            using var writer = new Utf8StringWriter();
             using var xmlWriter =XmlWriter.Create(writer, GetXmlWriterSettings());
             serializer.Serialize(xmlWriter, contactInfo, namespaces);
             return writer.ToString();
@@ -28,11 +29,15 @@ namespace QSOCollector.Parsers
         {
             return new XmlWriterSettings
             {
-                OmitXmlDeclaration = true,
                 Indent = false,
                 NewLineHandling = NewLineHandling.None,
                 NewLineChars = string.Empty
             };
         }
+    }
+
+    public class Utf8StringWriter : StringWriter
+    {
+        public override Encoding Encoding => Encoding.UTF8;
     }
 }
