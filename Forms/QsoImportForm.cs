@@ -1,22 +1,26 @@
-﻿using QSOCollector.Data;
+﻿using Microsoft.Data.Sqlite;
+using QSOCollector.Data;
+using QSOCollector.Forms;
 using QSOCollector.Helpers;
 using QSOCollector.Models;
 using QSOCollector.Parsers;
 using QSOCollector.Root;
 using Serilog;
 using System.ComponentModel;
+using System.Data;
+using System.Data.SQLite;
 
 namespace QSOCollector
 {
     public partial class QsoImportForm : Form
     {
         private readonly ILogger log = Log.ForContext<QsoImportForm>();
-
         private readonly IDbRepository dbRepository;
         private string? filePath = null;
         private string? fileName = null;
         private string? folder = null;
         private string? fileContent = null;
+        private readonly DataTable ruleDataTable = new();
 
         public QsoImportForm(IDbRepository dbRepository)
         {
@@ -24,7 +28,33 @@ namespace QSOCollector
             InitializeComponent();
         }
 
-        private void importButton_Click(object sender, EventArgs e)
+        private void QsoImportForm_Load(object sender, EventArgs e)
+        {
+            PopulateRuleDataGridView();
+        }
+
+        private void PopulateRuleDataGridView()
+        {
+            string selectCommand = "select sr.id, sr.name, sr.is_apply_for_import from sat_rules sr where sr.is_active = 1";
+            try
+            {
+                Log.Debug("Populate Listener Rules");
+                ruleDataAdapter = new SQLiteDataAdapter(selectCommand, dbRepository.GetConnectionString());
+                SQLiteCommandBuilder commandBuilder = new(ruleDataAdapter);
+                ruleDataAdapter.Fill(ruleDataTable);
+                ruleDataTable.PrimaryKey = [ruleDataTable.Columns["id"]];
+                applyRuleDataGridView.DataSource = ruleBindingSource;
+                ruleBindingSource.DataSource = ruleDataTable;
+            }
+            catch (SqliteException ex)
+            {
+                string message = "Can't retrieve data from DB";
+                log.Error(ex, message);
+                MessageBox.Show($"{message}: {ex.Message}");
+            }
+        }
+
+        private void ImportButton_Click(object sender, EventArgs e)
         {
             if (string.IsNullOrEmpty(fileContent))
             {
@@ -42,7 +72,7 @@ namespace QSOCollector
             importBackgroundWorker.RunWorkerAsync();
         }
 
-        private void chooseFileButton_Click(object sender, EventArgs e)
+        private void ChooseFileButton_Click(object sender, EventArgs e)
         {
             importProgressStep.Text = string.Empty;
             using OpenFileDialog openFileDialog = new();
@@ -61,7 +91,7 @@ namespace QSOCollector
                 fileContent = reader.ReadToEnd();
                 int length = Math.Min(fileContent.Length, filePreviewTextBox.MaxLength);
                 filePreviewTextBox.Text = fileContent[..length];
-                handleButton(importButton, true, "Continue import");
+                HandleButton(importButton, true, "Continue import");
                 closeCancelButton.Text = "Cancel";
             }
             else
@@ -74,33 +104,33 @@ namespace QSOCollector
                 fileName = null;
                 filePathLabel.Text = "No file selected";
                 filePreviewTextBox.Text = string.Empty;
-                handleButton(importButton, false);
+                HandleButton(importButton, false);
                 closeCancelButton.Text = "Close";
                 return;
             }
         }
-        private void handleButton(Button button, bool enabled, string? newText = null)
+        private static void HandleButton(Button button, bool enabled, string? newText = null)
         {
             button.Enabled = enabled;
             if (newText != null) button.Text = newText;
             ButtonStyleHandler.Update(button, enabled);
         }
 
-        private void importBackgroundWorker_ProgressChanged(object sender, ProgressChangedEventArgs e)
+        private void ImportBackgroundWorker_ProgressChanged(object sender, ProgressChangedEventArgs e)
         {
             importProgressBar.Value = e.ProgressPercentage;
         }
 
-        private void importBackgroundWorker_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
+        private void ImportBackgroundWorker_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
         {
             int count = (int)e.Result;
             importProgressBar.Visible = false;
-            handleButton(importButton, false, $"Imported {count} QSOs");
+            HandleButton(importButton, false, $"Imported {count} QSOs");
             closeCancelButton.Text = "Close";
             MessageBox.Show($"{count} QSOs successfully imported", "QSOs imported", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
-        private void importBackgroundWorker_DoWork(object sender, DoWorkEventArgs e)
+        private void ImportBackgroundWorker_DoWork(object sender, DoWorkEventArgs e)
         {
             QsoMessage qsoMessage = new()
             {
@@ -109,8 +139,8 @@ namespace QSOCollector
                 OriginalQsoData = fileContent,
                 AdifQsoData = fileContent
             };
-            List<Dictionary<string, string?>> qsoRecords = AdifToTableFieldsMapper.Map(qsoMessage, progressUpdater: updateProgressText);
-            List<Dictionary<string, string?>> dups = dbRepository.ImportQsoRecords(qsoRecords, folder, fileName, updateProgressText);
+            List<Dictionary<string, string?>> qsoRecords = AdifToTableFieldsMapper.Map(qsoMessage, progressUpdater: UpdateProgressText);
+            List<Dictionary<string, string?>> dups = dbRepository.ImportQsoRecords(qsoRecords, folder, fileName, UpdateProgressText);
             if (dups.Count > 0)
             {
                 if (DialogResult.Yes == MessageBox.Show(
@@ -121,13 +151,37 @@ namespace QSOCollector
                     MessageBoxDefaultButton.Button2
                 ))
                 {
-                    dbRepository.ForceImportQsoRecords(dups, folder, fileName, updateProgressText);
+                    dbRepository.ForceImportQsoRecords(dups, folder, fileName, UpdateProgressText);
                 }
             }
             e.Result = qsoRecords.Count;
         }
 
-        private async Task updateProgressText(string text)
+        public List<Dictionary<string, string>> GetQsoRecords(QsoMessage qsoMessage)
+        {
+            List<Band> bands = dbRepository.GetBands();
+            List<SatRule> rules = [..dbRepository.GetSatRules().Where(r => r.IsApplyForImport)];
+            List<Dictionary<string, string?>> qsos = AdifToTableFieldsMapper.Map(qsoMessage, progressUpdater: UpdateProgressText);
+            bool isOrigChanged = false;
+            var newQsos = qsos;
+            foreach (var rule in rules)
+            {
+                bool ruleApplied = SatRuleApplier.ApplyRuleToQsos(qsos, rule, bands, out var updatedQsos, out bool updatedIsOrigChanged);
+                if (ruleApplied)
+                {
+                    log.Debug("Rule {RuleName} applied to QSO message from {Format}", rule.Name, qsoMessage.OriginalFormat);
+                    newQsos = updatedQsos;
+                    isOrigChanged |= updatedIsOrigChanged;
+                }
+            }
+            if (isOrigChanged) {
+                log.Debug("QSO message from {Format} has been modified by applied rules", qsoMessage.OriginalFormat);
+                qsoMessage.AdifQsoData = AdifToTableFieldsMapper.Map(newQsos, withHeader: true);
+            }
+            return newQsos;
+        }
+
+        private async Task UpdateProgressText(string text)
         {
             importProgressStep.BeginInvoke((MethodInvoker)delegate
             {
@@ -136,5 +190,32 @@ namespace QSOCollector
             importProgressStep.Text = text;
         }
 
+        private void ApplyRuleDataGridView_CellContentClick(object sender, DataGridViewCellEventArgs e)
+        {
+            var senderGrid = (DataGridView)sender;
+
+            if (e.RowIndex < 0)
+            {
+                return;
+            }
+
+            DataGridViewColumn dataGridViewColumn = senderGrid.Columns[e.ColumnIndex];
+
+            if (dataGridViewColumn is DataGridViewButtonColumn)
+            {
+                int ruleId = Convert.ToInt32(senderGrid.Rows[e.RowIndex].Cells["id"].Value);
+                SatRule satRule = dbRepository.GetSatRule(ruleId);
+                RuleForm ruleForm = new(dbRepository, satRule, true);
+                ruleForm.ShowDialog();
+            }
+            else if (dataGridViewColumn is DataGridViewCheckBoxColumn)
+            {
+                int ruleId = Convert.ToInt32(senderGrid.Rows[e.RowIndex].Cells["id"].Value);
+                DataGridViewCell applyRuleCheckBoxCell = senderGrid.Rows[e.RowIndex].Cells["isApplyForImport"];
+                bool shouldBeChecked = !Convert.ToBoolean(applyRuleCheckBoxCell.Value);
+                dbRepository.UpdateSatRuleApplyForImport(ruleId, shouldBeChecked);
+                applyRuleCheckBoxCell.Value = shouldBeChecked;
+            }
+        }
     }
 }

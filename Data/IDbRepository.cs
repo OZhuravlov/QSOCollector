@@ -44,5 +44,6 @@ namespace QSOCollector.Data
         void RemoveRulesFromListener(int listenerId, List<int> selectedRuleIds);
         void AssignRuleToListener(int listenerId, int ruleId);
         List<SatRule> GetListenerSatRules(int listenerId);
+        void UpdateSatRuleApplyForImport(int ruleId, bool isChecked);
     }
 }

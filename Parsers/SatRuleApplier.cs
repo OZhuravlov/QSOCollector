@@ -10,11 +10,18 @@ namespace QSOCollector.Parsers
 
         public static bool AdifApplySatRule(QsoMessage qsoMessage, SatRule rule, List<Band> bands, out bool isOrigChanged)
         {
-            isOrigChanged = false;
-            bool isApplied = false;
-
             List<Dictionary<string, string>> qsos = AdifToTableFieldsMapper.Map(qsoMessage);
-            List<Dictionary<string, string>> newQsos = [];
+            bool isApplied = ApplyRuleToQsos(qsos, rule, bands, out _, out bool updatedIsOrigChanged);
+            isOrigChanged = updatedIsOrigChanged;
+            return isApplied;
+        }
+
+        public static bool ApplyRuleToQsos(List<Dictionary<string, string>> qsos, SatRule rule, List<Band> bands, out List<Dictionary<string, string>> newQsos, out bool isOrigChanged)
+        {
+            bool isApplied = false;
+            newQsos = new List<Dictionary<string, string>>();
+            isOrigChanged = false;
+
             foreach (var qso in qsos)
             {
                 // Process each QSO
@@ -120,12 +127,6 @@ namespace QSOCollector.Parsers
                 }
                 newQsos.Add(qso);
             }
-
-            if (isApplied)
-            {
-                qsoMessage.AdifQsoData = AdifToTableFieldsMapper.Map(newQsos);
-            }
-
             return isApplied;
         }
 

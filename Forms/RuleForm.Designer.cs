@@ -152,7 +152,7 @@
             populateGroupBox.Size = new Size(459, 154);
             populateGroupBox.TabIndex = 4;
             populateGroupBox.TabStop = false;
-            populateGroupBox.Text = "Populate/Override ADIF fields";
+            populateGroupBox.Text = "Then populate/override ADIF fields";
             // 
             // freqTxTextBox
             // 
@@ -284,7 +284,9 @@
             // 
             // propModeComboBox
             // 
+            propModeComboBox.BackColor = SystemColors.Window;
             propModeComboBox.Enabled = false;
+            propModeComboBox.FlatStyle = FlatStyle.Flat;
             propModeComboBox.FormattingEnabled = true;
             propModeComboBox.Items.AddRange(new object[] { "SAT" });
             propModeComboBox.Location = new Point(192, 17);
@@ -341,7 +343,7 @@
             MaximizeBox = false;
             MinimizeBox = false;
             Name = "RuleForm";
-            Text = "Create Rule to make proper log for SAT QSO's";
+            Text = "Rule";
             Load += RuleForm_Load;
             conditionGroupBox.ResumeLayout(false);
             conditionGroupBox.PerformLayout();

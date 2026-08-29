@@ -104,7 +104,7 @@ namespace QSOCollector.Data
             using var connection = new SqliteConnection(connectionString);
             connection.Open();
             using var transaction = connection.BeginTransaction();
-            CleanupListenerConfigs(connection, configs);
+            CleanupListenerConfigs(connection);
             SaveListenerConfigs(connection, configs);
             transaction.Commit();
         }
@@ -263,6 +263,17 @@ namespace QSOCollector.Data
             return satRules;
         }
 
+        public void UpdateSatRuleApplyForImport(int ruleId, bool isChecked) {
+            log.Debug("Updating satellite rule apply for import: {ruleId}, {isChecked}", ruleId, isChecked);
+            string sql = "UPDATE sat_rules SET is_apply_for_import = @isChecked WHERE id = @ruleId";
+            using var connection = new SqliteConnection(connectionString);
+            connection.Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = sql;
+            command.Parameters.Add(new SqliteParameter("@isChecked", isChecked));
+            command.Parameters.Add(new SqliteParameter("@ruleId", ruleId));
+            command.ExecuteNonQuery();
+        }
 
         public List<string> GetSatModes()
         {
@@ -312,10 +323,12 @@ namespace QSOCollector.Data
             transaction.Commit();
         }
 
-        private void CleanupListenerConfigs(SqliteConnection connection, List<ListenerConfig> configs)
+        private void CleanupListenerConfigs(SqliteConnection connection)
         {
             log.Warning("Cleaning listener configurations from database");
             using var command = connection.CreateCommand();
+            command.CommandText = "DELETE FROM listener_sat_rules";
+            command.ExecuteNonQuery();
             command.CommandText = "DELETE FROM listeners";
             command.ExecuteNonQuery();
         }
@@ -1083,7 +1096,7 @@ namespace QSOCollector.Data
                         }
                         else
                         {
-                            log.Debug(ex, "Skipping unknown property '{propName}' of type '{typeName}'", prop.Name, type.Name);
+                            log.Verbose(ex, "Skipping unknown property '{propName}' of type '{typeName}'", prop.Name, type.Name);
                             continue;
                         }
                     }

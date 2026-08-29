@@ -16,5 +16,6 @@
         public double? FreqTx { get; set; }
         public double? FreqRx { get; set; }
         public bool IsActive { get; set; }
+        public bool IsApplyForImport { get; set; }
     }
 }

@@ -112,7 +112,7 @@ namespace QSOCollector.Parsers
         public static string Map(List<Dictionary<string, string?>> qsoRecords, bool withHeader = false)
         {
             if (qsoRecords == null || qsoRecords.Count == 0) {
-                throw new ArgumentNullException("Qso record must not be null or empty");
+                throw new ArgumentNullException(nameof(qsoRecords), "Qso record must not be null or empty");
             }
 
             StringBuilder adif = new();

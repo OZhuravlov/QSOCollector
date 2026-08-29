@@ -115,7 +115,7 @@ namespace QSOCollector
                 {
                     continue;
                 }
-                int? listenerId = getListenerId(row);
+                int? listenerId = GetListenerId(row);
                 if (listenerId == null)
                 {
                     continue;
@@ -304,8 +304,8 @@ namespace QSOCollector
             {
             }
 
-            cancelEditListenersButton.Text = "Close";
             cancelEditListenersButton.Focus();
+            cancelEditListenersButton.Text = "Close";
             saveListenersButton.Enabled = false;
             if (isLocalClientRunning)
             {
@@ -327,7 +327,7 @@ namespace QSOCollector
             }
 
             rowsToDelete.ForEach(r => {
-                int? listenerId = getListenerId(r);
+                int? listenerId = GetListenerId(r);
                 ListenerDataGridView.Rows.Remove(r);
                 if (listenerId.HasValue)
                 {
@@ -402,7 +402,7 @@ namespace QSOCollector
         {
             if (ListenerDataGridView.Rows.Count > 0 || dbRepository.GetListenerConfigs()?.Count > 0)
             {
-                DialogResult result = MessageBox.Show("Existing configs will be replaced by imported. Do you want to continue?", "Existing config replacement", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+                DialogResult result = MessageBox.Show("Existing configs will be replaced by imported. SAT Rules needs to be reassigned manually if needed. Do you want to continue?", "Existing config replacement", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
                 if (result == DialogResult.No)
                 {
                     return;
@@ -438,7 +438,7 @@ namespace QSOCollector
             if (senderGrid.Columns[e.ColumnIndex] is DataGridViewButtonColumn &&
                 e.RowIndex >= 0)
             {
-                int? listenerId = getListenerId(senderGrid.Rows[e.RowIndex]);
+                int? listenerId = GetListenerId(senderGrid.Rows[e.RowIndex]);
                 if (saveListenersButton.Enabled || !listenerId.HasValue)
                 {
                     MessageBox.Show("Please Save Listener Configs before dealing with Rules", "Listener Config saving required", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -462,7 +462,7 @@ namespace QSOCollector
             }
         }
 
-        private int? getListenerId(DataGridViewRow row)
+        private int? GetListenerId(DataGridViewRow row)
         {
             string? id = row.Cells["id"].Value?.ToString();
             if (string.IsNullOrEmpty(id))

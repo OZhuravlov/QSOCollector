@@ -1,5 +1,6 @@
 ﻿using Microsoft.Data.Sqlite;
 using QSOCollector.Data;
+using QSOCollector.Helpers;
 using QSOCollector.Models;
 using System.Globalization;
 
@@ -10,14 +11,16 @@ namespace QSOCollector.Forms
         public bool ruleChanged = false;
         private readonly IDbRepository dbRepository;
         private SatRule? rule = null;
-        List<Band> bands = [];
-        bool isInit = false;
+        private List<Band> bands = [];
+        private bool isInit = false;
+        private readonly bool isReadOnly;
 
-        public RuleForm(IDbRepository dbRepository, SatRule? rule)
+        public RuleForm(IDbRepository dbRepository, SatRule? rule, bool isReadOnly = false)
         {
             this.dbRepository = dbRepository;
             InitializeComponent();
             this.rule = rule;
+            this.isReadOnly = isReadOnly;
         }
 
         private void RuleForm_Load(object sender, EventArgs e)
@@ -49,6 +52,26 @@ namespace QSOCollector.Forms
                 PopulateFormFields();
             }
             isInit = true;
+            if (isReadOnly)
+            {
+                this.Text += ": Readonly (Editable from Shared tab)";
+                DisableEditableControls(this);
+                saveButton.Visible = false;
+                cancelButton.Visible = false;
+            }
+        }
+
+        private static void DisableEditableControls(Control parentControl)
+        {
+            foreach (Control control in parentControl.Controls)
+            {
+                if (control is TextBox || control is ComboBox)
+                {
+                    control.BackColor = SystemColors.InactiveCaption;
+                    control.Enabled = false;
+                }
+                DisableEditableControls(control);
+            }
         }
 
         // Populate the form fields with the rule data

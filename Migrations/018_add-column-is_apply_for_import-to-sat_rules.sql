@@ -1,0 +1,1 @@
+﻿ALTER TABLE sat_rules ADD is_apply_for_import BOOLEAN NOT NULL DEFAULT FALSE;

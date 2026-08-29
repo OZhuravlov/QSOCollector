@@ -47,6 +47,7 @@
 	</ItemGroup>
 	
 	<ItemGroup>
+	<EmbeddedResource Include="Migrations\018_add-column-is_apply_for_import-to-sat_rules.sql" />
 	<EmbeddedResource Include="Migrations\017_createTables-for-sat_rules.sql" />
 	<EmbeddedResource Include="Migrations\016_update-mode-group-for-digu.sql" />
 	<EmbeddedResource Include="Migrations\015_create-index-on-call-column.sql" />
@@ -83,6 +84,7 @@
     <PackageReference Include="SQLite" Version="3.13.0" />
     <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.2" />
     <PackageReference Include="System.Data.SQLite" Version="2.0.2" />
+    <PackageReference Include="WsjtxUtils.WsjtxMessages" Version="1.0.0.69" />
   </ItemGroup>
 
   <ItemGroup>

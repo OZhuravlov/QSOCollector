@@ -6,6 +6,9 @@ using System.Collections.Concurrent;
 using System.Data;
 using System.Net.Sockets;
 using System.Text;
+using System.Text.Json;
+using WsjtxUtils.WsjtxMessages;
+using WsjtxUtils.WsjtxMessages.Messages;
 
 namespace QSOCollector.Network.Client
 {
@@ -174,14 +177,22 @@ namespace QSOCollector.Network.Client
             {
                 try
                 {
-                    log.Debug("Waiting for heartbeat message on port {Port} ({ListenerName})", heartbeatPort, listenerConfig.Name);
+                    log.Debug("Waiting for info message on port {Port} ({ListenerName})", heartbeatPort, listenerConfig.Name);
                     var receivedResults = await heartbeatUdpClient.ReceiveAsync(cancellationToken);
-                    string logMessage = $"Received heartbeat message on port {heartbeatPort} ({listenerConfig.Name})";
+                    string logMessage = $"Received info message on port {heartbeatPort} ({listenerConfig.Name})";
                     log.Debug(logMessage);
+                    if (Convert.ToHexString(receivedResults.Buffer).StartsWith("ADBCCBDA"))
+                    {
+                        LogWsjtxMessage(receivedResults);
+                    } else if (listenerConfig.MessageFormat == "N1MM")
+                    {
+                        LogN1mmInfoMessage(receivedResults);
+                    }
+                    else
+                    {
+                        log.Debug("Received message: {ReceivedData}", Encoding.UTF8.GetString(receivedResults.Buffer));
+                    }
                     progressUpdater.UpdateLog(logMessage, true);
-                    //byte[] receivedBytes = receivedResults.Buffer;
-                    //string receivedData = Encoding.UTF8.GetString(receivedBytes);
-                    //progressUpdater.UpdateLog($"Data: {receivedData}", true);
                 }
                 catch (Exception ex)
                 {
@@ -203,6 +214,38 @@ namespace QSOCollector.Network.Client
                     progressUpdater.UpdateLog(message);
                     break;
                 }
+            }
+        }
+
+        private void LogN1mmInfoMessage(UdpReceiveResult receivedResults)
+        {
+            string receivedData = Encoding.UTF8.GetString(receivedResults.Buffer);
+            if (receivedData.Contains("</RadioInfo>", StringComparison.OrdinalIgnoreCase))
+            {
+                N1mmRadioInfo infoMessage = N1mmRadioInfoSerializer.Deserialize(receivedData);
+                log.Debug("Received N1MM Radio info message: {ReceivedData}", JsonSerializer.Serialize(infoMessage));
+            }
+            else
+            {
+                log.Debug("Received N1MM message: {ReceivedData}", receivedData);
+            }
+        }
+
+        private void LogWsjtxMessage(UdpReceiveResult receivedResults)
+        {
+            Memory<byte> source = new(receivedResults.Buffer);
+            WsjtxMessage? message = source.DeserializeWsjtxMessage();
+            if (message is Heartbeat heartbeat)
+            {
+                log.Debug("Heartbeat: {heartbeat}", JsonSerializer.Serialize(heartbeat));
+            }
+            else if (message is LoggedAdif loggedAdif)
+            {
+                log.Debug("Logged Adif: {loggedAdif}", loggedAdif.AdifText);
+            }
+            else if (message is Status statusMessage)
+            {
+                log.Debug("Status Message: {statusMessage}", JsonSerializer.Serialize(statusMessage));
             }
         }
 
