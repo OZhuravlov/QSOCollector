@@ -161,7 +161,7 @@ namespace QSOCollector.Models
         {
             get { return OldTimestamp?.ToString("yyyy-MM-dd HH:mm:ss"); }
 
-            set => OldTimestamp = value == null ? null : DateTime.Parse(value);
+            set => OldTimestamp = string.IsNullOrEmpty(value) ? null : DateTime.Parse(value);
         }
 
         [XmlIgnore]

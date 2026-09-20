@@ -142,7 +142,8 @@ namespace QSOCollector.Network.Client
                     }
                     else
                     {
-                        message = $"!!!UDP listener on port {qsoPort} ({listenerConfig.Name}:{listenerConfig.MessageFormat}) unexpectedly stopped: {ex.Message}";
+                        message = $"" +
+                            $"!!!UDP listener on port {qsoPort} ({listenerConfig.Name}:{listenerConfig.MessageFormat}) unexpectedly stopped: {ex.Message}";
                         log.Error(ex, message);
                     }
                     progressUpdater.UpdateLog(message);

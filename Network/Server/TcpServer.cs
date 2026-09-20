@@ -226,6 +226,28 @@ namespace QSOCollector.Network.Server
                     client.Dispose();
                     break;
                 }
+                catch (IOException ex)
+                {
+                    string logMessage = $"Error while reading message from client {clientIPAddress}: {ex.Message}";
+                    log.Warning(logMessage);
+                    serverProgressUpdater.UpdateLog($"Client {clientIPAddress} message reading error", true);
+                    if (clientsMonitoring.TryGetValue(clientIPAddress, out var clientInfo))
+                    {
+                        clientInfo.Status = ClientStatus.Disconnected;
+                    }
+                    response = new ServerResponse(ServerResponseStatus.UnknownError, ex.Message);
+                }
+                catch (JsonException ex)
+                {
+                    string logMessage = $"Error while deserializing message from client {clientIPAddress}: {ex.Message}";
+                    log.Warning(logMessage);
+                    serverProgressUpdater.UpdateLog($"Client {clientIPAddress} message deserialization error", true);
+                    if (clientsMonitoring.TryGetValue(clientIPAddress, out var clientInfo))
+                    {
+                        clientInfo.Status = ClientStatus.Disconnected;
+                    }
+                    response = new ServerResponse(ServerResponseStatus.UnknownError, ex.Message);
+                }
                 catch (Exception ex)
                 {
                     string logMessage = $"Unknown error while processing message from client {clientIPAddress}: {ex.Message}";
@@ -258,9 +280,22 @@ namespace QSOCollector.Network.Server
                     client.Dispose();
                     break;
                 }
+                catch (IOException ex)
+                {
+                    log.Warning("Unknown error while writing response to client {clientIPAddress}: {message}", clientIPAddress, ex.Message);
+                    serverProgressUpdater.UpdateLog($"Client {clientIPAddress} looks disconnected: response writing error");
+                    serverProgressUpdater.UpdateLog("Reason: response writing error", true);
+                    if (clientsMonitoring.TryGetValue(clientIPAddress, out var clientInfo))
+                    {
+                        clientInfo.Status = ClientStatus.Disconnected;
+                    }
+                    client.Close();
+                    client.Dispose();
+                    break;
+                }
                 catch (Exception ex)
                 {
-                    log.Warning("Unknown error while while sending response to client {clientIPAddress}: {message}", clientIPAddress, ex.Message);
+                    log.Error("Unknown error while sending response to client {clientIPAddress}: {message}", clientIPAddress, ex.Message);
                     serverProgressUpdater.UpdateLog($"Client {clientIPAddress} looks disconnected: other error");
                     serverProgressUpdater.UpdateLog("Reason: other error", true);
                     if (clientsMonitoring.TryGetValue(clientIPAddress, out var clientInfo))
