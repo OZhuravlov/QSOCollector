@@ -1,13 +1,13 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.14.36414.22
+# Visual Studio Version 18
+VisualStudioVersion = 18.10.12217.157 stable
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QSOCollector", "QSOCollector.csproj", "{8F9DF05C-1442-4F08-8619-2FADF5159A4A}"
 EndProject
 Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "Setup-QSOCollector", "..\Setup-QSOCollector\Setup-QSOCollector.vdproj", "{BD87AAD4-2574-B227-9CF2-63272319C923}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QSOCollector.Tests", "..\QSOCollector.Tests\QSOCollector.Tests.csproj", "{E6C92DD8-7E61-4DF9-AE88-15789584CAA2}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QSOCollector.Tests", "QSOCollector.Tests\QSOCollector.Tests.csproj", "{E6C92DD8-7E61-4DF9-AE88-15789584CAA2}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
