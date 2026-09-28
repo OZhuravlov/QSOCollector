@@ -34,7 +34,7 @@ namespace QSOCollector.Data
             " LIMIT 100";
         private const string deleteQsoQsl = "DELETE FROM qsodata WHERE id = @id";
         private const string selectQsoToReplaceQsl = "SELECT id, export_id FROM qsodata WHERE external_id = @externalId AND qso_time BETWEEN @minTime AND @maxTime AND is_temporary = @isTemporary ORDER BY id DESC LIMIT 1";
-        private const string selectSatRulesSql = "SELECT id Id, name Name, orig_freq_mhz_from SourceFreqFrom, orig_freq_mhz_to SourceFreqTo, propagation_mode PropagationMode, sat_name SatName, sat_mode SatMode, band_id BandTxId, band_rx_id BandRxId, freq_mhz FreqTx, freq_mhz_rx FreqRx, is_active IsActive FROM sat_rules";
+        private const string selectSatRulesSql = "SELECT id Id, name Name, orig_freq_mhz_from SourceFreqFrom, orig_freq_mhz_to SourceFreqTo, propagation_mode PropagationMode, sat_name SatName, sat_mode SatMode, band_id BandTxId, band_rx_id BandRxId, freq_mhz FreqTx, freq_mhz_rx FreqRx, is_active IsActive, is_apply_for_import IsApplyForImport FROM sat_rules";
 
         private readonly string connectionString;
         private Dictionary<string, string>? qsodataColumns = null;
@@ -161,12 +161,12 @@ namespace QSOCollector.Data
             using var command = connection.CreateCommand();
             if (rule.Id.HasValue)
             {
-                command.CommandText = "UPDATE sat_rules SET name = @name, orig_freq_mhz_from = @orig_freq_mhz_from, orig_freq_mhz_to = @orig_freq_mhz_to, propagation_mode = @propagation_mode, sat_name = @sat_name, sat_mode = @sat_mode, band_id = @band_id, band_rx_id = @band_rx_id, freq_mhz = @freq_mhz, freq_mhz_rx = @freq_mhz_rx, is_active = @is_active WHERE id = @id";
+                command.CommandText = "UPDATE sat_rules SET name = @name, orig_freq_mhz_from = @orig_freq_mhz_from, orig_freq_mhz_to = @orig_freq_mhz_to, propagation_mode = @propagation_mode, sat_name = @sat_name, sat_mode = @sat_mode, band_id = @band_id, band_rx_id = @band_rx_id, freq_mhz = @freq_mhz, freq_mhz_rx = @freq_mhz_rx, is_active = @is_active, is_apply_for_import = @is_apply_for_import WHERE id = @id";
                 command.Parameters.Add(new SqliteParameter("@id", rule.Id.Value));
             }
             else
             {
-                command.CommandText = "INSERT INTO sat_rules (name, orig_freq_mhz_from, orig_freq_mhz_to, propagation_mode, sat_name, sat_mode, band_id, band_rx_id, freq_mhz, freq_mhz_rx, is_active) VALUES (@name, @orig_freq_mhz_from, @orig_freq_mhz_to, @propagation_mode, @sat_name, @sat_mode, @band_id, @band_rx_id, @freq_mhz, @freq_mhz_rx, @is_active)";
+                command.CommandText = "INSERT INTO sat_rules (name, orig_freq_mhz_from, orig_freq_mhz_to, propagation_mode, sat_name, sat_mode, band_id, band_rx_id, freq_mhz, freq_mhz_rx, is_active, is_apply_for_import) VALUES (@name, @orig_freq_mhz_from, @orig_freq_mhz_to, @propagation_mode, @sat_name, @sat_mode, @band_id, @band_rx_id, @freq_mhz, @freq_mhz_rx, @is_active, @is_apply_for_import)";
             }
             command.Parameters.Add(new SqliteParameter("@name", rule.Name));
             command.Parameters.Add(new SqliteParameter("@orig_freq_mhz_from", rule.SourceFreqFrom));
@@ -179,6 +179,7 @@ namespace QSOCollector.Data
             command.Parameters.Add(new SqliteParameter("@freq_mhz", rule.FreqTx.HasValue ? rule.FreqTx.Value : DBNull.Value));
             command.Parameters.Add(new SqliteParameter("@freq_mhz_rx", rule.FreqRx.HasValue ? rule.FreqRx.Value : DBNull.Value));
             command.Parameters.Add(new SqliteParameter("@is_active", rule.IsActive ? 1 : 0));
+            command.Parameters.Add(new SqliteParameter("@is_apply_for_import", rule.IsApplyForImport ? 1 : 0));
             command.ExecuteNonQuery();
             transaction.Commit();
         }

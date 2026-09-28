@@ -19,7 +19,7 @@ namespace QSOCollector.Parsers
         public static bool ApplyRuleToQsos(List<Dictionary<string, string>> qsos, SatRule rule, List<Band> bands, out List<Dictionary<string, string>> newQsos, out bool isOrigChanged)
         {
             bool isApplied = false;
-            newQsos = new List<Dictionary<string, string>>();
+            newQsos = [];
             isOrigChanged = false;
 
             foreach (var qso in qsos)
@@ -215,7 +215,7 @@ namespace QSOCollector.Parsers
             {
                 if (freq < band.FreqFrom || freq > band.FreqTo)
                 {
-                    newFreq = FreqConverter.fromMhz(band.FreqFrom);
+                    newFreq = band.FreqFrom;
                 }
             }
             else
